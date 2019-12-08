@@ -5558,6 +5558,14 @@ func TestCheckHtlcForward(t *testing.T) {
 		}
 	})
 
+	t.Run("tolerate fee", func(t *testing.T) {
+	    result := link.CheckHtlcForward(hash, 1009, 1000,
+		200, 150, 0)
+	    if result != nil {
+		t.Fatalf("expected fees to be tolerated")
+	    }
+	})
+
 	t.Run("expiry too soon", func(t *testing.T) {
 		result := link.CheckHtlcForward(hash, 1500, 1000,
 			200, 150, 190)

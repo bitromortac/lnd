@@ -2155,16 +2155,28 @@ func (l *channelLink) CheckHtlcForward(payHash [32]byte,
 			"expected %v, got %v",
 			payHash[:], int64(expectedFee), int64(actualFee))
 
-		// As part of the returned error, we'll send our latest routing
-		// policy so the sending node obtains the most up to date data.
+		// we can allow for underpayment of fees, maybe due to outdated
+		// policies or wrong fee calculation
+		underpayRelative := 0.10
+		underpayAmount := float64(expectedFee) * (1 - underpayRelative)
+		underpayMsat := lnwire.MilliSatoshi(uint64(underpayAmount))
 
-		return l.createFailureWithUpdate(
-			func(upd *lnwire.ChannelUpdate) lnwire.FailureMessage {
-				return lnwire.NewFeeInsufficient(
-					amtToForward, *upd,
-				)
-			},
-		)
+		if actualFee < underpayMsat {
+		    // As part of the returned error, we'll send our latest routing
+		    // policy so the sending node obtains the most up to date data.
+
+		    return l.createFailureWithUpdate(
+			    func(upd *lnwire.ChannelUpdate) lnwire.FailureMessage {
+				    return lnwire.NewFeeInsufficient(
+					    amtToForward, *upd,
+				    )
+			    },
+		    )
+		} else {
+		    l.log.Errorf("tolerating insufficient fee" +
+		        " htlc(%x) with fee: expected %v, got %v",
+			payHash[:], int64(expectedFee), int64(actualFee))
+		}
 	}
 
 	// Finally, we'll ensure that the time-lock on the outgoing HTLC meets
