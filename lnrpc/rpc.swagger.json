@@ -1118,6 +1118,30 @@
             "required": false,
             "type": "boolean",
             "format": "boolean"
+          },
+          {
+            "name": "index_offset",
+            "description": "*\nThe index of a payment that will be used as either the start or end of a\nquery to determine which payments should be returned in the response.",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "format": "uint64"
+          },
+          {
+            "name": "num_max_payments",
+            "description": "/ The max number of payments to return in the response to this query.",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "format": "uint64"
+          },
+          {
+            "name": "reversed",
+            "description": "*\nIf set, the payments returned will result from seeking backwards from the\nspecified index offset. This can be used to paginate backwards.",
+            "in": "query",
+            "required": false,
+            "type": "boolean",
+            "format": "boolean"
           }
         ],
         "tags": [
@@ -3137,6 +3161,16 @@
             "$ref": "#/definitions/lnrpcPayment"
           },
           "title": "/ The list of payments"
+        },
+        "first_index_offset": {
+          "type": "string",
+          "format": "uint64",
+          "description": "*\nThe index of the first item in the set of returned payments. This can be used\nto seek backwards, pagination style."
+        },
+        "last_index_offset": {
+          "type": "string",
+          "format": "uint64",
+          "description": "*\nThe index of the last item in the set of returned payments. This can be used\nto seek further, pagination style."
         }
       }
     },
