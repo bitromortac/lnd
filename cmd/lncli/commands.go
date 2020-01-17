@@ -2914,10 +2914,39 @@ var listPaymentsCommand = cli.Command{
 	Name:     "listpayments",
 	Category: "Payments",
 	Usage:    "List all outgoing payments.",
+	Description: "This command enables the retrieval of payments stored in the " +
+		"database. Pagination is supported by the usage of " +
+		"index_offset in combination with the reversed flag. " +
+		"Pagination can be resumed by using the returned " +
+		"last_index_offset (for forwards order), or first_index_offset " +
+		"(for reversed order) as the offset_index.",
 	Flags: []cli.Flag{
 		cli.BoolFlag{
-			Name:  "include_incomplete",
-			Usage: "if set to true, payments still in flight (or failed) will be returned as well",
+			Name: "include_incomplete",
+			Usage: "if set to true, payments still in flight (or " +
+				"failed) will be returned as well",
+		},
+		cli.UintFlag{
+			Name: "index_offset",
+			Usage: "the index of a payment that will be used as " +
+				"either the start (in forwards mode) or end " +
+				"(in reverse mode) of a query to determine " +
+				"which payments should be returned in the " +
+				"response, where the index_offset is " +
+				"excluded. If index_offset is set to zero in " +
+				"reversed mode, the query will end with the " +
+				"last payment made.",
+		},
+		cli.UintFlag{
+			Name: "max_payments",
+			Usage: "the max number of payments to return, by " +
+				"default, all completed payments are returned",
+		},
+		cli.BoolFlag{
+			Name: "reversed",
+			Usage: "if set, the payments returned precede the " +
+				"given index_offset, allowing backwards " +
+				"pagination",
 		},
 	},
 	Action: actionDecorator(listPayments),
@@ -2929,6 +2958,9 @@ func listPayments(ctx *cli.Context) error {
 
 	req := &lnrpc.ListPaymentsRequest{
 		IncludeIncomplete: ctx.Bool("include_incomplete"),
+		IndexOffset:       uint64(ctx.Uint("index_offset")),
+		NumMaxPayments:    uint64(ctx.Uint("max_payments")),
+		Reversed:          ctx.Bool("reversed"),
 	}
 
 	payments, err := client.ListPayments(context.Background(), req)
