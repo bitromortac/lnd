@@ -4453,8 +4453,8 @@ func marshalDbEdge(edgeInfo *channeldb.ChannelEdgeInfo,
 		ChanPoint: edgeInfo.ChannelPoint.String(),
 		// TODO(roasbeef): update should be on edge info itself
 		LastUpdate: uint32(lastUpdate),
-		Node1Pub:   hex.EncodeToString(edgeInfo.NodeKey1Bytes[:]),
-		Node2Pub:   hex.EncodeToString(edgeInfo.NodeKey2Bytes[:]),
+		Node1Pub:   hex.EncodeToString(c1.Node.PubKeyBytes[:]),
+		Node2Pub:   hex.EncodeToString(c2.Node.PubKeyBytes[:]),
 		Capacity:   int64(edgeInfo.Capacity),
 	}
 
