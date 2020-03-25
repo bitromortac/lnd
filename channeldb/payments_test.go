@@ -375,9 +375,9 @@ func TestQueryPayments(t *testing.T) {
 
 			for i, seqNr := range tt.expectedSeqNrs {
 				q := querySlice.Payments[i]
-				if seqNr != q.sequenceNum {
+				if seqNr != q.SequenceNum {
 					t.Fatalf("sequence numbers do not match, "+
-						"got %v, want %v", q.sequenceNum, seqNr)
+						"got %v, want %v", q.SequenceNum, seqNr)
 				}
 			}
 		})

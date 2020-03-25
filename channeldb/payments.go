@@ -242,7 +242,7 @@ func (db *DB) FetchPayments() ([]*MPPayment, error) {
 
 	// Before returning, sort the payments by their sequence number.
 	sort.Slice(payments, func(i, j int) bool {
-		return payments[i].sequenceNum < payments[j].sequenceNum
+		return payments[i].SequenceNum < payments[j].SequenceNum
 	})
 
 	return payments, nil
@@ -294,7 +294,7 @@ func fetchPayment(bucket *bbolt.Bucket) (*MPPayment, error) {
 	}
 
 	return &MPPayment{
-		sequenceNum:   sequenceNum,
+		SequenceNum:   sequenceNum,
 		Info:          creationInfo,
 		HTLCs:         htlcs,
 		FailureReason: failureReason,
@@ -454,7 +454,7 @@ func (db *DB) QueryPayments(query PaymentsQuery) (PaymentsQuerySlice, error) {
 	// If the index limit is the default 0 value, we set our limit to our
 	// highest sequence number.
 	if indexLimit == 0 && query.Reversed {
-		indexLimit = allPayments[len(allPayments)-1].sequenceNum + 1
+		indexLimit = allPayments[len(allPayments)-1].SequenceNum + 1
 	}
 
 	for i := range allPayments {
@@ -474,7 +474,7 @@ func (db *DB) QueryPayments(query PaymentsQuery) (PaymentsQuerySlice, error) {
 		// have sequence numbers greater than or equal to the index
 		// offset. We skip payments with equal index because the
 		// offset is exclusive.
-		if query.Reversed && payment.sequenceNum >= indexLimit {
+		if query.Reversed && payment.SequenceNum >= indexLimit {
 			continue
 		}
 
@@ -482,7 +482,7 @@ func (db *DB) QueryPayments(query PaymentsQuery) (PaymentsQuerySlice, error) {
 		// have sequence numbers less than or equal to the index offset.
 		// We skip payments with equal indexes because the index offset
 		// is exclusive.
-		if !query.Reversed && payment.sequenceNum <= indexLimit {
+		if !query.Reversed && payment.SequenceNum <= indexLimit {
 			continue
 		}
 
@@ -508,9 +508,9 @@ func (db *DB) QueryPayments(query PaymentsQuery) (PaymentsQuerySlice, error) {
 	// Set the first and last index of the returned payments so that the
 	// caller can resume from this point later on.
 	if len(resp.Payments) > 0 {
-		resp.FirstIndexOffset = resp.Payments[0].sequenceNum
+		resp.FirstIndexOffset = resp.Payments[0].SequenceNum
 		resp.LastIndexOffset =
-			resp.Payments[len(resp.Payments)-1].sequenceNum
+			resp.Payments[len(resp.Payments)-1].SequenceNum
 	}
 
 	return resp, err
