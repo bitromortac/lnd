@@ -241,7 +241,7 @@ func (db *DB) FetchPayments() ([]*MPPayment, error) {
 
 	// Before returning, sort the payments by their sequence number.
 	sort.Slice(payments, func(i, j int) bool {
-		return payments[i].sequenceNum < payments[j].sequenceNum
+		return payments[i].SequenceNum < payments[j].SequenceNum
 	})
 
 	return payments, nil
@@ -293,7 +293,7 @@ func fetchPayment(bucket kvdb.ReadBucket) (*MPPayment, error) {
 	}
 
 	return &MPPayment{
-		sequenceNum:   sequenceNum,
+		SequenceNum:   sequenceNum,
 		Info:          creationInfo,
 		HTLCs:         htlcs,
 		FailureReason: failureReason,
