@@ -29,4 +29,7 @@ type Config struct {
 	// vector should be provided.
 	UpdateNodeAnnouncement func(features *lnwire.RawFeatureVector,
 		mods ...netann.NodeAnnModifier) error
+
+	// SendBatch sends a list of messages to peers.
+	SendBatch func([]lnwire.Message)
 }

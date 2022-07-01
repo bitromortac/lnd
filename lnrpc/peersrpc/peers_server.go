@@ -4,6 +4,7 @@
 package peersrpc
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"net"
@@ -31,6 +32,10 @@ var (
 	// macPermissions maps RPC calls to the permissions they require.
 	macPermissions = map[string][]bakery.Op{
 		"/peersrpc.Peers/UpdateNodeAnnouncement": {{
+			Entity: "peers",
+			Action: "write",
+		}},
+		"/peersrpc.Peers/SendBatch": {{
 			Entity: "peers",
 			Action: "write",
 		}},
@@ -399,4 +404,109 @@ func (s *Server) UpdateNodeAnnouncement(_ context.Context,
 	}
 
 	return resp, nil
+}
+
+// SendBatch allows the caller to update the node parameters
+// and broadcasts a new version of the node announcement to its peers.
+func (s *Server) SendBatch(_ context.Context, req *SendBatchRequest) (
+	*SendBatchResponse, error) {
+
+	var batch []lnwire.Message
+
+	for _, chanAnn := range req.ChannelAnnouncements {
+		ann := lnwire.ChannelAnnouncement{}
+
+		copy(ann.NodeID1[:], chanAnn.NodeId1)
+		copy(ann.NodeID2[:], chanAnn.NodeId2)
+		copy(ann.BitcoinKey1[:], chanAnn.BitcoinKey1)
+		copy(ann.BitcoinKey2[:], chanAnn.BitcoinKey2)
+
+		// Convert node signatures.
+		nodeSig1, err := lnwire.NewSigFromECDSARawSignature(chanAnn.NodeSig1)
+		if err != nil {
+			return nil, err
+		}
+		ann.NodeSig1 = nodeSig1
+		nodeSig2, err := lnwire.NewSigFromECDSARawSignature(chanAnn.NodeSig2)
+		if err != nil {
+			return nil, err
+		}
+		ann.NodeSig2 = nodeSig2
+
+		// Convert bitcoin signatures.
+		bitcoinSig1, err := lnwire.NewSigFromECDSARawSignature(chanAnn.BitcoinSig1)
+		if err != nil {
+			return nil, err
+		}
+		ann.BitcoinSig1 = bitcoinSig1
+		bitcoinSig2, err := lnwire.NewSigFromECDSARawSignature(chanAnn.BitcoinSig2)
+		if err != nil {
+			return nil, err
+		}
+		ann.BitcoinSig2 = bitcoinSig2
+
+		ann.ShortChannelID = lnwire.NewShortChanIDFromInt(chanAnn.ChanId)
+		copy(ann.ChainHash[:], chanAnn.ChainHash)
+		ann.Features = lnwire.NewRawFeatureVector()
+
+		batch = append(batch, &ann)
+	}
+
+	for _, chanUpd := range req.ChannelUpdates {
+		update := lnwire.ChannelUpdate{
+			ShortChannelID:  lnwire.NewShortChanIDFromInt(chanUpd.ChanId),
+			BaseFee:         chanUpd.BaseFee,
+			FeeRate:         chanUpd.FeeRate,
+			TimeLockDelta:   uint16(chanUpd.TimeLockDelta),
+			HtlcMinimumMsat: lnwire.MilliSatoshi(chanUpd.HtlcMinimumMsat),
+			HtlcMaximumMsat: lnwire.MilliSatoshi(chanUpd.HtlcMaximumMsat),
+			ChannelFlags:    lnwire.ChanUpdateChanFlags(chanUpd.ChannelFlags),
+			MessageFlags:    lnwire.ChanUpdateMsgFlags(chanUpd.MessageFlags),
+			Timestamp:       uint32(chanUpd.Timestamp),
+		}
+		copy(update.ChainHash[:], chanUpd.ChainHash)
+
+		// Add the signature.
+		sig, err := lnwire.NewSigFromECDSARawSignature(chanUpd.Signature)
+		if err != nil {
+			return nil, err
+		}
+		update.Signature = sig
+
+		batch = append(batch, &update)
+	}
+
+	for _, nodeAnn := range req.NodeAnnouncements {
+
+		var alias lnwire.NodeAlias
+		copy(alias[:], nodeAnn.Alias)
+
+		// Set the timestamp.
+		ann := lnwire.NodeAnnouncement{
+			Timestamp: nodeAnn.Timestamp,
+			Alias:     alias,
+		}
+
+		// Decode features.
+		features := lnwire.NewRawFeatureVector()
+		reader := bytes.NewReader(nodeAnn.Features)
+		features.Decode(reader)
+		ann.Features = features
+
+		// Copy the node id.
+		copy(ann.NodeID[:], nodeAnn.NodeId)
+
+		// Add the signature.
+		sig, err := lnwire.NewSigFromECDSARawSignature(nodeAnn.Signature)
+		if err != nil {
+			return nil, err
+		}
+		ann.Signature = sig
+
+		batch = append(batch, &ann)
+	}
+
+	s.cfg.SendBatch(batch)
+
+	return &SendBatchResponse{}, nil
 }

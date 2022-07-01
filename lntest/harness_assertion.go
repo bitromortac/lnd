@@ -661,11 +661,11 @@ func (h *HarnessTest) AssertStreamChannelCoopClosed(hn *node.HarnessNode,
 	// We should see zero waiting close channels now.
 	h.AssertNumWaitingClose(hn, 0)
 
-	// Finally, check that the node's topology graph has seen this channel
-	// closed if it's a public channel.
-	if !resp.Channel.Private {
-		h.AssertTopologyChannelClosed(hn, cp)
-	}
+	// // Finally, check that the node's topology graph has seen this channel
+	// // closed if it's a public channel.
+	// if !resp.Channel.Private {
+	// 	h.AssertTopologyChannelClosed(hn, cp)
+	// }
 
 	return closingTxid
 }

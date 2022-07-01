@@ -122,7 +122,8 @@ func (s *subRPCServerConfigs) PopulateDependencies(cfg *Config,
 		modifiers ...netann.NodeAnnModifier) error,
 	parseAddr func(addr string) (net.Addr, error),
 	rpcLogger btclog.Logger,
-	getAlias func(lnwire.ChannelID) (lnwire.ShortChannelID, error)) error {
+	getAlias func(lnwire.ChannelID) (lnwire.ShortChannelID, error),
+	sendBatch func([]lnwire.Message)) error {
 
 	// First, we'll use reflect to obtain a version of the config struct
 	// that allows us to programmatically inspect its fields.
@@ -325,6 +326,10 @@ func (s *subRPCServerConfigs) PopulateDependencies(cfg *Config,
 
 			subCfgValue.FieldByName("UpdateNodeAnnouncement").Set(
 				reflect.ValueOf(updateNodeAnnouncement),
+			)
+
+			subCfgValue.FieldByName("SendBatch").Set(
+				reflect.ValueOf(sendBatch),
 			)
 
 		default:
