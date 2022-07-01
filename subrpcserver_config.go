@@ -127,7 +127,8 @@ func (s *subRPCServerConfigs) PopulateDependencies(cfg *Config,
 	parseAddr func(addr string) (net.Addr, error),
 	rpcLogger btclog.Logger, aliasMgr *aliasmgr.Manager,
 	auxDataParser fn.Option[AuxDataParser],
-	invoiceHtlcModifier *invoices.HtlcModificationInterceptor) error {
+	invoiceHtlcModifier *invoices.HtlcModificationInterceptor,
+	sendBatch func([]lnwire.Message)) error {
 
 	// First, we'll use reflect to obtain a version of the config struct
 	// that allows us to programmatically inspect its fields.
@@ -364,6 +365,10 @@ func (s *subRPCServerConfigs) PopulateDependencies(cfg *Config,
 
 			subCfgValue.FieldByName("UpdateNodeAnnouncement").Set(
 				reflect.ValueOf(updateNodeAnnouncement),
+			)
+
+			subCfgValue.FieldByName("SendBatch").Set(
+				reflect.ValueOf(sendBatch),
 			)
 
 		default:
