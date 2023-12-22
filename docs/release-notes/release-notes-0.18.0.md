@@ -53,6 +53,12 @@
   walletrpc endpoint `RemoveTransaction` is introduced which let one easily
   remove unconfirmed transaction manually.
 
+* [Bimodal pathfinding probability 
+  improvements](https://github.com/lightningnetwork/lnd/pull/8329). A fallback
+  probability is used if the bimodal model is not applicable. Fixes are added
+  such that the probability is evaluated quicker and to be more accurate in
+  outdated scenarios.
+
 # New Features
 ## Functional Enhancements
 
@@ -203,6 +209,7 @@
 
 * Amin Bashiri
 * Andras Banki-Horvath
+* bitromortac
 * Carla Kirk-Cohen
 * Elle Mouton
 * ErikEk
