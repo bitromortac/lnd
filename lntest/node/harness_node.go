@@ -333,9 +333,11 @@ func (hn *HarnessNode) ConnectRPCWithMacaroon(mac *macaroon.Macaroon) (
 		return nil, fmt.Errorf("error reading TLS cert: %w", err)
 	}
 
+	maxMsgRecvSize := grpc.MaxCallRecvMsgSize(1 * 1024 * 1024 * 100)
 	opts := []grpc.DialOption{
 		grpc.WithBlock(),
 		grpc.WithTransportCredentials(tlsCreds),
+		grpc.WithDefaultCallOptions(maxMsgRecvSize),
 	}
 
 	ctx, cancel := context.WithTimeout(hn.runCtx, wait.DefaultTimeout)
