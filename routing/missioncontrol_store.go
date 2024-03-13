@@ -96,6 +96,8 @@ func newMissionControlStore(db kvdb.Backend, maxRecords int,
 		return nil, err
 	}
 
+	log.Infof("Loaded %d mission control entries", len(keysMap))
+
 	return &missionControlStore{
 		done:          make(chan struct{}),
 		db:            db,
@@ -304,12 +306,25 @@ func (b *missionControlStore) run() {
 func (b *missionControlStore) storeResults() error {
 	b.queueMx.Lock()
 	l := b.queue
-	b.queue = list.New()
+
+	// Only recreate queue if it's not empty because if it is empty we will
+	// return early from the func without running any updates.
+	isEmpty := l.Len() == 0
+	if !isEmpty {
+		b.queue = list.New()
+	}
 	b.queueMx.Unlock()
 
+	// Return early when no new items will be updated.
+	if isEmpty {
+		return nil
+	}
+
 	var (
-		keys    *list.List
-		keysMap map[string]struct{}
+		keys       *list.List
+		keysMap    map[string]struct{}
+		storeCount int
+		pruneCount int
 	)
 
 	err := kvdb.Update(b.db, func(tx kvdb.RwTx) error {
@@ -337,6 +352,7 @@ func (b *missionControlStore) storeResults() error {
 
 			keys.PushBack(string(k))
 			keysMap[string(k)] = struct{}{}
+			storeCount++
 		}
 
 		// Prune oldest entries.
@@ -354,6 +370,7 @@ func (b *missionControlStore) storeResults() error {
 
 			keys.Remove(front)
 			delete(keysMap, key)
+			pruneCount++
 		}
 
 		return nil
@@ -365,11 +382,16 @@ func (b *missionControlStore) storeResults() error {
 		for k := range b.keysMap {
 			keysMap[k] = struct{}{}
 		}
+
+		storeCount, pruneCount = 0, 0
 	})
 
 	if err != nil {
 		return err
 	}
+
+	log.Debugf("Stored mission control results: %d added, %d deleted",
+		storeCount, pruneCount)
 
 	b.keys = keys
 	b.keysMap = keysMap
