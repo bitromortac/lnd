@@ -46,9 +46,9 @@ type missionControlStore struct {
 	// queue stores all pending payment results not yet added to the store.
 	queue *list.List
 
-	// queueChan is signalled when the first item is put into queue after
-	// a storeResult().
-	queueChan chan struct{}
+	// queueCond is a condition variable that is signaled when the queue is
+	// non-empty.
+	queueCond sync.Cond
 
 	// keys holds the stored MC store item keys in the order of storage.
 	// We use this list when adding/deleting items from the database to
@@ -106,7 +106,7 @@ func newMissionControlStore(db kvdb.Backend, maxRecords int,
 		done:          make(chan struct{}),
 		db:            db,
 		queue:         list.New(),
-		queueChan:     make(chan struct{}, 1),
+		queueCond:     sync.Cond{L: &sync.Mutex{}},
 		keys:          keys,
 		keysMap:       keysMap,
 		maxRecords:    maxRecords,
@@ -274,21 +274,16 @@ func deserializeResult(k, v []byte) (*paymentResult, error) {
 func (b *missionControlStore) AddResult(rp *paymentResult) {
 	b.queueMx.Lock()
 	b.queue.PushBack(rp)
-	signalRun := b.queue.Len() == 1
 	b.queueMx.Unlock()
 
-	// Signal run() that the queue is non-empty.
-	if signalRun {
-		select {
-		case <-b.done:
-		case b.queueChan <- struct{}{}:
-		}
-	}
+	// Signal that the queue is non-empty.
+	b.queueCond.Signal()
 }
 
 // stop stops the store ticker goroutine.
 func (b *missionControlStore) stop() {
 	close(b.done)
+	b.queueCond.Signal()
 	b.wg.Wait()
 }
 
@@ -297,24 +292,22 @@ func (b *missionControlStore) run() {
 	b.wg.Add(1)
 
 	go func() {
-		// TimerChan is non-null when there are items to be stored.
-		var timerChan <-chan time.Time
 		defer b.wg.Done()
-
 		for {
+			b.queueCond.L.Lock()
+			if b.queue.Len() == 0 {
+				b.queueCond.Wait()
+			}
+			b.queueCond.L.Unlock()
+
+			if err := b.storeResults(); err != nil {
+				log.Errorf("Failed to update mission control store: %v", err)
+			}
+
 			select {
-			case <-b.queueChan:
-				timerChan = time.After(b.flushInterval)
-
-			case <-timerChan:
-				timerChan = nil
-				if err := b.storeResults(); err != nil {
-					log.Errorf("Failed to update mission "+
-						"control store: %v", err)
-				}
-
 			case <-b.done:
 				return
+			case <-time.After(b.flushInterval):
 			}
 		}
 	}()

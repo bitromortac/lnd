@@ -240,7 +240,6 @@ func TestMissionControlStoreFlushing(t *testing.T) {
 	// Store a result and check immediately. There still shouldn't be
 	// any results stored (flush interval has not elapsed).
 	store.AddResult(nextResult())
-	assertResults(0)
 
 	// Assert that eventually the result is stored after being flushed.
 	assertResults(1)
@@ -267,21 +266,6 @@ func TestMissionControlStoreFlushing(t *testing.T) {
 		store.AddResult(nextResult())
 	}
 	assertResults(testMaxRecords)
-}
-
-// drainMCStoreQueueChan drains the store's queueChan when the test does not
-// issue a run().
-func drainMCStoreQueueChan(t testing.TB, store *missionControlStore) {
-	done := make(chan struct{})
-	t.Cleanup(func() { close(done) })
-	go func() {
-		for {
-			select {
-			case <-done:
-			case <-store.queueChan:
-			}
-		}
-	}()
 }
 
 // BenchmarkMissionControlStoreFlushingNoWork benchmarks the periodic storage
@@ -375,7 +359,6 @@ func BenchmarkMissionControlStoreFlushing(b *testing.B) {
 			// Do the first flush.
 			err = store.storeResults()
 			require.NoError(b, err)
-			<-store.queueChan
 
 			// Create the additional results.
 			results := make([]*paymentResult, tc.nbResults)
@@ -399,9 +382,7 @@ func BenchmarkMissionControlStoreFlushing(b *testing.B) {
 					results[j].id = lastID
 					store.AddResult(results[j])
 				}
-				if len(results) > 0 {
-					<-store.queueChan
-				}
+
 				err := store.storeResults()
 				require.NoError(b, err)
 			}
