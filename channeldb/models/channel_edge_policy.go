@@ -60,6 +60,9 @@ type ChannelEdgePolicy struct {
 	// HTLCs for each millionth of a satoshi forwarded.
 	FeeProportionalMillionths lnwire.MilliSatoshi
 
+	// InboundFee that will be charged for incoming HTLCs.
+	InboundFee
+
 	// ToNode is the public key of the node that this directed edge leads
 	// to. Using this pub key, the channel graph can further be traversed.
 	ToNode [33]byte

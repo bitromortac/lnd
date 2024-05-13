@@ -9,6 +9,7 @@ import (
 	"github.com/lightningnetwork/lnd/channeldb"
 	"github.com/lightningnetwork/lnd/channeldb/models"
 	"github.com/lightningnetwork/lnd/discovery"
+	"github.com/lightningnetwork/lnd/fn"
 	"github.com/lightningnetwork/lnd/kvdb"
 	"github.com/lightningnetwork/lnd/lnrpc"
 	"github.com/lightningnetwork/lnd/lnwire"
@@ -112,7 +113,7 @@ func (r *Manager) UpdatePolicy(newSchema routing.ChannelPolicy,
 			TimeLockDelta: uint32(edge.TimeLockDelta),
 			MinHTLCOut:    edge.MinHTLC,
 			MaxHTLC:       edge.MaxHTLC,
-			InboundFee:    newSchema.InboundFee,
+			InboundFee:    edge.InboundFee,
 		}
 
 		return nil
@@ -182,9 +183,28 @@ func (r *Manager) updateEdge(tx kvdb.RTx, chanPoint wire.OutPoint,
 		newSchema.FeeRate,
 	)
 
-	inboundFee := newSchema.InboundFee.ToWire()
-	if err := edge.ExtraOpaqueData.PackRecords(&inboundFee); err != nil {
-		return err
+	// If inbound fees are set, we update the edge with them. Otherwise,
+	// we extract the currently set inbound fee from the ExtraOpaqueData
+	// and use it.
+	if !newSchema.InboundFee.IsNone() {
+		err := fn.MapOptionZ(newSchema.InboundFee,
+			func(f models.InboundFee) error {
+				edge.InboundFee = f
+				inboundWireFee := f.ToWire()
+				return edge.ExtraOpaqueData.PackRecords(
+					&inboundWireFee,
+				)
+			})
+		if err != nil {
+			return err
+		}
+	} else {
+		var inboundWireFee lnwire.Fee
+		_, err := edge.ExtraOpaqueData.ExtractRecords(&inboundWireFee)
+		if err != nil {
+			return err
+		}
+		edge.InboundFee = models.NewInboundFeeFromWire(inboundWireFee)
 	}
 
 	edge.TimeLockDelta = uint16(newSchema.TimeLockDelta)
