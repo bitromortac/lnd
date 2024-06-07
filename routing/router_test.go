@@ -3069,6 +3069,23 @@ func TestBuildRoute(t *testing.T) {
 			MaxHTLC:  lnwire.NewMSatFromSatoshis(chanCapSat),
 			Features: paymentAddrFeatures,
 		}, 4),
+
+		// Create a route with inbound fees.
+		symmetricTestChannel("a", "d", chanCapSat, &testChannelPolicy{
+			Expiry:             144,
+			FeeRate:            20000,
+			MinHTLC:            lnwire.NewMSatFromSatoshis(5),
+			MaxHTLC:            lnwire.NewMSatFromSatoshis(chanCapSat),
+			InboundFeeBaseMsat: -1000,
+			InboundFeeRate:     -1000,
+		}, 3),
+		symmetricTestChannel("d", "f", chanCapSat, &testChannelPolicy{
+			Expiry:   144,
+			FeeRate:  60000,
+			MinHTLC:  lnwire.NewMSatFromSatoshis(20),
+			MaxHTLC:  lnwire.NewMSatFromSatoshis(120),
+			Features: paymentAddrFeatures,
+		}, 8),
 	}
 
 	testGraph, err := createTestGraphFromChannels(t, true, testChannels, "a")
@@ -3152,66 +3169,30 @@ func TestBuildRoute(t *testing.T) {
 	_, err = ctx.router.BuildRoute(
 		nil, hops, nil, 40, nil,
 	)
-	errNoChannel, ok := err.(ErrNoChannel)
-	if !ok {
-		t.Fatalf("expected incompatible policies error, but got %v",
-			err)
-	}
+
+	errNoChannel := ErrNoChannel{}
+	require.ErrorAs(t, err, &errNoChannel)
+
 	if errNoChannel.position != 0 {
 		t.Fatalf("unexpected no channel error position")
 	}
-	if errNoChannel.fromNode != ctx.aliases["a"] {
-		t.Fatalf("unexpected no channel error node")
+
+	// Check the case of inbound fees.
+	hops = []route.Vertex{
+		ctx.aliases["d"], ctx.aliases["f"],
 	}
-}
+	amt = lnwire.NewMSatFromSatoshis(100)
 
-// TestGetPathEdges tests that the getPathEdges function returns the expected
-// edges and amount when given a set of unifiers and does not panic.
-func TestGetPathEdges(t *testing.T) {
-	t.Parallel()
+	rt, err = ctx.router.BuildRoute(
+		&amt, hops, nil, 40, &payAddr,
+	)
+	require.NoError(t, err)
 
-	const startingBlockHeight = 101
-	ctx := createTestCtxFromFile(t, startingBlockHeight, basicGraphFilePath)
+	checkHops(rt, []uint64{3, 8}, payAddr)
 
-	testCases := []struct {
-		sourceNode     route.Vertex
-		amt            lnwire.MilliSatoshi
-		unifiers       []*edgeUnifier
-		bandwidthHints *bandwidthManager
-		hops           []route.Vertex
-
-		expectedEdges []*models.CachedEdgePolicy
-		expectedAmt   lnwire.MilliSatoshi
-		expectedErr   string
-	}{{
-		sourceNode: ctx.aliases["roasbeef"],
-		unifiers: []*edgeUnifier{
-			{
-				edges:     []*unifiedEdge{},
-				localChan: true,
-			},
-		},
-		expectedErr: fmt.Sprintf("no matching outgoing channel "+
-			"available for node 0 (%v)", ctx.aliases["roasbeef"]),
-	}}
-
-	for _, tc := range testCases {
-		pathEdges, amt, err := getPathEdges(
-			tc.sourceNode, tc.amt, tc.unifiers, tc.bandwidthHints,
-			tc.hops,
-		)
-
-		if tc.expectedErr != "" {
-			require.Error(t, err)
-			require.ErrorContains(t, err, tc.expectedErr)
-
-			continue
-		}
-
-		require.NoError(t, err)
-		require.Equal(t, pathEdges, tc.expectedEdges)
-		require.Equal(t, amt, tc.expectedAmt)
-	}
+	// We expect the same outcome as for b->c but with reduced fees because
+	// of the inbound discount.
+	require.EqualValues(t, rt.TotalAmount, 104894)
 }
 
 // edgeCreationModifier is an enum-like type used to modify steps that are

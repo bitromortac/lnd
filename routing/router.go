@@ -86,6 +86,10 @@ const (
 	// MaxCLTVDelta is the maximum CLTV value accepted by LND for all
 	// timelock deltas.
 	MaxCLTVDelta = math.MaxUint16
+
+	// maxSearchSteps is the maximum number of steps we allow to determine a
+	// minimal amount route.
+	maxSearchSteps = 1_000_000
 )
 
 var (
@@ -3063,35 +3067,18 @@ func (e ErrNoChannel) Error() string {
 // BuildRoute returns a fully specified route based on a list of pubkeys. If
 // amount is nil, the minimum routable amount is used. To force a specific
 // outgoing channel, use the outgoingChan parameter.
-func (r *ChannelRouter) BuildRoute(amt *lnwire.MilliSatoshi,
+func (r *ChannelRouter) BuildRoute(deliverAmt *lnwire.MilliSatoshi,
 	hops []route.Vertex, outgoingChan *uint64,
 	finalCltvDelta int32, payAddr *[32]byte) (*route.Route, error) {
 
 	log.Tracef("BuildRoute called: hopsCount=%v, amt=%v",
-		len(hops), amt)
+		len(hops), deliverAmt)
 
 	var outgoingChans map[uint64]struct{}
 	if outgoingChan != nil {
 		outgoingChans = map[uint64]struct{}{
 			*outgoingChan: {},
 		}
-	}
-
-	// If no amount is specified, we need to build a route for the minimum
-	// amount that this route can carry.
-	useMinAmt := amt == nil
-
-	var runningAmt lnwire.MilliSatoshi
-	if useMinAmt {
-		// For minimum amount routes, aim to deliver at least 1 msat to
-		// the destination. There are nodes in the wild that have a
-		// min_htlc channel policy of zero, which could lead to a zero
-		// amount payment being made.
-		runningAmt = 1
-	} else {
-		// If an amount is specified, we need to build a route that
-		// delivers exactly this amount to the final destination.
-		runningAmt = *amt
 	}
 
 	// We'll attempt to obtain a set of bandwidth hints that helps us select
@@ -3103,32 +3090,52 @@ func (r *ChannelRouter) BuildRoute(amt *lnwire.MilliSatoshi,
 		return nil, err
 	}
 
-	// Fetch the current block height outside the routing transaction, to
-	// prevent the rpc call blocking the database.
+	// We check that each node in the route has a connection to others.
+	edgeUnifiers, err := getEdgeUnifiers(r.selfNode.PubKeyBytes, hops,
+		r.cachedGraph, outgoingChans)
+	if err != nil {
+		return nil, err
+	}
+
+	// Determine the amount to send to the destination and the policies to
+	// use.
+	var (
+		pathEdges   []*unifiedEdge
+		receiverAmt lnwire.MilliSatoshi
+	)
+
+	// Should no amount be specified, we'll attempt to find the minimum
+	// amount that can be received by the destination supported by the path.
+	// Note that this introduces complexity, because we first need to
+	// determine the minimal amount that a receiver can receive. This cannot
+	// be done easily in the direction from the sender to the receiver,
+	// because the fee calculation is not invertible (the inbound fees and
+	// policies depend on all of the rest of the route).
+	if deliverAmt == nil {
+		pathEdges, receiverAmt, err = minReceiveSearch(
+			bandwidthHints, edgeUnifiers,
+		)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		pathEdges, _, err = backwardPass(
+			bandwidthHints, edgeUnifiers, *deliverAmt, false,
+		)
+		if err != nil {
+			return nil, err
+		}
+
+		receiverAmt = *deliverAmt
+	}
+
 	_, height, err := r.cfg.Chain.GetBestBlock()
 	if err != nil {
 		return nil, err
 	}
 
-	sourceNode := r.selfNode.PubKeyBytes
-	unifiers, senderAmt, err := getRouteUnifiers(
-		sourceNode, hops, useMinAmt, runningAmt, outgoingChans,
-		r.cachedGraph, bandwidthHints,
-	)
-	if err != nil {
-		return nil, err
-	}
-
-	pathEdges, receiverAmt, err := getPathEdges(
-		sourceNode, senderAmt, unifiers, bandwidthHints, hops,
-	)
-	if err != nil {
-		return nil, err
-	}
-
-	// Build and return the final route.
 	return newRoute(
-		sourceNode, pathEdges, uint32(height),
+		r.selfNode.PubKeyBytes, pathEdges, uint32(height),
 		finalHopParams{
 			amt:         receiverAmt,
 			totalAmt:    receiverAmt,
@@ -3139,121 +3146,222 @@ func (r *ChannelRouter) BuildRoute(amt *lnwire.MilliSatoshi,
 	)
 }
 
-// getRouteUnifiers returns a list of edge unifiers for the given route.
-func getRouteUnifiers(source route.Vertex, hops []route.Vertex,
-	useMinAmt bool, runningAmt lnwire.MilliSatoshi,
-	outgoingChans map[uint64]struct{}, graph routingGraph,
-	bandwidthHints *bandwidthManager) ([]*edgeUnifier, lnwire.MilliSatoshi,
+// getEdgeUnifiers returns edge unifiers for each hop in the route. We fail if
+// an edge unifier was absent for a node pair.
+func getEdgeUnifiers(source route.Vertex, hops []route.Vertex,
+	graph routingGraph, outgoingChans map[uint64]struct{}) ([]*edgeUnifier,
 	error) {
 
-	// Allocate a list that will contain the edge unifiers for this route.
-	unifiers := make([]*edgeUnifier, len(hops))
+	var edgeUnifiers = make([]*edgeUnifier, len(hops))
 
-	// Traverse hops backwards to accumulate fees in the running amounts.
+	// We do a backward pass, since all the methods in route building do
+	// this as well.
 	for i := len(hops) - 1; i >= 0; i-- {
-		toNode := hops[i]
-
 		var fromNode route.Vertex
 		if i == 0 {
 			fromNode = source
 		} else {
 			fromNode = hops[i-1]
 		}
+		toNode := hops[i]
 
-		localChan := i == 0
+		// All hops except for the last hop use inbound fees.
+		var useInbound bool
+		if i != len(hops)-1 {
+			useInbound = true
+		}
 
-		// Build unified policies for this hop based on the channels
-		// known in the graph. Don't use inbound fees.
-		//
-		// TODO: Add inbound fees support for BuildRoute.
 		u := newNodeEdgeUnifier(
-			source, toNode, false, outgoingChans,
+			source, toNode, useInbound, outgoingChans,
 		)
 
 		err := u.addGraphPolicies(graph)
 		if err != nil {
-			return nil, 0, err
-		}
-
-		// Exit if there are no channels.
-		edgeUnifier, ok := u.edgeUnifiers[fromNode]
-		if !ok {
-			log.Errorf("Cannot find policy for node %v", fromNode)
-			return nil, 0, ErrNoChannel{
+			return nil, ErrNoChannel{
 				fromNode: fromNode,
 				position: i,
 			}
 		}
 
-		// If using min amt, increase amt if needed.
-		if useMinAmt {
-			min := edgeUnifier.minAmt()
-			if min > runningAmt {
-				runningAmt = min
-			}
+		// Finally, check that the edge exists.
+		var ok bool
+		if edgeUnifiers[i], ok = u.edgeUnifiers[fromNode]; !ok {
+			return nil, fmt.Errorf("unable to find edge unifier "+
+				"for node %v: %v", fromNode, err)
 		}
-
-		// Get an edge for the specific amount that we want to forward.
-		edge := edgeUnifier.getEdge(runningAmt, bandwidthHints, 0)
-		if edge == nil {
-			log.Errorf("Cannot find policy with amt=%v for node %v",
-				runningAmt, fromNode)
-
-			return nil, 0, ErrNoChannel{
-				fromNode: fromNode,
-				position: i,
-			}
-		}
-
-		// Add fee for this hop.
-		if !localChan {
-			runningAmt += edge.policy.ComputeFee(runningAmt)
-		}
-
-		log.Tracef("Select channel %v at position %v",
-			edge.policy.ChannelID, i)
-
-		unifiers[i] = edgeUnifier
 	}
 
-	return unifiers, runningAmt, nil
+	return edgeUnifiers, nil
 }
 
-// getPathEdges returns the edges that make up the path and the total amount,
-// including fees, to send the payment.
-func getPathEdges(source route.Vertex, receiverAmt lnwire.MilliSatoshi,
-	unifiers []*edgeUnifier, bandwidthHints *bandwidthManager,
-	hops []route.Vertex) ([]*unifiedEdge,
-	lnwire.MilliSatoshi, error) {
+// minReceiveSearch is a helper function that searches for the smallest amount
+// possible to send to the destination.
+func minReceiveSearch(bandwidthHints *bandwidthManager,
+	unifiedEdges []*edgeUnifier) ([]*unifiedEdge, lnwire.MilliSatoshi,
+	error) {
 
-	// Now that we arrived at the start of the route and found out the route
-	// total amount, we make a forward pass. Because the amount may have
-	// been increased in the backward pass, fees need to be recalculated and
-	// amount ranges re-checked.
-	var pathEdges []*unifiedEdge
-	for i, unifier := range unifiers {
-		edge := unifier.getEdge(receiverAmt, bandwidthHints, 0)
-		if edge == nil {
-			fromNode := source
-			if i > 0 {
-				fromNode = hops[i-1]
-			}
+	// The lower bound is the minimum amount that can be forwarded by the
+	// first channel.
+	lowerBound := unifiedEdges[len(unifiedEdges)-1].minAmt()
 
-			return nil, 0, ErrNoChannel{
-				fromNode: fromNode,
-				position: i,
-			}
-		}
-
-		if i > 0 {
-			// Decrease the amount to send while going forward.
-			receiverAmt -= edge.policy.ComputeFeeFromIncoming(
-				receiverAmt,
-			)
-		}
-
-		pathEdges = append(pathEdges, edge)
+	// We do a backward pass to determine the max amount to *send*. Note
+	// that this determines the max amount to receive, because fees can only
+	// be positive.
+	_, upperBound, err := backwardPass(
+		bandwidthHints, unifiedEdges, lowerBound, true,
+	)
+	if err != nil {
+		return nil, 0, fmt.Errorf("could not determine upper bound: %w",
+			err)
 	}
 
-	return pathEdges, receiverAmt, nil
+	if lowerBound > upperBound {
+		return nil, 0, fmt.Errorf("lower and upper bounds are not "+
+			"compatible (lower %v > upper %v)", lowerBound,
+			upperBound)
+	}
+
+	// We search for a minimal amount that can be forwarded by all channels.
+	// This can be a costly operation, so we limit the number of steps.
+	// TODO: introduce coarser search steps by looking at overlaps of
+	// min/max htlc sizes.
+	count := 0
+	for a := lowerBound; a < upperBound; a++ {
+		count += 1
+
+		if count > maxSearchSteps {
+			return nil, 0, fmt.Errorf("search for minimal amount "+
+				"exceeded maximum number of steps after "+
+				"amount %v", a)
+		}
+
+		// We do a backward pass and check if we can send accross the
+		// route.
+		unifiedEdges, _, err := backwardPass(
+			bandwidthHints, unifiedEdges, a, false,
+		)
+		if err != nil {
+			continue
+		}
+
+		// We have found our lowest amount to receive.
+		return unifiedEdges, a, nil
+	}
+
+	return nil, 0, fmt.Errorf("unable to find a minimal amount")
+}
+
+// backwardPass iterates through the passed hops to determine the policies used
+// to forward the payment. We error if the amount is not possible.
+func backwardPass(bandwidthHints *bandwidthManager, edgeUnifiers []*edgeUnifier,
+	deliverAmt lnwire.MilliSatoshi, modeMin bool) ([]*unifiedEdge,
+	lnwire.MilliSatoshi, error) {
+
+	// Allocate a list that will contain the unified edges for this route.
+	unifiedEdges := make([]*unifiedEdge, len(edgeUnifiers))
+
+	var nextIncoming lnwire.MilliSatoshi
+
+	for i := len(edgeUnifiers) - 1; i >= 0; i-- {
+		var (
+			unifiedEdge  *unifiedEdge
+			amtToForward lnwire.MilliSatoshi
+			fee          int64
+		)
+
+		edgeUnifier := edgeUnifiers[i]
+
+		// The code path for the last hop.
+		if i == len(edgeUnifiers)-1 {
+			// If this is the last hop, then the hop payload will
+			// contain the exact amount.
+			amtToForward = deliverAmt
+
+			// Bump up the amount to send if we deal with a min
+			// amount search.
+			if modeMin {
+				minSize := edgeUnifier.minAmt()
+				if minSize > amtToForward {
+					amtToForward = minSize
+				}
+			}
+
+			// We get an edge that is able to forward this amount.
+			// We don't have a next hop, so an outbound fee does not
+			// apply.
+			unifiedEdge = edgeUnifier.getEdge(
+				amtToForward, bandwidthHints, 0,
+			)
+			if unifiedEdge == nil {
+				return nil, 0, ErrNoChannel{
+					position: i,
+				}
+			}
+
+			// The last hop doesn't earn any fees.
+			fee = 0
+
+		} else {
+			// The amount that the current hop needs to forward is
+			// equal to the incoming amount of the follwing hop that
+			// we already dealt with.
+			amtToForward = nextIncoming
+
+			// Bump up the amount to send if we deal with a min
+			// amount search.
+			if modeMin {
+				minSize := edgeUnifier.minAmt()
+				if minSize > amtToForward {
+					amtToForward = minSize
+				}
+			}
+
+			// The fee that needs to be paid to the current hop is
+			// based on the amount that this hop needs to forward
+			// and its policy for its outgoing channel. This policy
+			// is stored as part of the incoming channel of
+			// the following hop.
+			outboundFee := unifiedEdges[i+1].policy.ComputeFee(
+				amtToForward,
+			)
+
+			// Inbound fees are calculated based on the net amount
+			// received (without the inbound fees).
+			netAmount := amtToForward +
+				lnwire.MilliSatoshi(outboundFee)
+
+			// The unified edge is selected such that it can support
+			// forwarding the total amount, including the inbound
+			// fee. The previous hop's outbound fee is also supplied
+			// such that the inbound fee can be capped.
+			unifiedEdge = edgeUnifier.getEdge(
+				netAmount, bandwidthHints, outboundFee,
+			)
+			if unifiedEdge == nil {
+				return nil, 0, ErrNoChannel{
+					position: i,
+				}
+			}
+
+			inboundFee := calcCappedInboundFee(
+				unifiedEdge, netAmount, outboundFee,
+			)
+
+			fee = int64(outboundFee) + inboundFee
+
+			// Sanity check: total fees should be non-negative.
+			if fee < 0 {
+				fee = 0
+			}
+		}
+
+		// Finally, we update the amount that needs to flow into the
+		// *next* hop, which is the amount this hop needs to forward,
+		// accounting for the fee that it takes.
+		nextIncoming = amtToForward + lnwire.MilliSatoshi(fee)
+
+		unifiedEdges[i] = unifiedEdge
+	}
+
+	return unifiedEdges, nextIncoming, nil
 }
