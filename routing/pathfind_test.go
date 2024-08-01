@@ -3152,7 +3152,7 @@ func runInboundFees1(t *testing.T, useCache bool) {
 	// * s-a-b-t: 50 msat
 	// * s-a-c-t: 100 msat
 	require.Len(t, rt.Hops, 3)
-	require.EqualValues(t, 100, rt.TotalAmount-rt.Hops[2].AmtToForward)
+	require.EqualValues(t, 50, rt.TotalAmount-rt.Hops[2].AmtToForward)
 }
 
 // runInboundFees2 tests that pathfinding finds the cheapest route when inbound
@@ -3256,7 +3256,7 @@ func runInboundFees2(t *testing.T, useCache bool) {
 	// * s-a-c-t: 0 msat
 	// * s-b-c-t: 100 msat
 	require.Len(t, rt.Hops, 3)
-	require.EqualValues(t, 100, rt.TotalAmount-rt.Hops[2].AmtToForward)
+	require.EqualValues(t, 0, rt.TotalAmount-rt.Hops[2].AmtToForward)
 }
 
 // runInboundFees3 tests that pathfinding finds the cheapest route when inbound
@@ -3354,7 +3354,7 @@ func runInboundFees3(t *testing.T, useCache bool) {
 	// * s-a-c-t: 4 msat
 	// * s-a-b-t: 5 msat
 	require.Len(t, rt.Hops, 3)
-	require.EqualValues(t, 5, rt.TotalAmount-rt.Hops[2].AmtToForward)
+	require.EqualValues(t, 4, rt.TotalAmount-rt.Hops[2].AmtToForward)
 }
 
 type pathFindingTestContext struct {

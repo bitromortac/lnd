@@ -18,12 +18,10 @@ type nodeWithDist struct {
 	// outgoing edges (channels) emanating from a node.
 	node route.Vertex
 
-	// netAmountReceived is the amount that should be received by this node.
+	// amtToSend is the amount that should be sent out by this node.
 	// Either as final payment to the final node or as an intermediate
-	// amount that includes also the fees for subsequent hops. This node's
-	// inbound fee is already subtracted from the htlc amount - if
-	// applicable.
-	netAmountReceived lnwire.MilliSatoshi
+	// amount that includes also the fees for subsequent hops.
+	amtToSend lnwire.MilliSatoshi
 
 	// outboundFee is the fee that this node charges on the outgoing
 	// channel.
@@ -49,6 +47,26 @@ type nodeWithDist struct {
 	// routingInfoSize is the total size requirement for the payloads field
 	// in the onion packet from this hop towards the final destination.
 	routingInfoSize uint64
+
+	// next is the next node in the path.
+	next *nodeWithDist
+}
+
+type heapKey struct {
+	from, to route.Vertex
+}
+
+func (n *nodeWithDist) key() heapKey {
+	var to route.Vertex
+
+	if n.next != nil {
+		to = n.next.node
+	}
+
+	return heapKey{
+		from: n.node,
+		to:   to,
+	}
 }
 
 // distanceHeap is a min-distance heap that's used within our path finding
@@ -59,14 +77,14 @@ type distanceHeap struct {
 	// pubkeyIndices maps public keys of nodes to their respective index in
 	// the heap. This is used as a way to avoid db lookups by using heap.Fix
 	// instead of having duplicate entries on the heap.
-	pubkeyIndices map[route.Vertex]int
+	pubkeyIndices map[heapKey]int
 }
 
 // newDistanceHeap initializes a new distance heap. This is required because
 // we must initialize the pubkeyIndices map for path-finding optimizations.
 func newDistanceHeap(numNodes int) distanceHeap {
 	distHeap := distanceHeap{
-		pubkeyIndices: make(map[route.Vertex]int, numNodes),
+		pubkeyIndices: make(map[heapKey]int, numNodes),
 		nodes:         make([]*nodeWithDist, 0, numNodes),
 	}
 
@@ -96,8 +114,8 @@ func (d *distanceHeap) Less(i, j int) bool {
 // NOTE: This is part of the heap.Interface implementation.
 func (d *distanceHeap) Swap(i, j int) {
 	d.nodes[i], d.nodes[j] = d.nodes[j], d.nodes[i]
-	d.pubkeyIndices[d.nodes[i].node] = i
-	d.pubkeyIndices[d.nodes[j].node] = j
+	d.pubkeyIndices[d.nodes[i].key()] = i
+	d.pubkeyIndices[d.nodes[j].key()] = j
 }
 
 // Push pushes the passed item onto the priority queue.
@@ -106,7 +124,7 @@ func (d *distanceHeap) Swap(i, j int) {
 func (d *distanceHeap) Push(x interface{}) {
 	n := x.(*nodeWithDist)
 	d.nodes = append(d.nodes, n)
-	d.pubkeyIndices[n.node] = len(d.nodes) - 1
+	d.pubkeyIndices[n.key()] = len(d.nodes) - 1
 }
 
 // Pop removes the highest priority item (according to Less) from the priority
@@ -118,7 +136,7 @@ func (d *distanceHeap) Pop() interface{} {
 	x := d.nodes[n-1]
 	d.nodes[n-1] = nil
 	d.nodes = d.nodes[0 : n-1]
-	delete(d.pubkeyIndices, x.node)
+	delete(d.pubkeyIndices, x.key())
 	return x
 }
 
@@ -128,7 +146,7 @@ func (d *distanceHeap) Pop() interface{} {
 // exist in the heap, then it is pushed onto the heap. Otherwise, we will end
 // up performing more db lookups on the same node in the pathfinding algorithm.
 func (d *distanceHeap) PushOrFix(dist *nodeWithDist) {
-	index, ok := d.pubkeyIndices[dist.node]
+	index, ok := d.pubkeyIndices[dist.key()]
 	if !ok {
 		heap.Push(d, dist)
 		return
