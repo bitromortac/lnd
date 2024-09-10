@@ -135,11 +135,11 @@ type sphinxHopIterator struct {
 	router *sphinx.Router
 }
 
-// makeSphinxHopIterator converts a processed packet returned from a sphinx
+// MakeSphinxHopIterator converts a processed packet returned from a sphinx
 // router and converts it into an hop iterator for usage in the link. A
 // blinding kit is passed through for the link to obtain forwarding information
 // for blinded routes.
-func makeSphinxHopIterator(router *sphinx.Router, ogPacket *sphinx.OnionPacket,
+func MakeSphinxHopIterator(router *sphinx.Router, ogPacket *sphinx.OnionPacket,
 	packet *sphinx.ProcessedPacket, blindingKit BlindingKit,
 	rHash []byte) *sphinxHopIterator {
 
@@ -373,7 +373,7 @@ func peelBlindedPathDummyHop(r *sphinxHopIterator, cltvExpiryDelta uint32,
 		return nil, routeRole, err
 	}
 
-	iterator := makeSphinxHopIterator(
+	iterator := MakeSphinxHopIterator(
 		r.router, onionPkt, sphinxPacket, BlindingKit{
 			Processor: r.router,
 			UpdateAddBlinding: tlv.SomeRecordT(
@@ -700,7 +700,7 @@ func (p *OnionProcessor) ReconstructHopIterator(r io.Reader, rHash []byte,
 		return nil, err
 	}
 
-	return makeSphinxHopIterator(p.router, onionPkt, sphinxPacket,
+	return MakeSphinxHopIterator(p.router, onionPkt, sphinxPacket,
 		BlindingKit{
 			Processor:         p.router,
 			UpdateAddBlinding: blindingInfo.BlindingKey,
@@ -884,7 +884,7 @@ func (p *OnionProcessor) DecodeHopIterators(id []byte,
 
 		// Finally, construct a hop iterator from our processed sphinx
 		// packet, simultaneously caching the original onion packet.
-		resp.HopIterator = makeSphinxHopIterator(
+		resp.HopIterator = MakeSphinxHopIterator(
 			p.router, &onionPkts[i], &packets[i], BlindingKit{
 				Processor:         p.router,
 				UpdateAddBlinding: reqs[i].BlindingPoint,
