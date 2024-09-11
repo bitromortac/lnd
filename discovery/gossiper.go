@@ -1259,6 +1259,21 @@ func (d *AuthenticatedGossiper) splitAnnouncementBatches(
 	return splitAnnouncementBatch
 }
 
+// SendAllBatch sends a batch of messages.
+func (d *AuthenticatedGossiper) SendAllBatch(msgs []lnwire.Message) {
+
+	msgSenders := make([]msgWithSenders, len(msgs))
+
+	for i, msg := range msgs {
+		msgSenders[i] = msgWithSenders{
+			msg:     msg,
+			senders: make(map[route.Vertex]struct{}),
+		}
+	}
+
+	d.sendLocalBatch(msgSenders)
+}
+
 // splitAndSendAnnBatch takes a batch of messages, computes the proper batch
 // split size, and then sends out all items to the set of target peers. Locally
 // generated announcements are always sent before remotely generated

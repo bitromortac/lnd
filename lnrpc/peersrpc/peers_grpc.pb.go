@@ -22,6 +22,8 @@ type PeersClient interface {
 	// UpdateNodeAnnouncement allows the caller to update the node parameters
 	// and broadcasts a new version of the node announcement to its peers.
 	UpdateNodeAnnouncement(ctx context.Context, in *NodeAnnouncementUpdateRequest, opts ...grpc.CallOption) (*NodeAnnouncementUpdateResponse, error)
+	// SendBatch lets one send messages to peers.
+	SendBatch(ctx context.Context, in *SendBatchRequest, opts ...grpc.CallOption) (*SendBatchResponse, error)
 }
 
 type peersClient struct {
@@ -41,6 +43,15 @@ func (c *peersClient) UpdateNodeAnnouncement(ctx context.Context, in *NodeAnnoun
 	return out, nil
 }
 
+func (c *peersClient) SendBatch(ctx context.Context, in *SendBatchRequest, opts ...grpc.CallOption) (*SendBatchResponse, error) {
+	out := new(SendBatchResponse)
+	err := c.cc.Invoke(ctx, "/peersrpc.Peers/SendBatch", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // PeersServer is the server API for Peers service.
 // All implementations must embed UnimplementedPeersServer
 // for forward compatibility
@@ -49,6 +60,8 @@ type PeersServer interface {
 	// UpdateNodeAnnouncement allows the caller to update the node parameters
 	// and broadcasts a new version of the node announcement to its peers.
 	UpdateNodeAnnouncement(context.Context, *NodeAnnouncementUpdateRequest) (*NodeAnnouncementUpdateResponse, error)
+	// SendBatch lets one send messages to peers.
+	SendBatch(context.Context, *SendBatchRequest) (*SendBatchResponse, error)
 	mustEmbedUnimplementedPeersServer()
 }
 
@@ -58,6 +71,9 @@ type UnimplementedPeersServer struct {
 
 func (UnimplementedPeersServer) UpdateNodeAnnouncement(context.Context, *NodeAnnouncementUpdateRequest) (*NodeAnnouncementUpdateResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method UpdateNodeAnnouncement not implemented")
+}
+func (UnimplementedPeersServer) SendBatch(context.Context, *SendBatchRequest) (*SendBatchResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method SendBatch not implemented")
 }
 func (UnimplementedPeersServer) mustEmbedUnimplementedPeersServer() {}
 
@@ -90,6 +106,24 @@ func _Peers_UpdateNodeAnnouncement_Handler(srv interface{}, ctx context.Context,
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Peers_SendBatch_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SendBatchRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(PeersServer).SendBatch(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/peersrpc.Peers/SendBatch",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(PeersServer).SendBatch(ctx, req.(*SendBatchRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // Peers_ServiceDesc is the grpc.ServiceDesc for Peers service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -100,6 +134,10 @@ var Peers_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "UpdateNodeAnnouncement",
 			Handler:    _Peers_UpdateNodeAnnouncement_Handler,
+		},
+		{
+			MethodName: "SendBatch",
+			Handler:    _Peers_SendBatch_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

@@ -122,7 +122,8 @@ func (s *subRPCServerConfigs) PopulateDependencies(cfg *Config,
 	updateNodeAnnouncement func(features *lnwire.RawFeatureVector,
 		modifiers ...netann.NodeAnnModifier) error,
 	parseAddr func(addr string) (net.Addr, error),
-	rpcLogger btclog.Logger, aliasMgr *aliasmgr.Manager) error {
+	rpcLogger btclog.Logger, aliasMgr *aliasmgr.Manager,
+	sendBatch func([]lnwire.Message)) error {
 
 	// First, we'll use reflect to obtain a version of the config struct
 	// that allows us to programmatically inspect its fields.
@@ -338,6 +339,10 @@ func (s *subRPCServerConfigs) PopulateDependencies(cfg *Config,
 
 			subCfgValue.FieldByName("UpdateNodeAnnouncement").Set(
 				reflect.ValueOf(updateNodeAnnouncement),
+			)
+
+			subCfgValue.FieldByName("SendBatch").Set(
+				reflect.ValueOf(sendBatch),
 			)
 
 		default:

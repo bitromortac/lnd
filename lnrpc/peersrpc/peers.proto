@@ -15,6 +15,11 @@ service Peers {
     */
     rpc UpdateNodeAnnouncement (NodeAnnouncementUpdateRequest)
         returns (NodeAnnouncementUpdateResponse);
+
+    /*
+    SendBatch lets one send messages to peers.
+    */
+    rpc SendBatch (SendBatchRequest) returns (SendBatchResponse);
 }
 
 // UpdateAction is used to determine the kind of action we are referring to.
@@ -91,4 +96,49 @@ message NodeAnnouncementUpdateRequest {
 
 message NodeAnnouncementUpdateResponse {
     repeated lnrpc.Op ops = 1;
+}
+
+message NodeAnnouncement {
+    bytes Signature = 1;
+    bytes Features = 2;
+    uint32 Timestamp = 3;
+    bytes NodeId = 4;
+    bytes Alias = 5;
+}
+
+message ChannelUpdate {
+    bytes Signature = 1;
+    bytes ChainHash = 2;
+    uint64 ChanId = 3;
+    uint64 Timestamp = 4;
+    uint32 MessageFlags = 5;
+    uint32 ChannelFlags = 6;
+    uint32 TimeLockDelta = 7;
+    uint32 BaseFee = 8;
+    uint32 FeeRate = 9;
+    uint64 HtlcMinimumMsat = 10;
+    uint64 HtlcMaximumMsat = 11;
+}
+
+message ChannelAnnouncement {
+    bytes NodeSig1 = 1;
+    bytes NodeSig2 = 2;
+    bytes BitcoinSig1 = 3;
+    bytes BitcoinSig2 = 4;
+    bytes Features = 5;
+    bytes ChainHash = 6;
+    uint64 ChanId = 7;
+    bytes NodeId1 = 8;
+    bytes NodeId2 = 9;
+    bytes BitcoinKey1 = 10;
+    bytes BitcoinKey2 = 11;
+}
+
+message SendBatchRequest {
+    repeated NodeAnnouncement nodeAnnouncements = 1;
+    repeated ChannelAnnouncement channelAnnouncements = 2;
+    repeated ChannelUpdate channelUpdates = 3;
+}
+
+message SendBatchResponse {
 }

@@ -98,6 +98,129 @@
         }
       }
     },
+    "peersrpcChannelAnnouncement": {
+      "type": "object",
+      "properties": {
+        "NodeSig1": {
+          "type": "string",
+          "format": "byte"
+        },
+        "NodeSig2": {
+          "type": "string",
+          "format": "byte"
+        },
+        "BitcoinSig1": {
+          "type": "string",
+          "format": "byte"
+        },
+        "BitcoinSig2": {
+          "type": "string",
+          "format": "byte"
+        },
+        "Features": {
+          "type": "string",
+          "format": "byte"
+        },
+        "ChainHash": {
+          "type": "string",
+          "format": "byte"
+        },
+        "ChanId": {
+          "type": "string",
+          "format": "uint64"
+        },
+        "NodeId1": {
+          "type": "string",
+          "format": "byte"
+        },
+        "NodeId2": {
+          "type": "string",
+          "format": "byte"
+        },
+        "BitcoinKey1": {
+          "type": "string",
+          "format": "byte"
+        },
+        "BitcoinKey2": {
+          "type": "string",
+          "format": "byte"
+        }
+      }
+    },
+    "peersrpcChannelUpdate": {
+      "type": "object",
+      "properties": {
+        "Signature": {
+          "type": "string",
+          "format": "byte"
+        },
+        "ChainHash": {
+          "type": "string",
+          "format": "byte"
+        },
+        "ChanId": {
+          "type": "string",
+          "format": "uint64"
+        },
+        "Timestamp": {
+          "type": "string",
+          "format": "uint64"
+        },
+        "MessageFlags": {
+          "type": "integer",
+          "format": "int64"
+        },
+        "ChannelFlags": {
+          "type": "integer",
+          "format": "int64"
+        },
+        "TimeLockDelta": {
+          "type": "integer",
+          "format": "int64"
+        },
+        "BaseFee": {
+          "type": "integer",
+          "format": "int64"
+        },
+        "FeeRate": {
+          "type": "integer",
+          "format": "int64"
+        },
+        "HtlcMinimumMsat": {
+          "type": "string",
+          "format": "uint64"
+        },
+        "HtlcMaximumMsat": {
+          "type": "string",
+          "format": "uint64"
+        }
+      }
+    },
+    "peersrpcNodeAnnouncement": {
+      "type": "object",
+      "properties": {
+        "Signature": {
+          "type": "string",
+          "format": "byte"
+        },
+        "Features": {
+          "type": "string",
+          "format": "byte"
+        },
+        "Timestamp": {
+          "type": "integer",
+          "format": "int64"
+        },
+        "NodeId": {
+          "type": "string",
+          "format": "byte"
+        },
+        "Alias": {
+          "type": "string",
+          "format": "byte"
+        }
+      }
+    },
     "peersrpcNodeAnnouncementUpdateRequest": {
       "type": "object",
       "properties": {
@@ -135,6 +258,9 @@
           }
         }
       }
+    },
+    "peersrpcSendBatchResponse": {
+      "type": "object"
     },
     "peersrpcUpdateAction": {
       "type": "string",
