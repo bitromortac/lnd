@@ -759,79 +759,116 @@ func TestPathFinding(t *testing.T) {
 	testCases := []struct {
 		name string
 		fn   func(t *testing.T, useCache bool)
-	}{{
-		name: "lowest fee path",
-		fn:   runFindLowestFeePath,
-	}, {
-		name: "basic graph path finding",
-		fn:   runBasicGraphPathFinding,
-	}, {
-		name: "path finding with additional edges",
-		fn:   runPathFindingWithAdditionalEdges,
-	}, {
-		name: "path finding with redundant additional edges",
-		fn:   runPathFindingWithRedundantAdditionalEdges,
-	}, {
-		name: "new route path too long",
-		fn:   runNewRoutePathTooLong,
-	}, {
-		name: "path not available",
-		fn:   runPathNotAvailable,
-	}, {
-		name: "destination tlv graph fallback",
-		fn:   runDestTLVGraphFallback,
-	}, {
-		name: "missing feature dependency",
-		fn:   runMissingFeatureDep,
-	}, {
-		name: "unknown required features",
-		fn:   runUnknownRequiredFeatures,
-	}, {
-		name: "destination payment address",
-		fn:   runDestPaymentAddr,
-	}, {
-		name: "path insufficient capacity",
-		fn:   runPathInsufficientCapacity,
-	}, {
-		name: "route fail min HTLC",
-		fn:   runRouteFailMinHTLC,
-	}, {
-		name: "route fail max HTLC",
-		fn:   runRouteFailMaxHTLC,
-	}, {
-		name: "route fail disabled edge",
-		fn:   runRouteFailDisabledEdge,
-	}, {
-		name: "path source edges bandwidth",
-		fn:   runPathSourceEdgesBandwidth,
-	}, {
-		name: "restrict outgoing channel",
-		fn:   runRestrictOutgoingChannel,
-	}, {
-		name: "restrict last hop",
-		fn:   runRestrictLastHop,
-	}, {
-		name: "CLTV limit",
-		fn:   runCltvLimit,
-	}, {
-		name: "probability routing",
-		fn:   runProbabilityRouting,
-	}, {
-		name: "equal cost route selection",
-		fn:   runEqualCostRouteSelection,
-	}, {
-		name: "no cycle",
-		fn:   runNoCycle,
-	}, {
-		name: "route to self",
-		fn:   runRouteToSelf,
-	}, {
-		name: "with metadata",
-		fn:   runFindPathWithMetadata,
-	}, {
-		name: "inbound fees",
-		fn:   runInboundFees,
-	}}
+	}{
+		{
+			name: "lowest fee path",
+			fn:   runFindLowestFeePath,
+		},
+		{
+			name: "basic graph path finding",
+			fn:   runBasicGraphPathFinding,
+		},
+		{
+			name: "path finding with additional edges",
+			fn:   runPathFindingWithAdditionalEdges,
+		},
+		{
+			name: "path finding with redundant additional edges",
+			fn:   runPathFindingWithRedundantAdditionalEdges,
+		},
+		{
+			name: "new route path too long",
+			fn:   runNewRoutePathTooLong,
+		},
+		{
+			name: "path not available",
+			fn:   runPathNotAvailable,
+		},
+		{
+			name: "destination tlv graph fallback",
+			fn:   runDestTLVGraphFallback,
+		},
+		{
+			name: "missing feature dependency",
+			fn:   runMissingFeatureDep,
+		},
+		{
+			name: "unknown required features",
+			fn:   runUnknownRequiredFeatures,
+		},
+		{
+			name: "destination payment address",
+			fn:   runDestPaymentAddr,
+		},
+		{
+			name: "path insufficient capacity",
+			fn:   runPathInsufficientCapacity,
+		},
+		{
+			name: "route fail min HTLC",
+			fn:   runRouteFailMinHTLC,
+		},
+		{
+			name: "route fail max HTLC",
+			fn:   runRouteFailMaxHTLC,
+		},
+		{
+			name: "route fail disabled edge",
+			fn:   runRouteFailDisabledEdge,
+		},
+		{
+			name: "path source edges bandwidth",
+			fn:   runPathSourceEdgesBandwidth,
+		},
+		{
+			name: "restrict outgoing channel",
+			fn:   runRestrictOutgoingChannel,
+		},
+		{
+			name: "restrict last hop",
+			fn:   runRestrictLastHop,
+		},
+		{
+			name: "CLTV limit",
+			fn:   runCltvLimit,
+		},
+		{
+			name: "probability routing",
+			fn:   runProbabilityRouting,
+		},
+		{
+			name: "equal cost route selection",
+			fn:   runEqualCostRouteSelection,
+		},
+		{
+			name: "no cycle",
+			fn:   runNoCycle,
+		},
+		{
+			name: "route to self",
+			fn:   runRouteToSelf,
+		},
+		{
+			name: "with metadata",
+			fn:   runFindPathWithMetadata,
+		},
+		{
+			name: "inbound fees",
+			fn:   runInboundFees,
+		},
+		{
+			name: "inbound discount case 1",
+			fn:   runInboundFees1,
+		},
+		{
+			name: "inbound discount case 2",
+			fn:   runInboundFees2,
+		},
+		{
+			name: "inbound discount case 3",
+			fn:   runInboundFees3,
+		},
+	}
 
 	// Run with graph cache enabled.
 	for _, tc := range testCases {
@@ -3022,6 +3059,302 @@ func runInboundFees(t *testing.T, useCache bool) {
 		Hops:          expectedHops,
 	}
 	require.Equal(t, expectedRt, rt)
+}
+
+// runInboundFees1 tests that pathfinding finds the cheapest route when inbound
+// fee discounts apply.
+func runInboundFees1(t *testing.T, useCache bool) {
+	// Setup a test network.
+	chanCapSat := btcutil.Amount(100000)
+	features := lnwire.NewFeatureVector(
+		lnwire.NewRawFeatureVector(
+			lnwire.PaymentAddrOptional,
+			lnwire.TLVOnionPayloadRequired,
+		),
+		lnwire.Features,
+	)
+
+	testChannels := []*testChannel{
+		asymmetricTestChannel("s", "a", chanCapSat,
+			&testChannelPolicy{
+				Features: features,
+			},
+			&testChannelPolicy{
+				Features: features,
+			}, 10,
+		),
+		asymmetricTestChannel("a", "b", chanCapSat,
+			&testChannelPolicy{
+				Features: features,
+			},
+			&testChannelPolicy{
+				Features:           features,
+				InboundFeeBaseMsat: -100,
+			}, 11,
+		),
+		asymmetricTestChannel("a", "c", chanCapSat,
+			&testChannelPolicy{
+				Features: features,
+			},
+			&testChannelPolicy{
+				Features: features,
+			}, 12,
+		),
+		asymmetricTestChannel("b", "t", chanCapSat,
+			&testChannelPolicy{
+				Features:    features,
+				FeeBaseMsat: 150,
+			},
+			&testChannelPolicy{
+				Features: features,
+			}, 13,
+		),
+		asymmetricTestChannel("c", "t", chanCapSat,
+			&testChannelPolicy{
+				Features:    features,
+				FeeBaseMsat: 100,
+			},
+			&testChannelPolicy{
+				Features: features,
+			}, 14,
+		),
+	}
+
+	ctx := newPathFindingTestContext(t, useCache, testChannels, "s")
+
+	payAddr := [32]byte{1}
+	ctx.restrictParams.PaymentAddr = fn.Some(payAddr)
+	ctx.restrictParams.DestFeatures = tlvPayAddrFeatures
+
+	const (
+		startingHeight = 100
+		finalHopCLTV   = 1
+	)
+
+	paymentAmt := lnwire.MilliSatoshi(100_000)
+	target := ctx.keyFromAlias("t")
+	path, err := ctx.findPath(target, paymentAmt)
+	require.NoError(t, err, "unable to find path")
+
+	rt, err := newRoute(
+		ctx.source, path, startingHeight,
+		finalHopParams{
+			amt:       paymentAmt,
+			cltvDelta: finalHopCLTV,
+			records:   nil,
+			totalAmt:  paymentAmt,
+		},
+		nil,
+	)
+	require.NoError(t, err)
+
+	// We have two possible routes:
+	// * s-a-b-t: 50 msat
+	// * s-a-c-t: 100 msat
+	require.Len(t, rt.Hops, 3)
+	require.EqualValues(t, 100, rt.TotalAmount-rt.Hops[2].AmtToForward)
+}
+
+// runInboundFees2 tests that pathfinding finds the cheapest route when inbound
+// fee discounts apply.
+func runInboundFees2(t *testing.T, useCache bool) {
+	// Setup a test network.
+	chanCapSat := btcutil.Amount(2_000_000)
+	features := lnwire.NewFeatureVector(
+		lnwire.NewRawFeatureVector(
+			lnwire.PaymentAddrOptional,
+			lnwire.TLVOnionPayloadRequired,
+		),
+		lnwire.Features,
+	)
+
+	var (
+		// We apply a tie breaker in form of a cltv delta here, which
+		// together with the amount leads to an additional weight of 1
+		// msat, to have a deterministic test.
+		tieBreakerCltv   uint16              = 100
+		tieBreakerAmount lnwire.MilliSatoshi = 1_000_000
+	)
+
+	testChannels := []*testChannel{
+		asymmetricTestChannel("s", "a", chanCapSat,
+			&testChannelPolicy{
+				Features: features,
+			},
+			&testChannelPolicy{
+				Features: features,
+			}, 10,
+		),
+		asymmetricTestChannel("a", "c", chanCapSat,
+			&testChannelPolicy{
+				Features: features,
+				Expiry:   tieBreakerCltv,
+			},
+			&testChannelPolicy{
+				Features:           features,
+				InboundFeeBaseMsat: -100,
+			}, 11,
+		),
+		asymmetricTestChannel("s", "b", chanCapSat,
+			&testChannelPolicy{
+				Features: features,
+			},
+			&testChannelPolicy{
+				Features: features,
+			}, 12,
+		),
+		asymmetricTestChannel("b", "c", chanCapSat,
+			&testChannelPolicy{
+				Features:    features,
+				FeeBaseMsat: 100,
+				// Expiry:      tieBreakerCltv,
+			},
+			&testChannelPolicy{
+				Features:           features,
+				InboundFeeBaseMsat: -100,
+			}, 13,
+		),
+		asymmetricTestChannel("c", "t", chanCapSat,
+			&testChannelPolicy{
+				Features:    features,
+				FeeBaseMsat: 100,
+			},
+			&testChannelPolicy{
+				Features: features,
+			}, 14,
+		),
+	}
+
+	ctx := newPathFindingTestContext(t, useCache, testChannels, "s")
+
+	payAddr := [32]byte{1}
+	ctx.restrictParams.PaymentAddr = fn.Some(payAddr)
+	ctx.restrictParams.DestFeatures = tlvPayAddrFeatures
+
+	const (
+		startingHeight = 100
+		finalHopCLTV   = 1
+	)
+
+	target := ctx.keyFromAlias("t")
+	path, err := ctx.findPath(target, tieBreakerAmount)
+	require.NoError(t, err, "unable to find path")
+
+	rt, err := newRoute(
+		ctx.source, path, startingHeight,
+		finalHopParams{
+			amt:       tieBreakerAmount,
+			cltvDelta: finalHopCLTV,
+			records:   nil,
+			totalAmt:  tieBreakerAmount,
+		},
+		nil,
+	)
+	require.NoError(t, err)
+
+	// We have two possible routes:
+	// * s-a-c-t: 0 msat
+	// * s-b-c-t: 100 msat
+	require.Len(t, rt.Hops, 3)
+	require.EqualValues(t, 100, rt.TotalAmount-rt.Hops[2].AmtToForward)
+}
+
+// runInboundFees3 tests that pathfinding finds the cheapest route when inbound
+// fee discounts apply.
+func runInboundFees3(t *testing.T, useCache bool) {
+	// Setup a test network.
+	chanCapSat := btcutil.Amount(2_000_000)
+	features := lnwire.NewFeatureVector(
+		lnwire.NewRawFeatureVector(
+			lnwire.PaymentAddrOptional,
+			lnwire.TLVOnionPayloadRequired,
+		),
+		lnwire.Features,
+	)
+
+	testChannels := []*testChannel{
+		asymmetricTestChannel("s", "a", chanCapSat,
+			&testChannelPolicy{
+				Features: features,
+			},
+			&testChannelPolicy{
+				InboundFeeBaseMsat: -4,
+				Features:           features,
+			}, 10,
+		),
+		asymmetricTestChannel("a", "b", chanCapSat,
+			&testChannelPolicy{
+				Features:    features,
+				FeeBaseMsat: 9,
+			},
+			&testChannelPolicy{
+				Features:           features,
+				InboundFeeBaseMsat: -11,
+			}, 11,
+		),
+		asymmetricTestChannel("a", "c", chanCapSat,
+			&testChannelPolicy{
+				Features: features,
+			},
+			&testChannelPolicy{
+				Features:           features,
+				InboundFeeBaseMsat: -6,
+			}, 12,
+		),
+		asymmetricTestChannel("b", "t", chanCapSat,
+			&testChannelPolicy{
+				Features:    features,
+				FeeBaseMsat: 8,
+			},
+			&testChannelPolicy{
+				Features:           features,
+				InboundFeeBaseMsat: 0,
+			}, 13,
+		),
+		asymmetricTestChannel("c", "t", chanCapSat,
+			&testChannelPolicy{
+				Features:    features,
+				FeeBaseMsat: 10,
+			},
+			&testChannelPolicy{
+				Features: features,
+			}, 14,
+		),
+	}
+
+	ctx := newPathFindingTestContext(t, useCache, testChannels, "s")
+
+	payAddr := [32]byte{1}
+	ctx.restrictParams.PaymentAddr = fn.Some(payAddr)
+	ctx.restrictParams.DestFeatures = tlvPayAddrFeatures
+
+	const (
+		startingHeight = 100
+		finalHopCLTV   = 1
+	)
+
+	paymentAmt := lnwire.MilliSatoshi(100_000)
+	target := ctx.keyFromAlias("t")
+	path, err := ctx.findPath(target, paymentAmt)
+	require.NoError(t, err, "unable to find path")
+
+	rt, err := newRoute(
+		ctx.source, path, startingHeight,
+		finalHopParams{
+			amt:       paymentAmt,
+			cltvDelta: finalHopCLTV,
+			records:   nil,
+			totalAmt:  paymentAmt,
+		},
+		nil,
+	)
+	require.NoError(t, err)
+
+	// We have two possible routes:
+	// * s-a-c-t: 4 msat
+	// * s-a-b-t: 5 msat
+	require.Len(t, rt.Hops, 3)
+	require.EqualValues(t, 5, rt.TotalAmount-rt.Hops[2].AmtToForward)
 }
 
 type pathFindingTestContext struct {
