@@ -15,7 +15,7 @@ require (
 	github.com/btcsuite/btcwallet/wallet/txauthor v1.3.5
 	github.com/btcsuite/btcwallet/wallet/txrules v1.2.2
 	github.com/btcsuite/btcwallet/walletdb v1.5.1
-	github.com/btcsuite/btcwallet/wtxmgr v1.5.5
+	github.com/btcsuite/btcwallet/wtxmgr v1.5.6
 	github.com/coreos/go-systemd v0.0.0-20190719114852-fd7a80b32e1f
 	github.com/davecgh/go-spew v1.1.1
 	github.com/decred/dcrd/dcrec/secp256k1/v4 v4.3.0
@@ -218,3 +218,5 @@ go 1.23.6
 retract v0.0.2
 
 replace github.com/lightningnetwork/lnd/kvdb => ./kvdb
+
+replace github.com/btcsuite/btcwallet => github.com/yyforyongyu/btcwallet v0.16.12-0.20250411132545-04bfce1181d9
