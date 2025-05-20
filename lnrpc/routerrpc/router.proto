@@ -630,6 +630,8 @@ message MissionControlConfig {
         AprioriParameters apriori = 7;
         BimodalParameters bimodal = 8;
     }
+
+    FeeLevelParameters fee_level_parameters = 9;
 }
 
 message BimodalParameters {
@@ -694,6 +696,35 @@ message AprioriParameters {
     [0.75, 1.0].
     */
     double capacity_fraction = 4;
+}
+
+message FeeLevelParameters {
+    /*
+    The fee level increase for routing failures. The fee level increases most
+    strongly for the failing node to reach. Fee levels of neighboring nodes
+    along the route are increased less strongly, controlled by
+    FeeLevelCorrelation.
+    */
+    uint64 level_PPM = 1;
+
+    /*
+    The correlation extent for fee levels of neighboring nodes along the route
+    in units of hops.
+    */
+    double reach = 2;
+
+    /*
+    Decay is the time it takes for a fee level to decay to 50% of its initial
+    value. The decay is exponential, so the fee level will be halved after
+    Decay time has passed.
+    */
+    uint64 decay_seconds = 3;
+
+    /*
+    Symmetric is the flag that indicates whether to also apply the fee level
+    for successful hops before the failing node.
+    */
+    bool symmetric = 4;
 }
 
 message QueryProbabilityRequest {

@@ -978,12 +978,19 @@ func (s *Server) GetMissionControlConfig(ctx context.Context,
 
 	// Query the current mission control config.
 	cfg := s.cfg.RouterBackend.MissionControl.GetConfig()
+	feeLevelConfig := FeeLevelParameters{
+		Level_PPM:    cfg.InterpretCfg.FeeLevelPPM,
+		Reach:        cfg.InterpretCfg.FeeLevelReach,
+		DecaySeconds: uint64(cfg.InterpretCfg.FeeLevelDecay.Seconds()),
+		Symmetric:    cfg.InterpretCfg.FeeLevelSymmetric,
+	}
 	resp := &GetMissionControlConfigResponse{
 		Config: &MissionControlConfig{
 			MaximumPaymentResults: uint32(cfg.MaxMcHistory),
 			MinimumFailureRelaxInterval: uint64(
 				cfg.MinFailureRelaxInterval.Seconds(),
 			),
+			FeeLevelParameters: &feeLevelConfig,
 		},
 	}
 
@@ -1038,6 +1045,17 @@ func (s *Server) SetMissionControlConfig(ctx context.Context,
 		MinFailureRelaxInterval: time.Duration(
 			req.Config.MinimumFailureRelaxInterval,
 		) * time.Second,
+	}
+
+	if req.Config.FeeLevelParameters != nil {
+		mcCfg.InterpretCfg = routing.InterpretCfg{
+			FeeLevelPPM:   req.Config.FeeLevelParameters.Level_PPM,
+			FeeLevelReach: float64(req.Config.FeeLevelParameters.Reach),
+			FeeLevelDecay: time.Duration(
+				req.Config.FeeLevelParameters.DecaySeconds,
+			) * time.Second,
+			FeeLevelSymmetric: req.Config.FeeLevelParameters.Symmetric,
+		}
 	}
 
 	switch req.Config.Model {

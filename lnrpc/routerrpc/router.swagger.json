@@ -1400,6 +1400,30 @@
       ],
       "default": "UNKNOWN"
     },
+    "routerrpcFeeLevelParameters": {
+      "type": "object",
+      "properties": {
+        "level_PPM": {
+          "type": "string",
+          "format": "uint64",
+          "description": "The fee level increase for routing failures. The fee level increases most\nstrongly for the failing node to reach. Fee levels of neighboring nodes\nalong the route are increased less strongly, controlled by\nFeeLevelCorrelation."
+        },
+        "reach": {
+          "type": "number",
+          "format": "double",
+          "description": "The correlation extent for fee levels of neighboring nodes along the route\nin units of hops."
+        },
+        "decay_seconds": {
+          "type": "string",
+          "format": "uint64",
+          "description": "Decay is the time it takes for a fee level to decay to 50% of its initial\nvalue. The decay is exponential, so the fee level will be halved after\nDecay time has passed."
+        },
+        "symmetric": {
+          "type": "boolean",
+          "description": "Symmetric is the flag that indicates whether to also apply the fee level\nfor successful hops before the failing node."
+        }
+      }
+    },
     "routerrpcFinalHtlcEvent": {
       "type": "object",
       "properties": {
@@ -1689,6 +1713,9 @@
         },
         "bimodal": {
           "$ref": "#/definitions/routerrpcBimodalParameters"
+        },
+        "fee_level_parameters": {
+          "$ref": "#/definitions/routerrpcFeeLevelParameters"
         }
       }
     },
