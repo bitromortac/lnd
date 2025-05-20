@@ -582,6 +582,19 @@ func (m *MissionControl) GetProbability(fromNode, toNode route.Vertex,
 	)
 }
 
+// GetFeeLevel returns the fee level for a given node.
+func (m *MissionControl) GetFeeLevel(node route.Vertex) lnwire.MilliSatoshi {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	if m.interpretCfg.FeeLevelPPM == 0 {
+		return 0
+	}
+
+	now := m.cfg.clock.Now()
+	return m.state.getFeeLevel(now, node)
+}
+
 // GetHistorySnapshot takes a snapshot from the current mission control state
 // and actual probability estimates.
 func (m *MissionControl) GetHistorySnapshot() *MissionControlSnapshot {

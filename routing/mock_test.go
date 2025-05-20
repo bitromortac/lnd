@@ -157,6 +157,12 @@ func (m *mockMissionControlOld) GetProbability(fromNode, toNode route.Vertex,
 	return 0
 }
 
+func (m *mockMissionControlOld) GetFeeLevel(
+	node route.Vertex) lnwire.MilliSatoshi {
+
+	return 0
+}
+
 type mockPaymentSessionOld struct {
 	routes []*route.Route
 
@@ -687,6 +693,11 @@ func (m *mockMissionControl) GetProbability(fromNode, toNode route.Vertex,
 
 	args := m.Called(fromNode, toNode, amt, capacity)
 	return args.Get(0).(float64)
+}
+
+func (m *mockMissionControl) GetFeeLevel(node route.Vertex) lnwire.MilliSatoshi {
+	args := m.Called(node)
+	return args.Get(0).(lnwire.MilliSatoshi)
 }
 
 type mockPaymentSession struct {

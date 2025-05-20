@@ -26,6 +26,7 @@ import (
 	"github.com/lightningnetwork/lnd/routing/route"
 	"github.com/lightningnetwork/lnd/subscribe"
 	"github.com/lightningnetwork/lnd/zpay32"
+	"github.com/prometheus/common/log"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -126,6 +127,9 @@ type MissionControl interface {
 	// payment from fromNode to toNode.
 	GetProbability(fromNode, toNode route.Vertex,
 		amt lnwire.MilliSatoshi, capacity btcutil.Amount) float64
+
+	// GetFeeLevel returns the fee level for a given node.
+	GetFeeLevel(fromNode route.Vertex) lnwire.MilliSatoshi
 
 	// ResetHistory resets the history of MissionControl returning it to a
 	// state as if no payment attempts have been made.
@@ -402,6 +406,7 @@ func (r *RouterBackend) parseQueryRoutesRequest(in *lnrpc.QueryRoutesRequest) (
 				fromNode, toNode, amt, capacity,
 			)
 		},
+		FeeLevelSource:        r.MissionControl.GetFeeLevel,
 		DestCustomRecords:     record.CustomSet(in.DestCustomRecords),
 		CltvLimit:             cltvLimit,
 		DestFeatures:          destinationFeatures,

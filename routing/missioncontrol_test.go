@@ -38,6 +38,11 @@ var (
 	testPenaltyHalfLife       = 30 * time.Minute
 	testAprioriHopProbability = 0.9
 	testAprioriWeight         = 0.5
+
+	feeLevelPPM       uint64  = 100
+	feeLevelReach     float64 = 1
+	feeLevelSymmetric         = true
+	feeLevelDecay             = 24 * time.Hour
 )
 
 type mcTestContext struct {
@@ -107,7 +112,15 @@ func (ctx *mcTestContext) restartMc() {
 
 	ctx.mcController, err = NewMissionController(
 		ctx.db, mcTestSelf,
-		&MissionControlConfig{Estimator: estimator},
+		&MissionControlConfig{
+			Estimator: estimator,
+			InterpretCfg: InterpretCfg{
+				FeeLevelPPM:       feeLevelPPM,
+				FeeLevelReach:     feeLevelReach,
+				FeeLevelDecay:     feeLevelDecay,
+				FeeLevelSymmetric: feeLevelSymmetric,
+			},
+		},
 	)
 	if err != nil {
 		ctx.t.Fatal(err)
@@ -162,8 +175,8 @@ func (ctx *mcTestContext) reportSuccess() {
 	ctx.pid++
 }
 
-// TestMissionControl tests mission control probability estimation.
-func TestMissionControl(t *testing.T) {
+// TestMissionControlProbability tests mission control probability estimation.
+func TestMissionControlProbability(t *testing.T) {
 	ctx := createMcTestContext(t)
 
 	ctx.clock.setTime(testTime)
@@ -225,6 +238,37 @@ func TestMissionControl(t *testing.T) {
 
 	// Test reporting a success.
 	ctx.reportSuccess()
+}
+
+// TestMissionControlFeeLevels tests mission control probability estimation.
+func TestMissionControlFeeLevels(t *testing.T) {
+	ctx := createMcTestContext(t)
+
+	ctx.clock.setTime(testTime)
+
+	// Initially, we expect the fee levels to all be zero since we haven't
+	// experienced any failures yet.
+	require.EqualValues(t, 0, ctx.mc.GetFeeLevel(mcTestSelf))
+	require.EqualValues(t, 0, ctx.mc.GetFeeLevel(mcTestNode1))
+	require.EqualValues(t, 0, ctx.mc.GetFeeLevel(mcTestNode2))
+
+	// Report a failure for the hop from mcTestNode1 to mcTestNode2.
+	ctx.reportFailure(1000, lnwire.NewTemporaryChannelFailure(nil))
+	require.EqualValues(t, 0, ctx.mc.GetFeeLevel(mcTestSelf))
+	require.EqualValues(t, 50, ctx.mc.GetFeeLevel(mcTestNode1))
+	require.EqualValues(t, 100, ctx.mc.GetFeeLevel(mcTestNode2))
+
+	// Let some time pass.
+	ctx.clock.setTime(testTime.Add(24 * time.Hour))
+	require.EqualValues(t, 0, ctx.mc.GetFeeLevel(mcTestSelf))
+	require.EqualValues(t, 25, ctx.mc.GetFeeLevel(mcTestNode1))
+	require.EqualValues(t, 50, ctx.mc.GetFeeLevel(mcTestNode2))
+
+	// We report another failure.
+	ctx.reportFailure(1000, lnwire.NewTemporaryChannelFailure(nil))
+	require.EqualValues(t, 0, ctx.mc.GetFeeLevel(mcTestSelf))
+	require.EqualValues(t, 75, ctx.mc.GetFeeLevel(mcTestNode1))
+	require.EqualValues(t, 150, ctx.mc.GetFeeLevel(mcTestNode2))
 }
 
 // TestMissionControlChannelUpdate tests that the first channel update is not

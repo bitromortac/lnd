@@ -1082,6 +1082,7 @@ func testBasicGraphPathFindingCase(t *testing.T, graphInstance *testGraphInstanc
 		&RestrictParams{
 			FeeLimit:          test.feeLimit,
 			ProbabilitySource: noProbabilitySource,
+			FeeLevelSource:    noFeeLevelSource,
 			CltvLimit:         math.MaxUint32,
 		},
 		testPathFindingConfig,

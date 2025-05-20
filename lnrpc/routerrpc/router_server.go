@@ -477,6 +477,7 @@ func (s *Server) probeDestination(dest []byte, amtSat int64) (*RouteFeeResponse,
 			FeeLimit:          routeFeeLimitSat,
 			CltvLimit:         s.cfg.RouterBackend.MaxTotalTimelock,
 			ProbabilitySource: mc.GetProbability,
+			FeeLevelSource:    mc.GetFeeLevel,
 		}, nil, nil, nil, s.cfg.RouterBackend.DefaultFinalCltvDelta,
 	)
 	if err != nil {
