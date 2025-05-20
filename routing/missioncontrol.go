@@ -670,7 +670,7 @@ func (m *MissionControl) applyPaymentResult(
 	result *paymentResult) *channeldb.FailureReason {
 
 	// Interpret result.
-	i := interpretResult(&result.route.Val, result.failure.ValOpt())
+	i := interpretResult(InterpretCfg{}, &result.route.Val, result.failure.ValOpt())
 
 	if i.policyFailure != nil {
 		if m.state.requestSecondChance(

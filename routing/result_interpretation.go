@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"fmt"
 	"io"
+	"math"
+	"time"
 
 	"github.com/lightningnetwork/lnd/channeldb"
 	"github.com/lightningnetwork/lnd/fn/v2"
@@ -67,6 +69,10 @@ type interpretedResult struct {
 	// pairResults contains a map of node pairs for which we have a result.
 	pairResults map[DirectedNodePair]pairResult
 
+	// nodeFeeDeltas contains the fee deltas for each node in the route.
+	// These are only used in case of failure.
+	nodeFeeDeltas map[route.Vertex]lnwire.MilliSatoshi
+
 	// finalFailureReason is set to a non-nil value if it makes no more
 	// sense to start another payment attempt. It will contain the reason
 	// why.
@@ -76,16 +82,68 @@ type interpretedResult struct {
 	// that connection. This is used to control the second chance logic for
 	// policy failures.
 	policyFailure *DirectedNodePair
+
+	// cfg is the configuration for how results should be interpreted.
+	cfg InterpretCfg
+}
+
+func newInterpretedResult(cfg InterpretCfg) *interpretedResult {
+	return &interpretedResult{
+		pairResults:   make(map[DirectedNodePair]pairResult),
+		nodeFeeDeltas: make(map[route.Vertex]lnwire.MilliSatoshi),
+		cfg:           cfg,
+	}
+}
+
+// InterpretCfg contains the configuration for the interpretation of a payment
+// attempt.
+type InterpretCfg struct {
+	// FeeLevelPPM is the fee level in parts per million (PPM) that
+	// mission control should use to increase the fee level of a node
+	// after a failed payment attempt for the node that we couldn't reach.
+	FeeLevelPPM uint64
+
+	// FeeLevelReach controls the range the fee level delta drops off fromt
+	// the node that we couldn't reach.
+	FeeLevelReach float64
+
+	// FeeLevelSymmetric indicates whether the fee level delta should be
+	// symmetric, meaning that the fee level delta is applied to both
+	// directions of the route from the node that we couldn't reach.
+	FeeLevelSymmetric bool
+
+	// FeeLevelDecay is the time duration that mission control should
+	// decay the fee level delta for a node over time.
+	FeeLevelDecay time.Duration
+
+	// FeeLevelLoad indicates whether the fee level should be loaded from
+	// the database when interpreting results.
+	FeeLevelLoad bool
+}
+
+// Validate checks the interpretCfg for validity.
+func (i InterpretCfg) Validate() error {
+	if i.FeeLevelPPM < 0 {
+		return fmt.Errorf("fee level must be positive")
+	}
+
+	if i.FeeLevelReach < 0 {
+		return fmt.Errorf("reach must be positive")
+	}
+
+	if i.FeeLevelDecay < 0 {
+		return fmt.Errorf("decay must be positive")
+	}
+
+	return nil
 }
 
 // interpretResult interprets a payment outcome and returns an object that
 // contains information required to update mission control.
-func interpretResult(rt *mcRoute,
+func interpretResult(cfg InterpretCfg, rt *mcRoute,
 	failure fn.Option[paymentFailure]) *interpretedResult {
 
-	i := &interpretedResult{
-		pairResults: make(map[DirectedNodePair]pairResult),
-	}
+	i := newInterpretedResult(cfg)
 
 	return fn.ElimOption(failure, func() *interpretedResult {
 		i.processSuccess(rt)
@@ -475,11 +533,18 @@ func (i *interpretedResult) processPaymentOutcomeIntermediate(route *mcRoute,
 		// mission control, this report is ignored.
 		reportIncoming()
 
-	// If the outgoing channel doesn't have enough capacity, we penalize.
+	// If the outgoing channel doesn't have enough balance, we penalize.
 	// But we penalize only in a single direction and only for amounts
 	// greater than the attempted amount.
 	case *lnwire.FailTemporaryChannelFailure:
 		reportOutgoingBalance()
+
+		// Since we had a temporary channel failure, we can now bump the
+		// involved node's fee levels such that we will try higher fee
+		// channels in the future.
+		if i.cfg.FeeLevelPPM != 0 {
+			i.computeFeeDeltas(route, errorSourceIdx)
+		}
 
 	// If FailExpiryTooSoon is received, there must have been some delay
 	// along the path. We can't know which node is causing the delay, so we
@@ -855,6 +920,34 @@ func (i *interpretedResult) failPairBalance(rt *mcRoute, channelIdx int) {
 	pair, amt := getPair(rt, channelIdx)
 
 	i.pairResults[pair] = failPairResult(amt)
+}
+
+// computeFeeDeltas sets the fee deltas for the node that reported the failure.
+func (i *interpretedResult) computeFeeDeltas(rt *mcRoute, hopIdx int) {
+	feeDeltas := make(
+		map[route.Vertex]lnwire.MilliSatoshi, len(rt.hops.Val),
+	)
+
+	// We set the peak position to the next node than the one that reported
+	// the failure since that node is hard to reach.
+	peakPosition := hopIdx
+
+	// reach is the range where the fee levels half.
+	reach := i.cfg.FeeLevelReach
+
+	// We symmetrically raise the fee levels around the node that reported
+	// the failure.
+	for j, hop := range rt.hops.Val {
+		if !i.cfg.FeeLevelSymmetric && j < peakPosition {
+			continue
+		}
+		feeDelta := float64(i.cfg.FeeLevelPPM) * math.Exp2(
+			-math.Abs(float64(j-peakPosition))/reach,
+		)
+		feeDeltas[hop.pubKeyBytes.Val] = lnwire.MilliSatoshi(feeDelta)
+	}
+
+	i.nodeFeeDeltas = feeDeltas
 }
 
 // successPairRange marks the node pairs from node fromIdx to node toIdx as

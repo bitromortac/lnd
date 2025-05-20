@@ -3,12 +3,14 @@ package routing
 import (
 	"reflect"
 	"testing"
+	"time"
 
 	"github.com/btcsuite/btcd/btcec/v2"
 	"github.com/davecgh/go-spew/spew"
 	"github.com/lightningnetwork/lnd/fn/v2"
 	"github.com/lightningnetwork/lnd/lnwire"
 	"github.com/lightningnetwork/lnd/routing/route"
+	"github.com/stretchr/testify/require"
 )
 
 var (
@@ -738,7 +740,9 @@ func TestResultInterpretation(t *testing.T) {
 				))
 			}
 
-			i := interpretResult(testCase.route, failure)
+			i := interpretResult(
+				InterpretCfg{}, testCase.route, failure,
+			)
 
 			expected := testCase.expectedResult
 
@@ -748,10 +752,80 @@ func TestResultInterpretation(t *testing.T) {
 				expected.pairResults = emptyResults
 			}
 
+			// We don't want to test the node fee deltas here, so we
+			// set them to nil.
+			i.nodeFeeDeltas = nil
+
 			if !reflect.DeepEqual(i, expected) {
 				t.Fatalf("unexpected result\nwant: %v\ngot: %v",
 					spew.Sdump(expected), spew.Sdump(i))
 			}
 		})
 	}
+}
+
+// TestFeeDeltas tests that the fee deltas are correctly set in the interpreted
+// result.
+func TestFeeDeltas(t *testing.T) {
+	var (
+		failureSrcIdx = 1
+		failure       = lnwire.NewTemporaryChannelFailure(nil)
+	)
+
+	// Test asymmetric fee deltas.
+	i := interpretResult(
+		InterpretCfg{
+			FeeLevelPPM:       100.0,
+			FeeLevelReach:     1.0,
+			FeeLevelSymmetric: false,
+			FeeLevelDecay:     time.Duration(time.Hour),
+		},
+		routeFourHop,
+		fn.Some(newPaymentFailure(&failureSrcIdx, failure)),
+	)
+
+	// We raise the fee levels of three nodes.
+	require.Equal(t, 3, len(i.nodeFeeDeltas))
+
+	// The node that we failed to reach has the highest fee delta. All
+	// others are decayed by half.
+	require.EqualValues(
+		t, i.nodeFeeDeltas[hops[2]], lnwire.MilliSatoshi(100),
+	)
+	require.EqualValues(
+		t, i.nodeFeeDeltas[hops[3]], lnwire.MilliSatoshi(100/2),
+	)
+	require.EqualValues(
+		t, i.nodeFeeDeltas[hops[4]], lnwire.MilliSatoshi(100/4),
+	)
+
+	// Test symmetric fee deltas.
+	i = interpretResult(
+		InterpretCfg{
+			FeeLevelPPM:       100.0,
+			FeeLevelReach:     2.0,
+			FeeLevelSymmetric: true,
+			FeeLevelDecay:     time.Duration(time.Hour),
+		},
+		routeFourHop,
+		fn.Some(newPaymentFailure(&failureSrcIdx, failure)),
+	)
+
+	// We raise the fee levels of three nodes.
+	require.Equal(t, 4, len(i.nodeFeeDeltas))
+
+	// We raise fee levels symmetrically around the failure source. The
+	// reach is streched to 2.0, so we decay to half after two hops.
+	require.EqualValues(
+		t, i.nodeFeeDeltas[hops[1]], lnwire.MilliSatoshi(70),
+	)
+	require.EqualValues(
+		t, i.nodeFeeDeltas[hops[2]], lnwire.MilliSatoshi(100),
+	)
+	require.EqualValues(
+		t, i.nodeFeeDeltas[hops[3]], lnwire.MilliSatoshi(70),
+	)
+	require.EqualValues(
+		t, i.nodeFeeDeltas[hops[4]], lnwire.MilliSatoshi(50),
+	)
 }
