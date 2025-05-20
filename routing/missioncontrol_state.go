@@ -1,8 +1,10 @@
 package routing
 
 import (
+	"math"
 	"time"
 
+	"github.com/lightningnetwork/lnd/lnwire"
 	"github.com/lightningnetwork/lnd/routing/route"
 )
 
@@ -20,6 +22,13 @@ type missionControlState struct {
 	// a directed node pair.
 	lastSecondChance map[DirectedNodePair]time.Time
 
+	// feeLevels tracks the fee level for a node. This is used to apply
+	// a cutoff to the node's lower fee channels.
+	feeLevels map[route.Vertex]FeeLevel
+
+	// feeLevelDecay is the half-life time of the fee levels.
+	feeLevelDecay time.Duration
+
 	// minFailureRelaxInterval is the minimum time that must have passed
 	// since the previously recorded failure before the failure amount may
 	// be raised.
@@ -28,11 +37,14 @@ type missionControlState struct {
 
 // newMissionControlState instantiates a new mission control state object.
 func newMissionControlState(
-	minFailureRelaxInterval time.Duration) *missionControlState {
+	minFailureRelaxInterval time.Duration,
+	feeLevelDecay time.Duration) *missionControlState {
 
 	return &missionControlState{
 		lastPairResult:          make(map[route.Vertex]NodeResults),
 		lastSecondChance:        make(map[DirectedNodePair]time.Time),
+		feeLevels:               make(map[route.Vertex]FeeLevel),
+		feeLevelDecay:           feeLevelDecay,
 		minFailureRelaxInterval: minFailureRelaxInterval,
 	}
 }
@@ -46,11 +58,50 @@ func (m *missionControlState) getLastPairResult(node route.Vertex) (NodeResults,
 	return result, ok
 }
 
+// getLastSuccess returns the last success time for the given node.
+func (f *missionControlState) getFeeLevel(
+	now time.Time, node route.Vertex) lnwire.MilliSatoshi {
+
+	// In case we don't have a fee level for this node, we return zero, i.e.
+	// there will be no change in fee rates for this node.
+	feeLevel, ok := f.feeLevels[node]
+	if !ok {
+		return 0
+	}
+
+	// The fee level is decayed by the time that has passed since the last
+	// update.
+	passedTime := now.Sub(feeLevel.LastUpdate)
+	if passedTime < 0 {
+		log.Warnf("Negative time passed since last fee level update "+
+			"for node %v: %v", node, passedTime)
+		return 0
+	}
+
+	// The fee level decay is exponential, so the fee level will be halved
+	// after feeDecay time has passed.
+	factor := 1.0
+	if f.feeLevelDecay > 0 {
+		feeDecay := float64(f.feeLevelDecay)
+		factor = math.Exp2(-float64(passedTime) / feeDecay)
+	}
+
+	return lnwire.MilliSatoshi(
+		float64(feeLevel.FeeRate) * factor,
+	)
+}
+
+// getFeeLevels returns the current fee levels for all nodes.
+func (f *missionControlState) getFeeLevels() map[route.Vertex]FeeLevel {
+	return f.feeLevels
+}
+
 // ResetHistory resets the history of missionControlState returning it to a
 // state as if no payment attempts have been made.
 func (m *missionControlState) resetHistory() {
 	m.lastPairResult = make(map[route.Vertex]NodeResults)
 	m.lastSecondChance = make(map[DirectedNodePair]time.Time)
+	m.feeLevels = make(map[route.Vertex]FeeLevel)
 }
 
 // setLastPairResult stores a result for a node pair.
@@ -136,6 +187,48 @@ func (m *missionControlState) setLastPairResult(fromNode, toNode route.Vertex,
 		fromNode, toNode, current.SuccessAmt, current.FailAmt)
 
 	nodePairs[toNode] = current
+}
+
+// setFeeDelta applies a delta to the fee level of the given node. The fee level
+// is decayed by the time that has passed since the last update.
+func (m *missionControlState) setFeeDelta(now time.Time, node route.Vertex,
+	delta lnwire.MilliSatoshi) {
+
+	// Check if we have a fee level for this node.
+	feeLevel, ok := m.feeLevels[node]
+	if !ok {
+		m.feeLevels[node] = FeeLevel{
+			FeeRate:    delta,
+			LastUpdate: now,
+		}
+
+		return
+	}
+
+	// Otherwise, we update the fee level with the new delta. The old value
+	// is decayed by the time that has passed since the last update.
+	passedTime := now.Sub(feeLevel.LastUpdate)
+	if passedTime < 0 {
+		log.Warnf("Negative time passed since last fee level update "+
+			"for node %v: %v", node, passedTime)
+		return
+	}
+
+	// The fee level decay is exponential, so the fee level will be halved
+	// after feeDecay time has passed.
+	factor := 1.0
+	if m.feeLevelDecay > 0 {
+		feeDecay := float64(m.feeLevelDecay)
+		factor = math.Exp2(-float64(passedTime) / feeDecay)
+	}
+
+	feeLevel.FeeRate = lnwire.MilliSatoshi(
+		float64(feeLevel.FeeRate)*factor,
+	) + delta
+
+	feeLevel.LastUpdate = now
+
+	m.feeLevels[node] = feeLevel
 }
 
 // setAllFail stores a fail result for all known connections to and from the
