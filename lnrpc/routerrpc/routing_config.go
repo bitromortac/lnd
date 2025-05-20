@@ -44,6 +44,36 @@ type RoutingConfig struct {
 
 	// FeeEstimationTimeout is the maximum time to wait for routing fees to be estimated.
 	FeeEstimationTimeout time.Duration `long:"fee-estimation-timeout" description:"the maximum time to wait for routing fees to be estimated by payment probes"`
+
+	// FeeLevelConfig controls the fee level mechanism.
+	FeeLevelConfig *FeeLevelConfig `group:"fee-level" namespace:"fee-level" description:"configuration for the fee level mechanism"`
+}
+
+// FeeLevelConfig controls the fee level mechanism.
+type FeeLevelConfig struct {
+	// PPM is the fee level increase for routing failures in terms of a fee
+	// rate. Fee level increase most strongly for the failing node. Fee
+	// levels of neighboring nodes along the route are increased less
+	// strongly, controlled by Reach.
+	PPM uint64 `long:"ppm" description:"The fee level increase for routing failures. The fee level increases most strongly for the failing node to reach."`
+
+	// Reach is the correlation factor for fee levels of neighboring nodes
+	// along the route in units of hops. The larger this value, the more
+	// neighbors are affected by the fee level increase of the failing node.
+	Reach float64 `long:"reach" description:"The correlation factor for fee levels of neighboring nodes along the route in units of hops."`
+
+	// Decay is the time it takes for a fee level to decay to 50%
+	// of its initial value. The decay is exponential, so the fee level
+	// will be halved after Decay time has passed.
+	Decay time.Duration `long:"decay" description:"The time it takes for a fee level to decay to 50% of its initial value."`
+
+	// Symmetric is the flag that indicates whether to also
+	// apply the fee level for successful hops before the failing node.
+	Symmetric bool `long:"symmetric" description:"If true, the fee level is also applied for successful hops before the failing node."`
+
+	// Load is the flag that indicates whether the fee level should be
+	// loaded from disk on startup. If false, the fee level starts at zero.
+	Load bool `long:"load" description:"If true, the fee level is loaded from disk on startup. If false, the fee level is not loaded and starts at zero."`
 }
 
 // AprioriConfig defines parameters for the apriori probability.

@@ -75,6 +75,12 @@ func DefaultConfig() *Config {
 			DecayTime:  routing.DefaultBimodalDecayTime,
 		},
 		FeeEstimationTimeout: routing.DefaultFeeEstimationTimeout,
+		FeeLevelConfig: &FeeLevelConfig{
+			PPM:       routing.DefaultFeeLevelPPM,
+			Reach:     routing.DefaultFeeLevelReach,
+			Decay:     routing.DefaultFeeLevelDecay,
+			Symmetric: routing.DefaultFeeLevelSymmetric,
+		},
 	}
 
 	return &Config{
@@ -103,5 +109,12 @@ func GetRoutingConfig(cfg *Config) *RoutingConfig {
 			DecayTime:  cfg.BimodalConfig.DecayTime,
 		},
 		FeeEstimationTimeout: cfg.FeeEstimationTimeout,
+		FeeLevelConfig: &FeeLevelConfig{
+			PPM:       cfg.FeeLevelConfig.PPM,
+			Reach:     cfg.FeeLevelConfig.Reach,
+			Decay:     cfg.FeeLevelConfig.Decay,
+			Symmetric: cfg.FeeLevelConfig.Symmetric,
+			Load:      cfg.FeeLevelConfig.Load,
+		},
 	}
 }
