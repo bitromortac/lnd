@@ -26,7 +26,6 @@ import (
 	"github.com/lightningnetwork/lnd/routing/route"
 	"github.com/lightningnetwork/lnd/subscribe"
 	"github.com/lightningnetwork/lnd/zpay32"
-	"github.com/prometheus/common/log"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -130,6 +129,10 @@ type MissionControl interface {
 
 	// GetFeeLevel returns the fee level for a given node.
 	GetFeeLevel(fromNode route.Vertex) lnwire.MilliSatoshi
+
+	// GetFeeLevels returns the fee levels for all nodes in the mission
+	// control.
+	GetFeeLevels() map[route.Vertex]routing.FeeLevel
 
 	// ResetHistory resets the history of MissionControl returning it to a
 	// state as if no payment attempts have been made.
