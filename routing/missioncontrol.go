@@ -465,7 +465,7 @@ func (m *MissionControl) init() error {
 	}
 
 	for _, result := range results {
-		_ = m.applyPaymentResult(result)
+		_ = m.applyPaymentResult(result, true)
 	}
 
 	m.log.Debugf("Mission control state reconstruction finished: "+
@@ -658,7 +658,7 @@ func (m *MissionControl) processPaymentResult(result *paymentResult) (
 	defer m.mu.Unlock()
 
 	// Apply result to update mission control state.
-	reason := m.applyPaymentResult(result)
+	reason := m.applyPaymentResult(result, false)
 
 	return reason, nil
 }
@@ -667,7 +667,7 @@ func (m *MissionControl) processPaymentResult(result *paymentResult) (
 // estimates. It returns a bool indicating whether this error is a final error
 // and no further payment attempts need to be made.
 func (m *MissionControl) applyPaymentResult(
-	result *paymentResult) *channeldb.FailureReason {
+	result *paymentResult, isInit bool) *channeldb.FailureReason {
 
 	// Interpret result.
 	i := interpretResult(InterpretCfg{}, &result.route.Val, result.failure.ValOpt())
