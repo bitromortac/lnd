@@ -76,6 +76,12 @@ type notifierOptions struct {
 	// includeBlock if true, then the dispatched confirmation notification
 	// will include the block that mined the transaction.
 	includeBlock bool
+
+	// allConfirmations notifies the caller of all confirmations
+	// received for the target transaction. If false, then the caller will
+	// only be notified once the transaction reaches the targeted number of
+	// confirmations.
+	allConfirmations bool
 }
 
 // defaultNotifierOptions returns the set of default options for the notifier.
@@ -92,6 +98,15 @@ type NotifierOption func(*notifierOptions)
 func WithIncludeBlock() NotifierOption {
 	return func(o *notifierOptions) {
 		o.includeBlock = true
+	}
+}
+
+// WithAllConfs is an optional argument that allows the caller to specify
+// that they wish to receive all confirmations for the target transaction,
+// rather than just the targeted number of confirmations.
+func WithAllConfs() NotifierOption {
+	return func(o *notifierOptions) {
+		o.allConfirmations = false
 	}
 }
 
@@ -201,6 +216,12 @@ type TxConfirmation struct {
 	// NOTE: This is only specified if the confirmation request opts to
 	// have the response include the block itself.
 	Block *wire.MsgBlock
+
+	// ConfsLeft is the number of confirmations left for the transaction to
+	// be fully confirmed. This is only specified if the confirmation
+	// request opts to have the response include all confirmations, rather
+	// than just the targeted number of confirmations.
+	ConfsLeft uint32
 }
 
 // ConfirmationEvent encapsulates a confirmation notification. With this struct,
@@ -226,14 +247,6 @@ type ConfirmationEvent struct {
 	//
 	// NOTE: This channel must be buffered.
 	Confirmed chan *TxConfirmation
-
-	// Updates is a channel that will sent upon, at every incremental
-	// confirmation, how many confirmations are left to declare the
-	// transaction as fully confirmed.
-	//
-	// NOTE: This channel must be buffered with the number of required
-	// confirmations.
-	Updates chan uint32
 
 	// NegativeConf is a channel that will be sent upon if the transaction
 	// confirms, but is later reorged out of the chain. The integer sent
@@ -262,7 +275,6 @@ func NewConfirmationEvent(numConfs uint32, cancel func()) *ConfirmationEvent {
 		// the channel so we need to create a larger buffer to avoid
 		// blocking the notifier.
 		Confirmed:    make(chan *TxConfirmation, 1),
-		Updates:      make(chan uint32, numConfs),
 		NegativeConf: make(chan int32, 1),
 		Done:         make(chan struct{}, 1),
 		Cancel:       cancel,
