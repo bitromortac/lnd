@@ -79,6 +79,26 @@ const (
 	// control name space. This is used as the sub-bucket key within the
 	// top level DB bucket to store mission control results.
 	DefaultMissionControlNamespace = "default"
+
+	// DefaultFeeLevelPPM is the default fee level increase for routing
+	// failures. By default we don't apply it.
+	DefaultFeeLevelPPM = 0
+
+	// DefaultFeeLevelReach is the default correlation factor for fee
+	// levels of neighboring nodes along the route in units of hops. The
+	// larger the reach, the more neighboring nodes have their fee levels
+	// increased. The default value of 1 means that the neighboring node
+	// will get half of the fee level increase than the failing node.
+	DefaultFeeLevelReach = 1
+
+	// DefaultFeeLevelDecay is the default time it takes for a fee level to
+	// decay to 50% of its initial value. The decay is exponential, so the
+	// fee level will be halved after FeeLevelDecay time has passed.
+	DefaultFeeLevelDecay = time.Hour
+
+	// DefaultFeeLevelSymmetric is the default value for whether to also
+	// apply the fee level to nodes before the failing node.
+	DefaultFeeLevelSymmetric = true
 )
 
 var (
@@ -94,6 +114,15 @@ var (
 
 // NodeResults contains previous results from a node to its peers.
 type NodeResults map[route.Vertex]TimedPairResult
+
+// FeeLevel is a struct that contains the fee level for a node.
+type FeeLevel struct {
+	// FeeRate is the fee rate for this node.
+	FeeRate lnwire.MilliSatoshi
+
+	// LastUpdate is the last time this fee level was updated.
+	LastUpdate time.Time
+}
 
 // mcConfig holds various config members that will be required by all
 // MissionControl instances and will be the same regardless of namespace.
@@ -126,6 +155,9 @@ type MissionControl struct {
 	// estimator is the probability estimator that is used with the payment
 	// results that mission control collects.
 	estimator Estimator
+
+	// interpretCfg is the configuration for the interpretation of results.
+	interpretCfg InterpretCfg
 
 	// onConfigUpdate is a function that is called whenever the
 	// mission control state is updated.
@@ -202,6 +234,10 @@ type MissionControlConfig struct {
 	// since the previously recorded failure before the failure amount may
 	// be raised.
 	MinFailureRelaxInterval time.Duration
+
+	// InterpretCfg is the configuration for the interpretation of
+	// payment results.
+	InterpretCfg InterpretCfg
 }
 
 func (c *MissionControlConfig) validate() error {
@@ -213,13 +249,14 @@ func (c *MissionControlConfig) validate() error {
 		return ErrInvalidFailureInterval
 	}
 
-	return nil
+	return c.InterpretCfg.Validate()
 }
 
 // String returns a string representation of a mission control config.
 func (c *MissionControlConfig) String() string {
 	return fmt.Sprintf("maximum history: %v, minimum failure relax "+
-		"interval: %v", c.MaxMcHistory, c.MinFailureRelaxInterval)
+		"interval: %v, interpret config: %+v", c.MaxMcHistory,
+		c.MinFailureRelaxInterval, c.InterpretCfg)
 }
 
 // TimedPairResult describes a timestamped pair result.
@@ -415,11 +452,13 @@ func (m *MissionController) initMissionControl(namespace string) (
 		cfg: m.cfg,
 		state: newMissionControlState(
 			cfg.MinFailureRelaxInterval,
+			cfg.InterpretCfg.FeeLevelDecay,
 		),
 		store:          store,
 		estimator:      cfg.Estimator,
 		log:            log.WithPrefix(fmt.Sprintf("[%s]:", namespace)),
 		onConfigUpdate: cfg.OnConfigUpdate,
+		interpretCfg:   cfg.InterpretCfg,
 	}
 
 	m.mc[namespace] = mc
@@ -465,7 +504,7 @@ func (m *MissionControl) init() error {
 	}
 
 	for _, result := range results {
-		_ = m.applyPaymentResult(result)
+		_ = m.applyPaymentResult(result, true)
 	}
 
 	m.log.Debugf("Mission control state reconstruction finished: "+
@@ -486,6 +525,7 @@ func (m *MissionControl) GetConfig() *MissionControlConfig {
 		MaxMcHistory:            m.store.maxRecords,
 		McFlushInterval:         m.store.flushInterval,
 		MinFailureRelaxInterval: m.state.minFailureRelaxInterval,
+		InterpretCfg:            m.interpretCfg,
 	}
 }
 
@@ -509,6 +549,12 @@ func (m *MissionControl) SetConfig(cfg *MissionControlConfig) error {
 	m.store.maxRecords = cfg.MaxMcHistory
 	m.state.minFailureRelaxInterval = cfg.MinFailureRelaxInterval
 	m.estimator = cfg.Estimator
+
+	// The load setting cannot be set dynamically.
+	load := m.interpretCfg.FeeLevelLoad
+	cfg.InterpretCfg.FeeLevelLoad = load
+
+	m.interpretCfg = cfg.InterpretCfg
 
 	// Execute the callback function if it is set.
 	m.onConfigUpdate.WhenSome(func(f func(cfg *MissionControlConfig)) {
@@ -554,6 +600,27 @@ func (m *MissionControl) GetProbability(fromNode, toNode route.Vertex,
 	return m.estimator.PairProbability(
 		now, results, toNode, amt, capacity,
 	)
+}
+
+// GetFeeLevel returns the fee level for a given node.
+func (m *MissionControl) GetFeeLevel(node route.Vertex) lnwire.MilliSatoshi {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	if m.interpretCfg.FeeLevelPPM == 0 {
+		return 0
+	}
+
+	now := m.cfg.clock.Now()
+	return m.state.getFeeLevel(now, node)
+}
+
+// GetFeeLevels returns the fee level for a given node.
+func (m *MissionControl) GetFeeLevels() map[route.Vertex]FeeLevel {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	return m.state.getFeeLevels()
 }
 
 // GetHistorySnapshot takes a snapshot from the current mission control state
@@ -658,7 +725,7 @@ func (m *MissionControl) processPaymentResult(result *paymentResult) (
 	defer m.mu.Unlock()
 
 	// Apply result to update mission control state.
-	reason := m.applyPaymentResult(result)
+	reason := m.applyPaymentResult(result, false)
 
 	return reason, nil
 }
@@ -667,10 +734,12 @@ func (m *MissionControl) processPaymentResult(result *paymentResult) (
 // estimates. It returns a bool indicating whether this error is a final error
 // and no further payment attempts need to be made.
 func (m *MissionControl) applyPaymentResult(
-	result *paymentResult) *channeldb.FailureReason {
+	result *paymentResult, isInit bool) *channeldb.FailureReason {
 
 	// Interpret result.
-	i := interpretResult(&result.route.Val, result.failure.ValOpt())
+	i := interpretResult(
+		m.interpretCfg, &result.route.Val, result.failure.ValOpt(),
+	)
 
 	if i.policyFailure != nil {
 		if m.state.requestSecondChance(
@@ -680,6 +749,8 @@ func (m *MissionControl) applyPaymentResult(
 			return nil
 		}
 	}
+
+	replyTime := time.Unix(0, int64(result.timeReply.Val))
 
 	// If there is a node-level failure, record a failure for every tried
 	// connection of that node. A node-level failure can be considered as a
@@ -702,10 +773,7 @@ func (m *MissionControl) applyPaymentResult(
 		m.log.Debugf("Reporting node failure to Mission Control: "+
 			"node=%v", *i.nodeFailure)
 
-		m.state.setAllFail(
-			*i.nodeFailure,
-			time.Unix(0, int64(result.timeReply.Val)),
-		)
+		m.state.setAllFail(*i.nodeFailure, replyTime)
 	}
 
 	for pair, pairResult := range i.pairResults {
@@ -722,10 +790,23 @@ func (m *MissionControl) applyPaymentResult(
 		}
 
 		m.state.setLastPairResult(
-			pair.From, pair.To,
-			time.Unix(0, int64(result.timeReply.Val)), &pairResult,
-			false,
+			pair.From, pair.To, replyTime, &pairResult, false,
 		)
+	}
+
+	// In case we are initiating and the loading setting is disabled, we
+	// won't set the initial fee deltas.
+	if m.interpretCfg.FeeLevelLoad || !isInit {
+		for node, delta := range i.nodeFeeDeltas {
+			m.log.Debugf("Reporting node fee delta to Mission "+
+				"Control: node=%v, delta=%v", node, delta)
+
+			// Beware that fee deltas are loaded dynamically when
+			// mission control launches. This could lead to
+			// increased fee levels when restarting with a higher
+			// fee level PPM.
+			m.state.setFeeDelta(replyTime, node, delta)
+		}
 	}
 
 	return i.finalFailureReason

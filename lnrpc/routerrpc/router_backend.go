@@ -127,6 +127,13 @@ type MissionControl interface {
 	GetProbability(fromNode, toNode route.Vertex,
 		amt lnwire.MilliSatoshi, capacity btcutil.Amount) float64
 
+	// GetFeeLevel returns the fee level for a given node.
+	GetFeeLevel(fromNode route.Vertex) lnwire.MilliSatoshi
+
+	// GetFeeLevels returns the fee levels for all nodes in the mission
+	// control.
+	GetFeeLevels() map[route.Vertex]routing.FeeLevel
+
 	// ResetHistory resets the history of MissionControl returning it to a
 	// state as if no payment attempts have been made.
 	ResetHistory() error
@@ -402,6 +409,7 @@ func (r *RouterBackend) parseQueryRoutesRequest(in *lnrpc.QueryRoutesRequest) (
 				fromNode, toNode, amt, capacity,
 			)
 		},
+		FeeLevelSource:        r.MissionControl.GetFeeLevel,
 		DestCustomRecords:     record.CustomSet(in.DestCustomRecords),
 		CltvLimit:             cltvLimit,
 		DestFeatures:          destinationFeatures,

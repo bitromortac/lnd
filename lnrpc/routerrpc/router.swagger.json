@@ -1400,6 +1400,51 @@
       ],
       "default": "UNKNOWN"
     },
+    "routerrpcFeeLevel": {
+      "type": "object",
+      "properties": {
+        "node": {
+          "type": "string",
+          "format": "byte",
+          "description": "The node for the fee level."
+        },
+        "fee_level": {
+          "type": "string",
+          "format": "uint64",
+          "description": "The node's fee level."
+        },
+        "last_update": {
+          "type": "string",
+          "format": "int64",
+          "description": "Last updated."
+        }
+      },
+      "title": "FeeLevel"
+    },
+    "routerrpcFeeLevelParameters": {
+      "type": "object",
+      "properties": {
+        "level_PPM": {
+          "type": "string",
+          "format": "uint64",
+          "description": "The fee level increase for routing failures. The fee level increases most\nstrongly for the failing node to reach. Fee levels of neighboring nodes\nalong the route are increased less strongly, controlled by\nFeeLevelCorrelation."
+        },
+        "reach": {
+          "type": "number",
+          "format": "double",
+          "description": "The correlation extent for fee levels of neighboring nodes along the route\nin units of hops."
+        },
+        "decay_seconds": {
+          "type": "string",
+          "format": "uint64",
+          "description": "Decay is the time it takes for a fee level to decay to 50% of its initial\nvalue. The decay is exponential, so the fee level will be halved after\nDecay time has passed."
+        },
+        "symmetric": {
+          "type": "boolean",
+          "description": "Symmetric is the flag that indicates whether to also apply the fee level\nfor successful hops before the failing node."
+        }
+      }
+    },
     "routerrpcFinalHtlcEvent": {
       "type": "object",
       "properties": {
@@ -1689,6 +1734,9 @@
         },
         "bimodal": {
           "$ref": "#/definitions/routerrpcBimodalParameters"
+        },
+        "fee_level_parameters": {
+          "$ref": "#/definitions/routerrpcFeeLevelParameters"
         }
       }
     },
@@ -1792,6 +1840,14 @@
             "$ref": "#/definitions/routerrpcPairHistory"
           },
           "description": "Node pair-level mission control state."
+        },
+        "fee_levels": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/routerrpcFeeLevel"
+          },
+          "description": "Per node fee levels."
         }
       },
       "description": "QueryMissionControlResponse contains mission control state."

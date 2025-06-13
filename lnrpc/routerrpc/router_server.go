@@ -477,6 +477,7 @@ func (s *Server) probeDestination(dest []byte, amtSat int64) (*RouteFeeResponse,
 			FeeLimit:          routeFeeLimitSat,
 			CltvLimit:         s.cfg.RouterBackend.MaxTotalTimelock,
 			ProbabilitySource: mc.GetProbability,
+			FeeLevelSource:    mc.GetFeeLevel,
 		}, nil, nil, nil, s.cfg.RouterBackend.DefaultFinalCltvDelta,
 	)
 	if err != nil {
@@ -977,12 +978,19 @@ func (s *Server) GetMissionControlConfig(ctx context.Context,
 
 	// Query the current mission control config.
 	cfg := s.cfg.RouterBackend.MissionControl.GetConfig()
+	feeLevelConfig := FeeLevelParameters{
+		Level_PPM:    cfg.InterpretCfg.FeeLevelPPM,
+		Reach:        cfg.InterpretCfg.FeeLevelReach,
+		DecaySeconds: uint64(cfg.InterpretCfg.FeeLevelDecay.Seconds()),
+		Symmetric:    cfg.InterpretCfg.FeeLevelSymmetric,
+	}
 	resp := &GetMissionControlConfigResponse{
 		Config: &MissionControlConfig{
 			MaximumPaymentResults: uint32(cfg.MaxMcHistory),
 			MinimumFailureRelaxInterval: uint64(
 				cfg.MinFailureRelaxInterval.Seconds(),
 			),
+			FeeLevelParameters: &feeLevelConfig,
 		},
 	}
 
@@ -1037,6 +1045,17 @@ func (s *Server) SetMissionControlConfig(ctx context.Context,
 		MinFailureRelaxInterval: time.Duration(
 			req.Config.MinimumFailureRelaxInterval,
 		) * time.Second,
+	}
+
+	if req.Config.FeeLevelParameters != nil {
+		mcCfg.InterpretCfg = routing.InterpretCfg{
+			FeeLevelPPM:   req.Config.FeeLevelParameters.Level_PPM,
+			FeeLevelReach: float64(req.Config.FeeLevelParameters.Reach),
+			FeeLevelDecay: time.Duration(
+				req.Config.FeeLevelParameters.DecaySeconds,
+			) * time.Second,
+			FeeLevelSymmetric: req.Config.FeeLevelParameters.Symmetric,
+		}
 	}
 
 	switch req.Config.Model {
@@ -1133,8 +1152,20 @@ func (s *Server) QueryMissionControl(_ context.Context,
 		rpcPairs = append(rpcPairs, &rpcPair)
 	}
 
+	feeLevels := s.cfg.RouterBackend.MissionControl.GetFeeLevels()
+
+	rpcFeeLevels := make([]*FeeLevel, 0, len(feeLevels))
+	for node, feeLevel := range feeLevels {
+		rpcFeeLevels = append(rpcFeeLevels, &FeeLevel{
+			Node:       node[:],
+			FeeLevel:   uint64(feeLevel.FeeRate),
+			LastUpdate: feeLevel.LastUpdate.Unix(),
+		})
+	}
+
 	response := QueryMissionControlResponse{
-		Pairs: rpcPairs,
+		Pairs:     rpcPairs,
+		FeeLevels: rpcFeeLevels,
 	}
 
 	return &response, nil

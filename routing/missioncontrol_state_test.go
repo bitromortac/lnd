@@ -4,6 +4,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/lightningnetwork/lnd/lnwire"
 	"github.com/lightningnetwork/lnd/routing/route"
 	"github.com/stretchr/testify/require"
 )
@@ -12,7 +13,7 @@ import (
 // pair results.
 func TestMissionControlStateSetLastPairResult(t *testing.T) {
 	const minFailureRelaxInterval = time.Minute
-	state := newMissionControlState(minFailureRelaxInterval)
+	state := newMissionControlState(minFailureRelaxInterval, 0)
 
 	var (
 		from      = route.Vertex{1}
@@ -90,4 +91,45 @@ func TestMissionControlStateSetLastPairResult(t *testing.T) {
 		SuccessAmt:  50,
 	}
 	require.Equal(t, expected, result[to])
+}
+
+// TestMissionControlStateFeeLevel tests functionality of the fee level
+// mechanism.
+func TestMissionControlStateFeeLevel(t *testing.T) {
+	var (
+		feeLevelDecay = time.Hour
+		now           = time.Now()
+		state         = newMissionControlState(0, feeLevelDecay)
+	)
+
+	// Query the fee level for a node that has not been set yet.
+	node := route.Vertex{1}
+	feeLevel := state.getFeeLevel(now, node)
+	require.Zero(t, 0, feeLevel)
+
+	// Set the fee level for the node.
+	feeLevelDelta := lnwire.MilliSatoshi(100)
+	state.setFeeDelta(now, node, feeLevelDelta)
+
+	// Query the fee level for the node again.
+	feeLevel = state.getFeeLevel(now, node)
+	require.Equal(t, feeLevelDelta, feeLevel)
+
+	// Set the fee level for the node again. The fee level should have
+	// accumulated.
+	state.setFeeDelta(now, node, feeLevelDelta)
+	feeLevel = state.getFeeLevel(now, node)
+	require.Equal(t, feeLevelDelta*2, feeLevel)
+
+	// Query the fee level after some time. The fee level should have
+	// decayed.
+	decayTime := now.Add(feeLevelDecay)
+	feeLevel = state.getFeeLevel(decayTime, node)
+	require.Equal(t, feeLevelDelta, feeLevel)
+
+	// Query the fee level after some more time. The fee level should have
+	// decayed by another 50%.
+	decayTime = decayTime.Add(feeLevelDecay)
+	feeLevel = state.getFeeLevel(decayTime, node)
+	require.Equal(t, feeLevelDelta/2, feeLevel)
 }

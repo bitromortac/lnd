@@ -48,7 +48,10 @@ var setCfgCommand = cli.Command{
 	Description: `
         Update the config values being used by mission control to calculate the
         probability that payment routes will succeed. The estimator type must be
-        provided to set estimator-related parameters.`,
+        provided to set estimator-related parameters.
+	If any of the fee level flags are set, all of the fee level flags must
+	be set.
+	`,
 	Flags: []cli.Flag{
 		// General settings.
 		cli.UintFlag{
@@ -111,6 +114,24 @@ var setCfgCommand = cli.Command{
 				"estimator takes into account other channels " +
 				"of a router",
 		},
+		cli.Uint64Flag{
+			Name:  "feelevelppm",
+			Usage: "the fee level increase for routing failures.",
+		},
+		cli.Float64Flag{
+			Name:  "feelevelreach",
+			Usage: "the correlation factor for fee levels",
+		},
+		cli.DurationFlag{
+			Name: "feeleveldecay",
+			Usage: "the time it takes for a fee level to decay " +
+				"to 50% of its initial value",
+		},
+		cli.BoolFlag{
+			Name: "feelevelsymmetric",
+			Usage: "if true, the fee level is also applied for " +
+				"successful hops before the failing node",
+		},
 	},
 	Action: actionDecorator(setCfg),
 }
@@ -145,6 +166,20 @@ func setCfg(ctx *cli.Context) error {
 		mcCfg.Config.MinimumFailureRelaxInterval = uint64(ctx.Duration(
 			"failrelax",
 		).Seconds())
+	}
+
+	// Only set fee level config if any of the fee level flags are set.
+	if ctx.IsSet("feelevelppm") || ctx.IsSet("feelevelreach") ||
+		ctx.IsSet("feeleveldecay") || ctx.IsSet("feelevelsymmetric") {
+
+		haveValue = true
+		feeLevelCfg := &routerrpc.FeeLevelParameters{
+			Level_PPM:    ctx.Uint64("feelevelppm"),
+			Reach:        ctx.Float64("feelevelreach"),
+			DecaySeconds: uint64(ctx.Duration("feeleveldecay").Seconds()),
+			Symmetric:    ctx.Bool("feelevelsymmetric"),
+		}
+		mcCfg.Config.FeeLevelParameters = feeLevelCfg
 	}
 
 	// We switch between estimators and set corresponding configs. If

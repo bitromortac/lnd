@@ -1039,6 +1039,13 @@ func newServer(_ context.Context, cfg *Config, listenAddrs []net.Addr,
 		MaxMcHistory:            routingConfig.MaxMcHistory,
 		McFlushInterval:         routingConfig.McFlushInterval,
 		MinFailureRelaxInterval: routing.DefaultMinFailureRelaxInterval,
+		InterpretCfg: routing.InterpretCfg{
+			FeeLevelPPM:       routingConfig.FeeLevelConfig.PPM,
+			FeeLevelReach:     routingConfig.FeeLevelConfig.Reach,
+			FeeLevelSymmetric: routingConfig.FeeLevelConfig.Symmetric,
+			FeeLevelDecay:     routingConfig.FeeLevelConfig.Decay,
+			FeeLevelLoad:      routingConfig.FeeLevelConfig.Load,
+		},
 	}
 
 	s.missionController, err = routing.NewMissionController(
@@ -1947,6 +1954,14 @@ func (s *server) UpdateRoutingConfig(cfg *routing.MissionControlConfig) {
 	}
 
 	routerCfg.MaxMcHistory = cfg.MaxMcHistory
+
+	routerCfg.FeeLevelConfig = &routerrpc.FeeLevelConfig{
+		PPM:       cfg.InterpretCfg.FeeLevelPPM,
+		Reach:     cfg.InterpretCfg.FeeLevelReach,
+		Decay:     cfg.InterpretCfg.FeeLevelDecay,
+		Symmetric: cfg.InterpretCfg.FeeLevelSymmetric,
+		Load:      cfg.InterpretCfg.FeeLevelLoad,
+	}
 }
 
 // registerBlockConsumers registers the subsystems that consume block events.

@@ -396,8 +396,17 @@ func newRoute(sourceVertex route.Vertex,
 // channels with shorter time lock deltas and shorter (hops) routes in general.
 // RiskFactor controls the influence of time lock on route selection. This is
 // currently a fixed value, but might be configurable in the future.
-func edgeWeight(lockedAmt lnwire.MilliSatoshi, fee lnwire.MilliSatoshi,
+func edgeWeight(lockedAmt, fee, feeLevelPPM lnwire.MilliSatoshi,
 	timeLockDelta uint16) int64 {
+
+	// We virtually lift up the outbound fee if we encounter a
+	// channel below the fee level. This is to prevent channels with
+	// a low fee level from being used.
+	thresholdFee := feeLevelPPM * lockedAmt / 1000000
+	if fee < thresholdFee {
+		fee = thresholdFee + (thresholdFee - fee)
+	}
+
 	// timeLockPenalty is the penalty for the time lock delta of this channel.
 	// It is controlled by RiskFactorBillionths and scales proportional
 	// to the amount that will pass through channel. Rationale is that it if
@@ -436,6 +445,9 @@ type RestrictParams struct {
 	// success probability of traversing the channel from the node.
 	ProbabilitySource func(route.Vertex, route.Vertex,
 		lnwire.MilliSatoshi, btcutil.Amount) float64
+
+	// FeeLevel is a callback that gives the fee level in PPM of a node.
+	FeeLevelSource func(route.Vertex) lnwire.MilliSatoshi
 
 	// FeeLimit is a maximum fee amount allowed to be used on the path from
 	// the source to the target.
@@ -803,11 +815,16 @@ func findPath(g *graphParams, r *RestrictParams, cfg *PathFindingConfig,
 			edge.capacity,
 		)
 
+		// Compute the fee level which is used as a routing fee
+		// threshold.
+		feeLevelPPM := r.FeeLevelSource(toNodeDist.node)
+
 		log.Trace(lnutils.NewLogClosure(func() string {
-			return fmt.Sprintf("path finding probability: fromnode=%v,"+
-				" tonode=%v, amt=%v, cap=%v, probability=%v",
-				fromVertex, toNodeDist.node, amountToSend,
-				edge.capacity, edgeProbability)
+			return fmt.Sprintf("path finding probability: "+
+				"fromnode=%v, tonode=%v (feelevel=%v "+
+				"PPM), amt=%v, cap=%v, probability=%v",
+				fromVertex, toNodeDist.node, feeLevelPPM,
+				amountToSend, edge.capacity, edgeProbability)
 		}))
 
 		// If the probability is zero, there is no point in trying.
@@ -834,6 +851,7 @@ func findPath(g *graphParams, r *RestrictParams, cfg *PathFindingConfig,
 			outboundFee = int64(
 				edge.policy.ComputeFee(amountToSend),
 			)
+
 			timeLockDelta = edge.policy.TimeLockDelta
 		}
 
@@ -879,7 +897,9 @@ func findPath(g *graphParams, r *RestrictParams, cfg *PathFindingConfig,
 		// weight composed of the fee that this node will charge and
 		// the amount that will be locked for timeLockDelta blocks in
 		// the HTLC that is handed out to fromVertex.
-		weight := edgeWeight(amountToSend, fee, timeLockDelta)
+		weight := edgeWeight(
+			amountToSend, fee, feeLevelPPM, timeLockDelta,
+		)
 
 		// Compute the tentative weight to this new channel/edge
 		// which is the weight from our toNode to the target node
