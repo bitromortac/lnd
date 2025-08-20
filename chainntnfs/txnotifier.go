@@ -1835,44 +1835,82 @@ func (n *TxNotifier) DisconnectTip(blockHeight uint32) error {
 	// those that have confirmed/spent at previous heights.
 	n.updateHints(blockHeight)
 
+	// removeLastEvent is a helper closure that will attempt to drain the
+	// last enqueued confirmation event from the notification channel.
+	removeLastEvent := func(channel chan *TxConfirmation) error {
+		events := make([]*TxConfirmation, 0, len(channel))
+	drain:
+		for {
+			// Note that if there is a concurrent reader on the
+			// channel, it may happen that they get the confirmation
+			// events out of order with requeuing. This is best
+			// effort attempt to remove the last event item, which
+			// also may be missed here because it may be consumed by
+			// the other reader.
+			select {
+			case event := <-channel:
+				events = append(events, event)
+			case <-n.quit:
+				return ErrTxNotifierExiting
+			default:
+				break drain
+			}
+		}
+
+		if len(events) == 0 {
+			return nil
+		}
+
+		events = events[:len(events)-1]
+
+		// Re-queue all the events back to the channel.
+		for _, event := range events {
+			channel <- event
+		}
+
+		return nil
+	}
+
 	// We'll go through all of our watched confirmation requests and attempt
 	// to drain their notification channels to ensure sending notifications
 	// to the clients is always non-blocking.
-	for txHash := range n.confsByInitialHeight[blockHeight] {
-		// If the transaction/output script has been reorged out
-		// of the chain, we'll make sure to remove the cached
-		// confirmation details to prevent notifying clients
-		// with old information.
-		confSet := n.confNotifications[txHash]
-		confSet.details = nil
-
-		for _, ntfn := range confSet.ntfns {
-			// If the caller requested intermediate confirmations,
-			// drain all pending confirmation events so that
-			// subsequent sends (after a reorg) remain non‑blocking.
-			if ntfn.allConfirmations {
-			drain:
-				for {
-					select {
-					case <-ntfn.Event.Confirmed:
-					case <-n.quit:
-						return ErrTxNotifierExiting
-					default:
-						break drain
-					}
-				}
+	for initialHeight, txHashes := range n.confsByInitialHeight {
+		for txHash := range txHashes {
+			// If the transaction/output script has been reorged out
+			// of the chain, we'll make sure to remove the cached
+			// confirmation details to prevent notifying clients
+			// with old information.
+			confSet := n.confNotifications[txHash]
+			if initialHeight == blockHeight {
+				confSet.details = nil
 			}
 
-			// We also reset the num of confs left.
-			ntfn.numConfsLeft = ntfn.NumConfirmations
+			for _, ntfn := range confSet.ntfns {
+				// We drain the last confirmation event from the
+				// notification channel (if still present) to
+				// ensure that any future sends are
+				// non-blocking.
+				err := removeLastEvent(ntfn.Event.Confirmed)
+				if err != nil {
+					return err
+				}
 
-			// Then, we'll check if the current transaction/output
-			// script was included in the block currently being
-			// disconnected. If it was, we'll need to dispatch a
-			// reorg notification to the client.
-			err := n.dispatchConfReorg(ntfn, blockHeight)
-			if err != nil {
-				return err
+				// We also reset the num of confs update.
+				ntfn.numConfsLeft = ntfn.NumConfirmations
+
+				// Then, we'll check if the current
+				// transaction/output script was included in the
+				// block currently being disconnected. If it
+				// was, we'll need to dispatch a reorg
+				// notification to the client.
+				if initialHeight == blockHeight {
+					err := n.dispatchConfReorg(
+						ntfn, blockHeight,
+					)
+					if err != nil {
+						return err
+					}
+				}
 			}
 		}
 	}
