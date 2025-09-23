@@ -6570,6 +6570,10 @@ func (lc *LightningChannel) ChannelPoint() wire.OutPoint {
 	return lc.channelState.FundingOutpoint
 }
 
+func (lc *LightningChannel) ChannelState() *channeldb.OpenChannel {
+	return lc.channelState
+}
+
 // ChannelID returns the ChannelID of this LightningChannel. This is the same
 // ChannelID that is used in update messages for this channel.
 func (lc *LightningChannel) ChannelID() lnwire.ChannelID {
