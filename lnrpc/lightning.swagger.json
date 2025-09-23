@@ -3060,7 +3060,8 @@
         "INACTIVE_CHANNEL",
         "PENDING_OPEN_CHANNEL",
         "FULLY_RESOLVED_CHANNEL",
-        "CHANNEL_FUNDING_TIMEOUT"
+        "CHANNEL_FUNDING_TIMEOUT",
+        "CHANNEL_UPDATE"
       ],
       "default": "OPEN_CHANNEL"
     },
@@ -4413,6 +4414,14 @@
         }
       }
     },
+    "lnrpcChannelCommitUpdate": {
+      "type": "object",
+      "properties": {
+        "channel": {
+          "$ref": "#/definitions/lnrpcChannel"
+        }
+      }
+    },
     "lnrpcChannelConstraints": {
       "type": "object",
       "properties": {
@@ -4543,6 +4552,9 @@
         },
         "channel_funding_timeout": {
           "$ref": "#/definitions/lnrpcChannelPoint"
+        },
+        "updated_channel": {
+          "$ref": "#/definitions/lnrpcChannelCommitUpdate"
         },
         "type": {
           "$ref": "#/definitions/ChannelEventUpdateUpdateType"
