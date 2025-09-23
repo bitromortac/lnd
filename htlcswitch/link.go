@@ -2480,6 +2480,12 @@ func (l *channelLink) handleUpstreamMsg(ctx context.Context,
 		}
 		l.RWMutex.Unlock()
 
+		// At this point our local commitment state has been irrevokably
+		// committed to and our balances are updated. We notify our
+		// subscribers that the channel state has been updated.
+		// TODO: create a deep copy of the channel state.
+		l.cfg.NotifyChannelUpdate(l.channel.ChannelState())
+
 	case *lnwire.RevokeAndAck:
 		// We've received a revocation from the remote chain, if valid,
 		// this moves the remote chain forward, and expands our
