@@ -366,24 +366,18 @@
       "enum": [
         "UNSPECIFIED",
         "PAYMENT_ID_NOT_FOUND",
-        "FORWARDING_ERROR",
         "CLEAR_TEXT_ERROR",
         "UNREADABLE_FAILURE_MESSAGE",
         "DUPLICATE_HTLC",
-        "NO_LINK",
         "SWITCH_EXITING",
         "INTERNAL"
       ],
       "default": "UNSPECIFIED",
-      "description": " - UNSPECIFIED: Default value for unset errors.\n - PAYMENT_ID_NOT_FOUND: Payment ID was not found.\n - FORWARDING_ERROR: Error occurred during forwarding.\n - CLEAR_TEXT_ERROR: Clear text error.\n - UNREADABLE_FAILURE_MESSAGE: Failure message could not be read.\n - DUPLICATE_HTLC: An HTLC with same ID is already in flight.\n - NO_LINK: No link available for payment.\n - SWITCH_EXITING: HTLC switch is exiting.\n - INTERNAL: Opaque internal server error."
+      "description": " - UNSPECIFIED: Default value for unset errors.\n - PAYMENT_ID_NOT_FOUND: Payment ID was not found.\n - CLEAR_TEXT_ERROR: Clear text error.\n - UNREADABLE_FAILURE_MESSAGE: Failure message could not be read.\n - DUPLICATE_HTLC: An HTLC with same ID is already in flight.\n - SWITCH_EXITING: HTLC switch is exiting.\n - INTERNAL: Opaque internal server error."
     },
     "switchrpcFailureDetails": {
       "type": "object",
       "properties": {
-        "error_code": {
-          "$ref": "#/definitions/switchrpcErrorCode",
-          "description": "The ErrorCode provides a high-level classification of the failure."
-        },
         "error_message": {
           "type": "string",
           "description": "A human-readable error_message for logging or display."
@@ -400,6 +394,22 @@
           "type": "string",
           "format": "byte",
           "description": "encrypted_error_data is returned when the server could not decrypt\nthe onion error blob, deferring decryption to the client."
+        },
+        "payment_id_not_found": {
+          "$ref": "#/definitions/switchrpcPaymentIdNotFound",
+          "description": "payment_id_not_found is returned when the payment ID is unknown."
+        },
+        "unreadable_failure": {
+          "$ref": "#/definitions/switchrpcUnreadableFailure",
+          "description": "unreadable_failure is returned when the failure message is malformed."
+        },
+        "switch_exiting": {
+          "$ref": "#/definitions/switchrpcSwitchExiting",
+          "description": "switch_exiting is returned when the switch is shutting down."
+        },
+        "internal_error": {
+          "$ref": "#/definitions/switchrpcInternalError",
+          "description": "internal_error is returned for all other opaque internal errors."
         }
       },
       "description": "FailureDetails provides structured information about why a payment attempt\nfailed on the network. This message is included in a successful\nTrackOnionResponse when the queried attempt ultimately failed."
@@ -419,6 +429,14 @@
         }
       },
       "description": "ForwardingFailure represents an HTLC failure that occurred at a specific\nhop within the payment route."
+    },
+    "switchrpcInternalError": {
+      "type": "object",
+      "description": "InternalError indicates that an unexpected internal error occurred."
+    },
+    "switchrpcPaymentIdNotFound": {
+      "type": "object",
+      "description": "PaymentIdNotFound indicates that the specified payment ID was not found."
     },
     "switchrpcSendOnionRequest": {
       "type": "object",
@@ -495,6 +513,10 @@
         }
       }
     },
+    "switchrpcSwitchExiting": {
+      "type": "object",
+      "description": "SwitchExiting indicates that the HTLC switch is shutting down."
+    },
     "switchrpcTrackOnionRequest": {
       "type": "object",
       "properties": {
@@ -536,6 +558,10 @@
           "description": "The application-level failure for the payment attempt. If this field\nis set, the payment attempt failed."
         }
       }
+    },
+    "switchrpcUnreadableFailure": {
+      "type": "object",
+      "description": "UnreadableFailure indicates that the failure message from the network was\nmalformed or otherwise unreadable."
     }
   }
 }

@@ -488,6 +488,7 @@ func (s *Server) TrackOnion(ctx context.Context,
 			"encrypted error", hash)
 
 		details := &FailureDetails{
+			ErrorMessage: "onion error could not be decrypted by server",
 			Failure: &FailureDetails_EncryptedErrorData{
 				EncryptedErrorData: result.EncryptedError,
 			},
@@ -503,8 +504,10 @@ func (s *Server) TrackOnion(ctx context.Context,
 			"error", hash)
 
 		details := &FailureDetails{
-			ErrorCode:    ErrorCode_INTERNAL,
 			ErrorMessage: ErrAmbiguousPaymentState.Error(),
+			Failure: &FailureDetails_InternalError{
+				InternalError: &InternalError{},
+			},
 		}
 
 		return newTrackOnionFailureResponse(details), nil
@@ -721,35 +724,43 @@ func newTrackOnionFailureResponse(
 // marshallFailureDetails creates the FailureDetails message for the
 // TrackOnion response body.
 func marshallFailureDetails(err error) *FailureDetails {
+	details := &FailureDetails{
+		ErrorMessage: err.Error(),
+	}
+
 	var (
 		clearTextErr htlcswitch.ClearTextError
 		fwdErr       *htlcswitch.ForwardingError
 	)
 
-	details := &FailureDetails{
-		ErrorMessage: err.Error(),
-	}
-
 	switch {
 	case errors.Is(err, htlcswitch.ErrPaymentIDNotFound):
-		details.ErrorCode = ErrorCode_PAYMENT_ID_NOT_FOUND
+		details.Failure = &FailureDetails_PaymentIdNotFound{
+			PaymentIdNotFound: &PaymentIdNotFound{},
+		}
 
 	case errors.Is(err, htlcswitch.ErrUnreadableFailureMessage):
-		details.ErrorCode = ErrorCode_UNREADABLE_FAILURE_MESSAGE
+		details.Failure = &FailureDetails_UnreadableFailure{
+			UnreadableFailure: &UnreadableFailure{},
+		}
 
 	case errors.Is(err, htlcswitch.ErrSwitchExiting):
-		details.ErrorCode = ErrorCode_SWITCH_EXITING
+		details.Failure = &FailureDetails_SwitchExiting{
+			SwitchExiting: &SwitchExiting{},
+		}
 
 	case errors.As(err, &clearTextErr):
 		var buf bytes.Buffer
-
 		encodeErr := lnwire.EncodeFailure(
 			&buf, clearTextErr.WireMessage(), 0,
 		)
 		if encodeErr != nil {
 			log.Errorf("failed to encode wire message: %v",
 				encodeErr)
-			details.ErrorCode = ErrorCode_INTERNAL
+			details.ErrorMessage = encodeErr.Error()
+			details.Failure = &FailureDetails_InternalError{
+				InternalError: &InternalError{},
+			}
 
 			return details
 		}
@@ -772,7 +783,9 @@ func marshallFailureDetails(err error) *FailureDetails {
 		}
 
 	default:
-		details.ErrorCode = ErrorCode_INTERNAL
+		details.Failure = &FailureDetails_InternalError{
+			InternalError: &InternalError{},
+		}
 	}
 
 	return details
@@ -780,7 +793,7 @@ func marshallFailureDetails(err error) *FailureDetails {
 
 // UnmarshallFailureDetails translates a FailureDetails message from a
 // TrackOnion response into a concrete Go error. It handles all cases of the
-// 'oneof failure' field and falls back to the ErrorCode if needed.
+// 'oneof failure' field.
 func UnmarshallFailureDetails(details *FailureDetails,
 	deobfuscator htlcswitch.ErrorDecrypter) (error, error) {
 
@@ -804,14 +817,18 @@ func UnmarshallFailureDetails(details *FailureDetails,
 
 		// The client provides the decryption key/logic.
 		return deobfuscator.DecryptError(failure.EncryptedErrorData)
-	}
 
-	// If the 'oneof' was not populated, fall back to the error code.
-	switch details.ErrorCode {
-	case ErrorCode_UNREADABLE_FAILURE_MESSAGE:
+	case *FailureDetails_PaymentIdNotFound:
+		return htlcswitch.ErrPaymentIDNotFound, nil
+
+	case *FailureDetails_UnreadableFailure:
 		return htlcswitch.ErrUnreadableFailureMessage, nil
-	case ErrorCode_SWITCH_EXITING:
+
+	case *FailureDetails_SwitchExiting:
 		return htlcswitch.ErrSwitchExiting, nil
+
+	case *FailureDetails_InternalError:
+		return errors.New(details.ErrorMessage), nil
 	}
 
 	// If all else fails, return the generic error message.

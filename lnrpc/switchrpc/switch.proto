@@ -106,39 +106,29 @@ enum ErrorCode {
     PAYMENT_ID_NOT_FOUND = 1;
 
     /*
-    Error occurred during forwarding.
-    */
-    FORWARDING_ERROR = 2;
-
-    /*
     Clear text error.
     */
-    CLEAR_TEXT_ERROR = 3;
+    CLEAR_TEXT_ERROR = 2;
 
     /*
     Failure message could not be read.
     */
-    UNREADABLE_FAILURE_MESSAGE = 4;
+    UNREADABLE_FAILURE_MESSAGE = 3;
 
     /*
     An HTLC with same ID is already in flight.
     */
-    DUPLICATE_HTLC = 5;
-
-    /*
-    No link available for payment.
-    */
-    NO_LINK = 6;
+    DUPLICATE_HTLC = 4;
 
     /*
     HTLC switch is exiting.
     */
-    SWITCH_EXITING = 7;
+    SWITCH_EXITING = 5;
 
     /*
     Opaque internal server error.
     */
-    INTERNAL = 8;
+    INTERNAL = 6;
 }
 
 message TrackOnionRequest {
@@ -177,26 +167,35 @@ message TrackOnionResponse {
 // failed on the network. This message is included in a successful
 // TrackOnionResponse when the queried attempt ultimately failed.
 message FailureDetails {
-    // The ErrorCode provides a high-level classification of the failure.
-    ErrorCode error_code = 1;
-
     // A human-readable error_message for logging or display.
-    string error_message = 2;
+    string error_message = 1;
 
     // The failure contains specific, structured details about the error.
     oneof failure {
         // clear_text_failure is included when the failure originates locally
         // (at our node) or is a fully decrypted, known failure from an upstream
         // node. It contains the raw lnwire.FailureMessage.
-        ClearTextFailure clear_text_failure = 3;
+        ClearTextFailure clear_text_failure = 2;
 
         // forwarding_failure is included when the HTLC fails at a remote node
         // in the payment path and includes the index of the failing node.
-        ForwardingFailure forwarding_failure = 4;
+        ForwardingFailure forwarding_failure = 3;
 
         // encrypted_error_data is returned when the server could not decrypt
         // the onion error blob, deferring decryption to the client.
-        bytes encrypted_error_data = 5;
+        bytes encrypted_error_data = 4;
+
+        // payment_id_not_found is returned when the payment ID is unknown.
+        PaymentIdNotFound payment_id_not_found = 5;
+
+        // unreadable_failure is returned when the failure message is malformed.
+        UnreadableFailure unreadable_failure = 6;
+
+        // switch_exiting is returned when the switch is shutting down.
+        SwitchExiting switch_exiting = 7;
+
+        // internal_error is returned for all other opaque internal errors.
+        InternalError internal_error = 8;
     }
 }
 
@@ -244,4 +243,21 @@ message BuildOnionResponse {
     // The serialized public keys of all nodes along the route for the
     // constructed onion.
     repeated bytes hop_pubkeys = 3;
+}
+
+// PaymentIdNotFound indicates that the specified payment ID was not found.
+message PaymentIdNotFound {
+}
+
+// UnreadableFailure indicates that the failure message from the network was
+// malformed or otherwise unreadable.
+message UnreadableFailure {
+}
+
+// SwitchExiting indicates that the HTLC switch is shutting down.
+message SwitchExiting {
+}
+
+// InternalError indicates that an unexpected internal error occurred.
+message InternalError {
 }
