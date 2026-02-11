@@ -216,6 +216,15 @@ type peerSlotStatus struct {
 	state peerAccessStatus
 }
 
+// connMgr defines the methods used by the server from the connection manager.
+// This interface allows for testing with mock implementations.
+type connMgr interface {
+	Connect(c *connmgr.ConnReq)
+	Remove(id uint64)
+	Start()
+	Stop()
+}
+
 // server is the main server of the Lightning Network Daemon. The server houses
 // global state pertaining to the wallet, database, and the rpcserver.
 // Additionally, the server is also used as a central messaging bus to interact
@@ -380,7 +389,7 @@ type server struct {
 
 	towerClientMgr *wtclient.Manager
 
-	connMgr *connmgr.ConnManager
+	connMgr connMgr
 
 	sigPool *lnwallet.SigPool
 
