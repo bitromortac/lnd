@@ -1,11 +1,87 @@
 package lnd
 
 import (
+	"sync"
 	"testing"
 	"time"
 
+	"github.com/btcsuite/btcd/btcec/v2"
+	"github.com/btcsuite/btcd/connmgr"
+	"github.com/lightningnetwork/lnd/lncfg"
+	"github.com/lightningnetwork/lnd/lnwire"
+	"github.com/lightningnetwork/lnd/peer"
 	"github.com/stretchr/testify/require"
 )
+
+// mockConnMgr implements the connMgr interface for testing. It tracks all
+// Connect and Remove calls without making real network connections.
+type mockConnMgr struct {
+	mu           sync.Mutex
+	connectCalls []*connmgr.ConnReq
+	removeCalls  []uint64
+}
+
+func (m *mockConnMgr) Connect(c *connmgr.ConnReq) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.connectCalls = append(m.connectCalls, c)
+}
+
+func (m *mockConnMgr) Remove(id uint64) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.removeCalls = append(m.removeCalls, id)
+}
+
+func (m *mockConnMgr) Start() {}
+func (m *mockConnMgr) Stop()  {}
+
+func (m *mockConnMgr) getConnectCount() int {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	return len(m.connectCalls)
+}
+
+func (m *mockConnMgr) getRemoveCount() int {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	return len(m.removeCalls)
+}
+
+// newTestServer creates a minimal server instance with only the fields needed
+// for persistent connection management tests.
+func newTestServer(t *testing.T, cm connMgr) *server {
+	t.Helper()
+
+	s := &server{
+		cfg: &Config{
+			MinBackoff: time.Second,
+			Dev:        &lncfg.DevConfig{},
+		},
+		connMgr:                 cm,
+		persistentPeers:         make(map[string]bool),
+		persistentPeersBackoff:  make(map[string]time.Duration),
+		persistentConnReqs:      make(map[string][]*connmgr.ConnReq),
+		persistentPeerAddrs:     make(map[string][]*lnwire.NetAddress),
+		persistentRetryCancels:  make(map[string]chan struct{}),
+		peersByPub:              make(map[string]*peer.Brontide),
+		inboundPeers:            make(map[string]*peer.Brontide),
+		outboundPeers:           make(map[string]*peer.Brontide),
+		ignorePeerTermination:   make(map[*peer.Brontide]struct{}),
+		scheduledPeerConnection: make(map[string]func()),
+		quit:                    make(chan struct{}),
+	}
+
+	return s
+}
+
+// generateTestPubKey creates a new random public key for testing.
+func generateTestPubKey(t *testing.T) *btcec.PublicKey {
+	t.Helper()
+	priv, err := btcec.NewPrivateKey()
+	require.NoError(t, err)
+	return priv.PubKey()
+}
 
 // TestNodeAnnouncementTimestampComparison tests the timestamp comparison
 // logic used in setSelfNode to ensure node announcements have strictly
