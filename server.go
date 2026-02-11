@@ -4176,11 +4176,12 @@ func (s *server) OutboundPeerConnected(connReq *connmgr.ConnReq, conn net.Conn) 
 const UnassignedConnID uint64 = 0
 
 // cancelConnReqs stops all persistent connection requests for a given pubkey.
-// Any attempts initiated by the peerTerminationWatcher are canceled first.
-// Afterwards, each connection request removed from the connmgr. The caller can
-// optionally specify a connection ID to ignore, which prevents us from
+// It first closes any in-flight stagger goroutine from connectToPersistentPeer,
+// then removes each connection request from the connmgr. ConnReqs that have not
+// yet been assigned an ID are polled asynchronously until removal is possible.
+// The caller can optionally specify a connection ID to skip, which prevents
 // canceling a successful request. All persistent connreqs for the provided
-// pubkey are discarded after the operationjw.
+// pubkey are discarded after the operation.
 func (s *server) cancelConnReqs(pubStr string, skip *uint64) {
 	// First, cancel any lingering persistent retry attempts, which will
 	// prevent retries for any with backoffs that are still maturing.
@@ -4996,12 +4997,12 @@ func (s *server) ConnectToPeer(addr *lnwire.NetAddress,
 
 	// Peer was not found, continue to pursue connection with peer.
 
-	// If there's already a pending connection request for this pubkey,
-	// then we ignore this request to ensure we don't create a redundant
-	// connection.
-	if reqs, ok := s.persistentConnReqs[targetPub]; ok {
-		srvrLog.Warnf("Already have %d persistent connection "+
-			"requests for %v, connecting anyway.", len(reqs), addr)
+	// If there are already pending connection requests for this pubkey,
+	// cancel them before creating a new one. This prevents accumulation
+	// of ConnReqs when ConnectToPeer is called repeatedly for the same
+	// peer (e.g., from RPC or autopilot).
+	if _, ok := s.persistentConnReqs[targetPub]; ok {
+		s.cancelConnReqs(targetPub, nil)
 	}
 
 	// If there's not already a pending or active connection to this node,
