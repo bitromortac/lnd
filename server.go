@@ -4068,15 +4068,15 @@ func (s *server) OutboundPeerConnected(connReq *connmgr.ConnReq, conn net.Conn) 
 	defer s.mu.Unlock()
 
 	// If we already have an inbound connection to this peer, then ignore
-	// this new connection.
+	// this new connection and cancel ALL pending ConnReqs (not just the
+	// one that triggered this callback). This prevents accumulated
+	// ConnReqs from continuing to retry.
 	if p, ok := s.inboundPeers[pubStr]; ok {
 		srvrLog.Debugf("Already have inbound connection for %v, "+
 			"ignoring outbound connection from local=%v, remote=%v",
 			p, conn.LocalAddr(), conn.RemoteAddr())
 
-		if connReq != nil {
-			s.connMgr.Remove(connReq.ID())
-		}
+		s.cancelConnReqs(pubStr, nil)
 		conn.Close()
 		return
 	}

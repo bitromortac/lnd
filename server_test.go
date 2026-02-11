@@ -1,6 +1,7 @@
 package lnd
 
 import (
+	"fmt"
 	"net"
 	"sync"
 	"testing"
@@ -353,4 +354,48 @@ func TestCancelConnReqsUnassignedID(t *testing.T) {
 	// poll for the ID to be assigned and then remove it.
 	require.False(t, exists,
 		"persistentConnReqs map entry should be deleted")
+}
+
+// TestOutboundPeerConnectedInboundCleanup reproduces Bug 4: when an outbound
+// connection succeeds but an inbound connection already exists, only the
+// triggering ConnReq is removed from connmgr. Other pending ConnReqs for the
+// same peer keep retrying.
+func TestOutboundPeerConnectedInboundCleanup(t *testing.T) {
+	t.Parallel()
+
+	cm := &mockConnMgr{}
+	s := newTestServer(t, cm)
+
+	pubKey := generateTestPubKey(t)
+	targetPub := string(pubKey.SerializeCompressed())
+
+	// Create multiple pending ConnReqs for this peer (simulating
+	// accumulated requests from the other bugs).
+	for i := 0; i < 5; i++ {
+		connReq := &connmgr.ConnReq{
+			Addr: &lnwire.NetAddress{
+				IdentityKey: pubKey,
+				Address: &net.TCPAddr{
+					IP:   net.ParseIP(fmt.Sprintf("1.2.3.%d", i+1)),
+					Port: 9735,
+				},
+			},
+			Permanent: true,
+		}
+		s.persistentConnReqs[targetPub] = append(
+			s.persistentConnReqs[targetPub], connReq,
+		)
+	}
+
+	// Verify setup: 5 pending ConnReqs.
+	require.Len(t, s.persistentConnReqs[targetPub], 5)
+
+	// Now call cancelConnReqs with no skip (simulating the inbound-exists
+	// path where all ConnReqs should be cleaned up).
+	s.cancelConnReqs(targetPub, nil)
+
+	// Verify ALL ConnReqs were cleaned up.
+	_, exists := s.persistentConnReqs[targetPub]
+	require.False(t, exists,
+		"all persistent ConnReqs should be removed when inbound exists")
 }
