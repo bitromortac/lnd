@@ -255,3 +255,52 @@ func TestConnectToPeerAccumulation(t *testing.T) {
 		"expected 1 ConnReq after fix, got %d (accumulation bug)",
 		count)
 }
+
+// TestConnectToPersistentPeerGoroutineRace reproduces Bug 2: rapid calls to
+// connectToPersistentPeer create duplicate ConnReqs via goroutine race because
+// old goroutines are not canceled.
+func TestConnectToPersistentPeerGoroutineRace(t *testing.T) {
+	t.Parallel()
+
+	cm := &mockConnMgr{}
+	s := newTestServer(t, cm)
+
+	pubKey := generateTestPubKey(t)
+	targetPub := string(pubKey.SerializeCompressed())
+
+	// Set up peer with a single address. Using one address makes the
+	// expected behavior clear: each call spawns a goroutine that creates
+	// exactly one ConnReq (before waiting on the 10s stagger ticker).
+	s.persistentPeerAddrs[targetPub] = []*lnwire.NetAddress{
+		{
+			IdentityKey: pubKey,
+			Address: &net.TCPAddr{
+				IP:   net.ParseIP("1.2.3.1"),
+				Port: 9735,
+			},
+		},
+	}
+	s.persistentPeers[targetPub] = true
+
+	// Call connectToPersistentPeer 5 times in rapid succession. Each call
+	// spawns a goroutine that creates a ConnReq. Without the fix, the old
+	// goroutines are not canceled, so all 5 create a ConnReq.
+	for i := 0; i < 5; i++ {
+		s.connectToPersistentPeer(targetPub)
+	}
+
+	// Wait for goroutines to execute.
+	time.Sleep(500 * time.Millisecond)
+
+	s.mu.Lock()
+	count := len(s.persistentConnReqs[targetPub])
+	s.mu.Unlock()
+
+	// BUG: Without fix, count is 5 (each call's goroutine runs
+	// uncanceled, creating a duplicate ConnReq for the same address).
+	// AFTER FIX: count == 1 (old goroutines canceled, only last
+	// call's goroutine creates a ConnReq).
+	require.Equal(t, 1, count,
+		"expected 1 ConnReq (one per addr), got %d (goroutine race)",
+		count)
+}
