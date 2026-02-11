@@ -4175,6 +4175,13 @@ func (s *server) OutboundPeerConnected(connReq *connmgr.ConnReq, conn net.Conn) 
 // generating atomic IDs
 const UnassignedConnID uint64 = 0
 
+// maxPersistentConnReqsPerPeer is a safety cap on the number of persistent
+// connection requests tracked per peer. With the cancel-before-replace fixes
+// in ConnectToPeer and connectToPersistentPeer, this limit should never be
+// reached under normal operation. It exists as defense-in-depth to prevent
+// unbounded memory growth from future regressions.
+const maxPersistentConnReqsPerPeer = 10
+
 // cancelConnReqs stops all persistent connection requests for a given pubkey.
 // It first closes any in-flight stagger goroutine from connectToPersistentPeer,
 // then removes each connection request from the connmgr. ConnReqs that have not
@@ -4922,6 +4929,15 @@ func (s *server) connectToPersistentPeer(pubKeyStr string) {
 			default:
 			}
 
+			if len(s.persistentConnReqs[pubKeyStr]) >= maxPersistentConnReqsPerPeer {
+				srvrLog.Warnf("Peer %v has %d persistent "+
+					"ConnReqs (cap=%d), canceling "+
+					"before adding new one",
+					addr, len(s.persistentConnReqs[pubKeyStr]),
+					maxPersistentConnReqsPerPeer)
+				s.cancelConnReqs(pubKeyStr, nil)
+			}
+
 			s.persistentConnReqs[pubKeyStr] = append(
 				s.persistentConnReqs[pubKeyStr], connReq,
 			)
@@ -5068,6 +5084,13 @@ func (s *server) ConnectToPeer(addr *lnwire.NetAddress,
 		s.persistentPeers[targetPub] = true
 		if _, ok := s.persistentPeersBackoff[targetPub]; !ok {
 			s.persistentPeersBackoff[targetPub] = s.cfg.MinBackoff
+		}
+		if len(s.persistentConnReqs[targetPub]) >= maxPersistentConnReqsPerPeer {
+			srvrLog.Warnf("Peer %v has %d persistent ConnReqs "+
+				"(cap=%d), canceling before adding new one",
+				addr, len(s.persistentConnReqs[targetPub]),
+				maxPersistentConnReqsPerPeer)
+			s.cancelConnReqs(targetPub, nil)
 		}
 		s.persistentConnReqs[targetPub] = append(
 			s.persistentConnReqs[targetPub], connReq,
