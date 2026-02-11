@@ -4852,11 +4852,15 @@ func (s *server) connectToPersistentPeer(pubKeyStr string) {
 
 	s.persistentConnReqs[pubKeyStr] = updatedConnReqs
 
-	cancelChan, ok := s.persistentRetryCancels[pubKeyStr]
-	if !ok {
-		cancelChan = make(chan struct{})
-		s.persistentRetryCancels[pubKeyStr] = cancelChan
+	// If there's an existing cancel channel for this peer, close it so
+	// that any previous stagger goroutine exits immediately. This
+	// prevents duplicate ConnReqs when connectToPersistentPeer is called
+	// rapidly (e.g., from multiple gossip updates).
+	if oldCancelChan, ok := s.persistentRetryCancels[pubKeyStr]; ok {
+		close(oldCancelChan)
 	}
+	cancelChan := make(chan struct{})
+	s.persistentRetryCancels[pubKeyStr] = cancelChan
 
 	// Any addresses left in addrMap are new ones that we have not made
 	// connection requests for. So create new connection requests for those.
@@ -4876,6 +4880,18 @@ func (s *server) connectToPersistentPeer(pubKeyStr string) {
 			}
 
 			s.mu.Lock()
+
+			// If our cancel channel has been closed, a newer
+			// call to connectToPersistentPeer has superseded
+			// this goroutine. Exit without creating any more
+			// ConnReqs.
+			select {
+			case <-cancelChan:
+				s.mu.Unlock()
+				return
+			default:
+			}
+
 			s.persistentConnReqs[pubKeyStr] = append(
 				s.persistentConnReqs[pubKeyStr], connReq,
 			)
