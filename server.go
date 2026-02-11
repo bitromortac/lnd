@@ -4204,9 +4204,39 @@ func (s *server) cancelConnReqs(pubStr string, skip *uint64) {
 		// Atomically capture the current request identifier.
 		connID := connReq.ID()
 
-		// Skip any zero IDs, this indicates the request has not
-		// yet been schedule.
+		// If the ConnReq hasn't been assigned an ID yet (the
+		// Connect call hasn't been processed by connmgr), we
+		// can't call Remove immediately. Spawn a goroutine to
+		// poll until the ID is assigned, then remove it.
 		if connID == UnassignedConnID {
+			go func(cr *connmgr.ConnReq) {
+				timeout := time.After(10 * time.Second)
+				ticker := time.NewTicker(100 * time.Millisecond)
+				defer ticker.Stop()
+
+				for {
+					select {
+					case <-timeout:
+						srvrLog.Warnf("Timeout waiting "+
+							"for ConnReq ID "+
+							"assignment: %v",
+							cr.Addr)
+
+						return
+					case <-ticker.C:
+						id := cr.ID()
+						if id == UnassignedConnID {
+							continue
+						}
+						s.connMgr.Remove(id)
+
+						return
+					case <-s.quit:
+						return
+					}
+				}
+			}(connReq)
+
 			continue
 		}
 

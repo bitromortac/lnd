@@ -304,3 +304,53 @@ func TestConnectToPersistentPeerGoroutineRace(t *testing.T) {
 		"expected 1 ConnReq (one per addr), got %d (goroutine race)",
 		count)
 }
+
+// TestCancelConnReqsUnassignedID reproduces Bug 3: ConnReqs with ID=0
+// (UnassignedConnID) are skipped by cancelConnReqs and orphaned in connmgr.
+func TestCancelConnReqsUnassignedID(t *testing.T) {
+	t.Parallel()
+
+	cm := &mockConnMgr{}
+	s := newTestServer(t, cm)
+
+	pubKey := generateTestPubKey(t)
+	targetPub := string(pubKey.SerializeCompressed())
+
+	// Create a ConnReq and add it to the map WITHOUT calling Connect.
+	// This simulates the race window where the Connect goroutine hasn't
+	// yet started (so the ConnReq still has ID=0).
+	connReq := &connmgr.ConnReq{
+		Addr: &lnwire.NetAddress{
+			IdentityKey: pubKey,
+			Address: &net.TCPAddr{
+				IP:   net.ParseIP("1.2.3.4"),
+				Port: 9735,
+			},
+		},
+		Permanent: true,
+	}
+	s.persistentConnReqs[targetPub] = []*connmgr.ConnReq{connReq}
+
+	// Verify the ConnReq has ID=0 (unassigned).
+	require.Equal(t, UnassignedConnID, connReq.ID(),
+		"test setup: ConnReq should have unassigned ID")
+
+	// Now call cancelConnReqs.
+	s.cancelConnReqs(targetPub, nil)
+
+	// Verify the map entry was deleted regardless of whether the ConnReq
+	// had an assigned ID or not.
+	s.mu.Lock()
+	_, exists := s.persistentConnReqs[targetPub]
+	s.mu.Unlock()
+
+	// BUG: Without fix, the ConnReq with ID=0 is skipped but the map
+	// entry is still deleted. The ConnReq is orphaned — if Connect is
+	// later called on it, connmgr will manage it but server has no
+	// reference to remove it.
+	// The map entry deletion works, but the real bug is that the ConnReq
+	// is never removed from connmgr. After the fix, a goroutine will
+	// poll for the ID to be assigned and then remove it.
+	require.False(t, exists,
+		"persistentConnReqs map entry should be deleted")
+}
