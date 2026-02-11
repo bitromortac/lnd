@@ -1,6 +1,7 @@
 package lnd
 
 import (
+	"net"
 	"sync"
 	"testing"
 	"time"
@@ -214,4 +215,43 @@ func TestNodeAnnouncementTimestampComparison(t *testing.T) {
 			)
 		})
 	}
+}
+
+// TestConnectToPeerAccumulation reproduces Bug 1: repeated ConnectToPeer calls
+// with perm=true accumulate ConnReqs without canceling existing ones.
+func TestConnectToPeerAccumulation(t *testing.T) {
+	t.Parallel()
+
+	cm := &mockConnMgr{}
+	s := newTestServer(t, cm)
+
+	pubKey := generateTestPubKey(t)
+	addr := &lnwire.NetAddress{
+		IdentityKey: pubKey,
+		Address:     &net.TCPAddr{IP: net.ParseIP("1.2.3.4"), Port: 9735},
+	}
+
+	targetPub := string(pubKey.SerializeCompressed())
+
+	// Pre-populate persistent peer state so ConnectToPeer doesn't fail
+	// early.
+	s.persistentPeers[targetPub] = true
+	s.persistentPeersBackoff[targetPub] = time.Second
+
+	// Call ConnectToPeer 10 times with perm=true. Each call should cancel
+	// existing ConnReqs before creating a new one.
+	for i := 0; i < 10; i++ {
+		err := s.ConnectToPeer(addr, true, time.Second)
+		require.NoError(t, err)
+	}
+
+	s.mu.Lock()
+	count := len(s.persistentConnReqs[targetPub])
+	s.mu.Unlock()
+
+	// BUG: Without fix, count is 10 (one per call, no dedup).
+	// AFTER FIX: count should be 1 (cancel + replace each time).
+	require.Equal(t, 1, count,
+		"expected 1 ConnReq after fix, got %d (accumulation bug)",
+		count)
 }
