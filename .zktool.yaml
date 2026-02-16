@@ -1,0 +1,11 @@
+root: "zk"
+federation:
+  zk-spec:
+    path: "/home/user/Projects/internal/zk-spec"
+    url: "github.com/bitromortac/zk-spec"
+  zk-dev:
+    path: "/home/user/Projects/internal/zk-dev"
+    url: "github.com/bitromortac/zk-dev"
+  bolts:
+    url: "github.com/bitromortac/bolts/zk"
+    version: "zk"
