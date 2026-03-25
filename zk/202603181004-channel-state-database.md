@@ -26,3 +26,5 @@ Tags: #architecture #channel-state #database #storage
 - [Pathfinding Router](202603181005-pathfinding-router.md)
 - [Funding Manager](202603181007-funding-manager.md)
 - [Payment Session Pathfinding](202603181013-payment-session-pathfinding.md)
+- [Gossip Discovery Syncs Topology](202603251008-gossip-discovery-syncs-topology.md)
+- [Invoice Registry Tracks Payments](202603251009-invoice-registry-tracks-payments.md)

@@ -12,7 +12,7 @@ signing, where a watch-only wallet can securely delegate transaction signing
 (`MusigSession` or ECDSA) to an isolated, secure signer component. Ultimately,
 the wallet abstraction ensures that channel states can be cleanly and reliably
 enforced on the underlying chain when required by components like the [Contract
-Court](202603181008-contract-court-arbitration.md) or the [Funding
+Court](202603251003-Contract-Court-Resolution.md) or the [Funding
 Manager](202603181007-funding-manager.md).
 
 Tags: #architecture #wallet #on-chain #utxo-management
@@ -25,4 +25,4 @@ Tags: #architecture #wallet #on-chain #utxo-management
 - [Lnd Architecture](202603181000-Lnd-Architecture.md)
 - [Lnd Daemon Process](202603181001-lnd-daemon-process.md)
 - [Funding Manager](202603181007-funding-manager.md)
-- [Contract Court Arbitration](202603181008-contract-court-arbitration.md)
+- [Contract Court Resolution](202603251003-Contract-Court-Resolution.md)

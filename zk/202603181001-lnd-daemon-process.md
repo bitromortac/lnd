@@ -22,3 +22,4 @@ Tags: #architecture #lightning-network #daemon #orchestration
 ## Backlinks
 - [Lnd Architecture](202603181000-Lnd-Architecture.md)
 - [Lightning Wallet Abstraction](202603181003-lightning-wallet-abstraction.md)
+- [Macaroon Auth Secures Rpc](202603251010-macaroon-auth-secures-rpc.md)

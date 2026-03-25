@@ -2,11 +2,10 @@
 
 The `routing` component operates the `ControlTower` and evaluates the
 authenticated `Graph` to discover the most cost-effective and reliable multihop
-paths for outgoing payments. It utilizes the channel state and network
-topology provided by the
-[Channel Database](202603181004-channel-state-database.md) to calculate
-optimal routes before handing them over to the
-[HTLC Switch](202603181002-htlc-switch-routing.md).
+paths for outgoing payments. It utilizes the channel state and network topology
+provided by the [Channel Database](202603181004-channel-state-database.md) to
+calculate optimal routes before handing them over to the [HTLC
+Switch](202603181002-htlc-switch-routing.md).
 
 It does not treat payments as single monolithic blobs. To increase success
 rates, the router actively participates in cryptographic privacy overlays and
@@ -28,3 +27,4 @@ Tags: #architecture #routing #pathfinding #graph-theory
 - [Htlc Switch Routing](202603181002-htlc-switch-routing.md)
 - [Channel State Database](202603181004-channel-state-database.md)
 - [Pathfinding Router](202603181010-Pathfinding-Router.md)
+- [Gossip Discovery Syncs Topology](202603251008-gossip-discovery-syncs-topology.md)

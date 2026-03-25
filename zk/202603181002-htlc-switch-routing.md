@@ -10,8 +10,8 @@ of in-flight payments via the `ForwardingLog` and `CircuitMap`. The switch uses
 these circuits to correctly unroll the onion routing packets and assign incoming
 payments to outgoing channels. By abstracting the complex off-chain state
 machine, the [Lnd Architecture](202603181000-Lnd-Architecture.md) can rely on
-the switch to correctly propagate updates and enforce atomicity between
-incoming and outgoing links without blocking.
+the switch to correctly propagate updates and enforce atomicity between incoming
+and outgoing links without blocking.
 
 Tags: #architecture #routing #htlc #payment
 
@@ -25,7 +25,8 @@ Tags: #architecture #routing #htlc #payment
 - [Channel State Database](202603181004-channel-state-database.md)
 - [Pathfinding Router](202603181005-pathfinding-router.md)
 - [Peer Network Management](202603181006-peer-network-management.md)
-- [Contract Court Arbitration](202603181008-contract-court-arbitration.md)
 - [Payment Lifecycle State Machine](202603181011-payment-lifecycle-state-machine.md)
 - [Multi Path Payment Sharding](202603181014-multi-path-payment-sharding.md)
 - [Blinded Paths Privacy](202603181015-blinded-paths-privacy.md)
+- [Invoice Registry Tracks Payments](202603251009-invoice-registry-tracks-payments.md)
+- [Sphinx Onion Unrolling](202603251013-sphinx-onion-unrolling.md)

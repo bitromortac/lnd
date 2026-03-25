@@ -26,3 +26,4 @@ Tags: #architecture #channel-management #channel-establishment #state-machine
 ## Backlinks
 - [Lnd Architecture](202603181000-Lnd-Architecture.md)
 - [Lightning Wallet Abstraction](202603181003-lightning-wallet-abstraction.md)
+- [Autopilot Automates Liquidity](202603251011-autopilot-automates-liquidity.md)
