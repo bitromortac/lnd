@@ -20,6 +20,5 @@ Tags: #architecture #networking #protocol #multiplexing
 - Multiplexes for: [HTLC Switch](202603181002-htlc-switch-routing.md)
 
 ## Backlinks
-- [Lnd Architecture](202603181000-Lnd-Architecture.md)
 - [Funding Manager](202603181007-funding-manager.md)
 - [Brontide Noise Protocol Handshake](202603251012-brontide-noise-protocol-handshake.md)

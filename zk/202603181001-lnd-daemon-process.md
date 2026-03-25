@@ -7,10 +7,9 @@ injects specialized interfaces (e.g., `WalletController`, `HTLCSwitch`,
 `ControlTower`) into each service.
 
 This orchestration decouples the execution layer from the protocol logic. It
-enables [Lightning Wallet
-Abstraction](202603181003-lightning-wallet-abstraction.md) to function
-independently from the data plane, allowing components to be tested in isolation
-or swapped entirely without disrupting the broader [Lnd
+enables [Lightning Wallet Abstraction](202603181003-lightning-wallet-abstraction.md)
+to function independently from the data plane, allowing components to be tested
+in isolation or swapped entirely without disrupting the broader [Lnd
 Architecture](202603181000-Lnd-Architecture.md).
 
 Tags: #architecture #lightning-network #daemon #orchestration
@@ -20,6 +19,5 @@ Tags: #architecture #lightning-network #daemon #orchestration
 - Coordinates the: [Wallet Abstraction](202603181003-lightning-wallet-abstraction.md)
 
 ## Backlinks
-- [Lnd Architecture](202603181000-Lnd-Architecture.md)
 - [Lightning Wallet Abstraction](202603181003-lightning-wallet-abstraction.md)
 - [Macaroon Auth Secures Rpc](202603251010-macaroon-auth-secures-rpc.md)

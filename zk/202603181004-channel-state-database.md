@@ -1,18 +1,18 @@
 # Channel Database Persists Network State
 
-The `channeldb` subsystem acts as the persistent storage layer for the
-[Lnd Architecture](202603181000-Lnd-Architecture.md), securely logging channel
+The `channeldb` subsystem acts as the persistent storage layer for the [Lnd
+Architecture](202603181000-Lnd-Architecture.md), securely logging channel
 mutations and maintaining a local view of the global network graph. It separates
 all state operations into dedicated buckets or sub-databases, like the
 `ChannelStateDB`, to ensure atomicity.
 
 By persisting these off-chain states, the database enables graceful recovery
-during crash-faults and power cycles. If a node restarts, the
-[HTLC Switch](202603181002-htlc-switch-routing.md) can rebuild its internal
-circuit map from the database, and the daemon can seamlessly resume routing.
-Furthermore, the database handles migration schemas to transition data models,
-such as moving the legacy routing graph from a key-value store to a native SQL
-backend, ensuring structural resilience as the codebase evolves.
+during crash-faults and power cycles. If a node restarts, the [HTLC Switch](202603181002-htlc-switch-routing.md)
+can rebuild its internal circuit map from the database, and the daemon can
+seamlessly resume routing. Furthermore, the database handles migration schemas
+to transition data models, such as moving the legacy routing graph from a
+key-value store to a native SQL backend, ensuring structural resilience as the
+codebase evolves.
 
 Tags: #architecture #channel-state #database #storage
 

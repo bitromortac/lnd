@@ -1,9 +1,8 @@
 # Channel Arbitrator Manages Lifecycle
 
 The channel arbitrator is a state machine that governs the on-chain resolution
-of a single disputed channel. It is spawned by the [Chain
-Arbitrator](202603251004-chain-arbitrator-dispatches-events.md) when a
-unilateral close or breach is detected on the blockchain.
+of a single disputed channel. It is spawned by the [Chain Arbitrator](202603251004-chain-arbitrator-dispatches-events.md)
+when a unilateral close or breach is detected on the blockchain.
 
 Once activated, the channel arbitrator evaluates the state of the closed channel
 and determines which outputs need to be claimed. It does not perform the

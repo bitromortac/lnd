@@ -9,16 +9,17 @@ machine](202603250832-invoice-state-machine.md).
 When a client initiates a subscription, it can choose to track all invoices
 globally or narrow its focus to a single, specific invoice identified by its
 payment hash. The [invoice registry](202603250838-invoice-registry.md) manages
-these active listeners in-memory, acting as an event dispatcher. When an incoming
-Hash Time-Locked Contract (HTLC) causes an invoice to transition to `Accepted`,
-`Settled`, or `Canceled`, the registry immediately pushes the updated invoice
-data to the connected subscribers.
+these active listeners in-memory, acting as an event dispatcher. When an
+incoming Hash Time-Locked Contract (HTLC) causes an invoice to transition to
+`Accepted`, `Settled`, or `Canceled`, the registry immediately pushes the
+updated invoice data to the connected subscribers.
 
 This real-time capability is crucial for implementing [hold
 invoices](202603250834-hold-invoices.md), where external systems must react
 instantly when funds are locked. The subscription model enables point-of-sale
-systems or web applications to confidently dispatch a product or confirm an order
-the moment they receive cryptographically secure confirmation of the settlement.
+systems or web applications to confidently dispatch a product or confirm an
+order the moment they receive cryptographically secure confirmation of the
+settlement.
 
 Tags: #invoices #rpc #architecture #state-machine
 

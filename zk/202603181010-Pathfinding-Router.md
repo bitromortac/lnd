@@ -26,17 +26,13 @@ sequenceDiagram
 ```
 
 ## Routing Subsystems
-- **State Machine:**
-  [Payment Lifecycle](202603181011-payment-lifecycle-state-machine.md)
+- **State Machine:** [Payment Lifecycle](202603181011-payment-lifecycle-state-machine.md)
   orchestrates the retry loop.
-- **Path Generation:**
-  [Payment Session](202603181013-payment-session-pathfinding.md)
+- **Path Generation:** [Payment Session](202603181013-payment-session-pathfinding.md)
   isolates pathfinding constraints.
-- **Liquidity Estimation:**
-  [Mission Control](202603181012-mission-control-probability.md)
+- **Liquidity Estimation:** [Mission Control](202603181012-mission-control-probability.md)
   models edge capacities.
-- **Sharding:**
-  [Multi-path Sharding](202603181014-multi-path-payment-sharding.md)
+- **Sharding:** [Multi-path Sharding](202603181014-multi-path-payment-sharding.md)
   bypasses liquidity bottlenecks.
 - **Privacy:** [Blinded Paths](202603181015-blinded-paths-privacy.md) obscure
   payment destinations.

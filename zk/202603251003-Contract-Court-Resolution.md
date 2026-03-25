@@ -15,17 +15,14 @@ flowchart TD
 ```
 
 ## Arbitrators
-- **Global Dispatcher:** The [Chain
-  Arbitrator](202603251004-chain-arbitrator-dispatches-events.md) monitors new
-  blocks and maps them to channel disputes.
-- **Channel State Machine:** The [Channel
-  Arbitrator](202603251005-channel-arbitrator-manages-lifecycle.md) manages the
-  full on-chain resolution lifecycle of a single channel.
+- **Global Dispatcher:** The [Chain Arbitrator](202603251004-chain-arbitrator-dispatches-events.md)
+  monitors new blocks and maps them to channel disputes.
+- **Channel State Machine:** The [Channel Arbitrator](202603251005-channel-arbitrator-manages-lifecycle.md)
+  manages the full on-chain resolution lifecycle of a single channel.
 
 ## Spend Operations
-- **Contract Resolution:** Distinct [Contract
-  Resolvers](202603251006-contract-resolvers-sweep-outputs.md) know how to claim
-  specific outputs like HTLCs or anchors.
+- **Contract Resolution:** Distinct [Contract Resolvers](202603251006-contract-resolvers-sweep-outputs.md)
+  know how to claim specific outputs like HTLCs or anchors.
 - **Batching:** The [Sweeper](202603251007-sweeper-batches-utxo-spends.md)
   aggregates these time-sensitive spends into fee-efficient transactions.
 

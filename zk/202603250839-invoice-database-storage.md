@@ -17,9 +17,8 @@ Contract (HTLC) or when the invoice is finally settled or canceled.
 This atomicity ensures that if the node crashes during the [invoice settlement
 flow](202603250837-invoice-settlement-flow.md), it will not accidentally forget
 that an invoice was settled or that a preimage was revealed. The persistent
-state guarantees the [invoice state
-machine](202603250832-invoice-state-machine.md) maintains its integrity across
-all channel connections over time.
+state guarantees the [invoice state machine](202603250832-invoice-state-machine.md)
+maintains its integrity across all channel connections over time.
 
 Tags: #invoices #storage #database #architecture
 

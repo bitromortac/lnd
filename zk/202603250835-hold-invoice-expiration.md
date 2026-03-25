@@ -7,11 +7,11 @@ it locks the corresponding HTLCs on the incoming channel, freezing the funds and
 tying up network liquidity.
 
 Every incoming HTLC carries a CheckLockTimeVerify (CLTV) timeout. If an accepted
-hold invoice remains unresolved as the blockchain height approaches this timeout,
-the sender of the HTLC is forced to act to protect their funds. If the HTLC
-timeout is reached and the receiver has neither settled nor failed the payment,
-the sender must broadcast their commitment transaction to the blockchain, resulting
-in a unilateral channel force-close.
+hold invoice remains unresolved as the blockchain height approaches this
+timeout, the sender of the HTLC is forced to act to protect their funds. If the
+HTLC timeout is reached and the receiver has neither settled nor failed the
+payment, the sender must broadcast their commitment transaction to the
+blockchain, resulting in a unilateral channel force-close.
 
 To prevent this destructive event, nodes must actively monitor the expiration of
 any unresolved hold invoices. The receiver's external logic must be designed to

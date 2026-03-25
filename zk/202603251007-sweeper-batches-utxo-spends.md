@@ -1,11 +1,10 @@
 # Sweeper Batches UTXO Spends
 
-The sweeper is a specialized component within the [Contract Court
-Resolution](202603251003-Contract-Court-Resolution.md) that is responsible for
-maximizing fee efficiency and ensuring reliable confirmations for on-chain
-spends. It aggregates time-sensitive spends provided by the [Contract
-Resolvers](202603251006-contract-resolvers-sweep-outputs.md) and constructs the
-final sweep transactions.
+The sweeper is a specialized component within the [Contract Court Resolution](202603251003-Contract-Court-Resolution.md)
+that is responsible for maximizing fee efficiency and ensuring reliable
+confirmations for on-chain spends. It aggregates time-sensitive spends provided
+by the [Contract Resolvers](202603251006-contract-resolvers-sweep-outputs.md)
+and constructs the final sweep transactions.
 
 Rather than publishing an individual transaction for every single time-locked or
 conditional output that needs claiming, the sweeper batches them together when

@@ -1,14 +1,14 @@
 # Invoice Acceptor Enables Programmatic Gatekeeping
 
-The Invoice Acceptor operates as an interceptor for incoming payments,
-providing an application-level callback to evaluate an incoming Hash Time-Locked
-Contract (HTLC) before the node commits to processing it. Normally, when an
-incoming HTLC aligns with a registered invoice, the node automatically verifies
-the cryptographic constraints and transitions the invoice state.
+The Invoice Acceptor operates as an interceptor for incoming payments, providing
+an application-level callback to evaluate an incoming Hash Time-Locked Contract
+(HTLC) before the node commits to processing it. Normally, when an incoming HTLC
+aligns with a registered invoice, the node automatically verifies the
+cryptographic constraints and transitions the invoice state.
 
-By registering an Invoice Htlc Modifier via RPC, a user delegates the
-acceptance logic to an external application. When a valid HTLC arrives for a
-watched invoice, the node pauses processing and streams the HTLC details to the
+By registering an Invoice Htlc Modifier via RPC, a user delegates the acceptance
+logic to an external application. When a valid HTLC arrives for a watched
+invoice, the node pauses processing and streams the HTLC details to the
 application. The application acts as a gatekeeper, dynamically analyzing the
 payment and responding with an instruction to either accept, settle, or cancel
 the HTLC.

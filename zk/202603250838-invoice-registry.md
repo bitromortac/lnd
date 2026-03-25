@@ -3,23 +3,22 @@
 The Invoice Registry acts as an in-memory coordinator that synchronizes arriving
 Hash Time-Locked Contract (HTLC) events with their corresponding stored
 invoices. Since HTLCs arrive concurrently from multiple channels and payment
-paths, the registry provides the crucial concurrency control necessary to prevent
-race conditions during payment resolution.
+paths, the registry provides the crucial concurrency control necessary to
+prevent race conditions during payment resolution.
 
 When a channel link receives an HTLC, it queries the registry to determine if
 the payment satisfies an open invoice. The registry fetches the expected
-parameters from the [invoice database
-storage](202603250839-invoice-database-storage.md) and rigorously verifies the
-incoming parameters. It checks that the payment hash matches, that the CLTV
-delay provides a sufficient safety margin, and that the amount meets the minimum
-required by the invoice.
+parameters from the [invoice database storage](202603250839-invoice-database-storage.md)
+and rigorously verifies the incoming parameters. It checks that the payment hash
+matches, that the CLTV delay provides a sufficient safety margin, and that the
+amount meets the minimum required by the invoice.
 
 If the validation succeeds, the registry records the incoming HTLC and triggers
 a state update, orchestrating the transition to `Accepted` or directly to
 `Settled`. Crucially, it manages the lifecycle of these incoming events, acting
 as the central dispatcher that routes notifications to all external [invoice
-subscriptions](202603250840-invoice-subscriptions.md) whenever a watched
-invoice changes state.
+subscriptions](202603250840-invoice-subscriptions.md) whenever a watched invoice
+changes state.
 
 Tags: #invoices #architecture #htlc #lightning-network
 

@@ -1,11 +1,11 @@
 # Invoice Data Model Encapsulates Payment Constraints
 
 Invoices act as the authoritative contract defining the conditions under which a
-Lightning payment may be accepted. They encapsulate both the cryptographic material
-needed to settle an incoming payment and the temporal constraints ensuring the
-transaction is secure. An invoice requires a payment hash, which serves as the
-primary identifier, and a preimage, which is the secret revealed upon successful
-settlement.
+Lightning payment may be accepted. They encapsulate both the cryptographic
+material needed to settle an incoming payment and the temporal constraints
+ensuring the transaction is secure. An invoice requires a payment hash, which
+serves as the primary identifier, and a preimage, which is the secret revealed
+upon successful settlement.
 
 Beyond the core cryptographic material, the invoice data model specifies the
 exact value expected from the payer. It also defines a final CheckLockTimeVerify

@@ -9,12 +9,10 @@ honest channel state.
 The local node delegates enforcement without revealing the actual contents of
 the channel.
 
-- **Outsourcing:** The [watchtower
-  client](202603251001-watchtower-client-outsources-monitoring.md) encrypts the
-  justice transaction and sends it to the tower.
-- **Enforcement:** The [watchtower
-  server](202603251002-watchtower-server-enforces-breaches.md) blindly monitors
-  the chain and acts only if a breach hint is detected.
+- **Outsourcing:** The [watchtower client](202603251001-watchtower-client-outsources-monitoring.md)
+  encrypts the justice transaction and sends it to the tower.
+- **Enforcement:** The [watchtower server](202603251002-watchtower-server-enforces-breaches.md)
+  blindly monitors the chain and acts only if a breach hint is detected.
 
 ## Flow
 

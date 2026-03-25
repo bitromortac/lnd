@@ -2,10 +2,9 @@
 
 Before any Lightning Network protocol messages are exchanged between peers,
 their connection must be cryptographically secured using the Brontide Noise
-Protocol. The `brontide` component within the [Peer
-Network](202603181006-peer-network-management.md) acts as an authenticated
-encryption framework, providing a robust handshake process based on the Noise
-Protocol Framework (specifically, `Noise_XK`).
+Protocol. The `brontide` component within the [Peer Network](202603181006-peer-network-management.md)
+acts as an authenticated encryption framework, providing a robust handshake
+process based on the Noise Protocol Framework (specifically, `Noise_XK`).
 
 When a node connects to another node, it initiates the Brontide handshake. This
 handshake mutually authenticates both nodes using their long-term identity
