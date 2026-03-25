@@ -22,5 +22,6 @@ Tags: #architecture #dispute-resolution #on-chain
 - Coordinates with: [Sweeper](202603251007-sweeper-batches-utxo-spends.md)
 
 ## Backlinks
+- [Contract Court Resolution](202603251003-Contract-Court-Resolution.md)
 - [Channel Arbitrator Manages Lifecycle](202603251005-channel-arbitrator-manages-lifecycle.md)
 - [Sweeper Batches Utxo Spends](202603251007-sweeper-batches-utxo-spends.md)

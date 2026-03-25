@@ -17,7 +17,7 @@ incoming funds are only accepted if they match a pre-authorized request.
 
 Tags: #architecture #payment
 
-## References 
+## References
 - Interacts with: [HTLC Switch](202603181002-htlc-switch-routing.md)
 - Interacts with: [Channel Database](202603181004-channel-state-database.md)
 

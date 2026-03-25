@@ -25,4 +25,3 @@ Tags: #architecture #wallet #on-chain #utxo-management
 - [Lnd Architecture](202603181000-Lnd-Architecture.md)
 - [Lnd Daemon Process](202603181001-lnd-daemon-process.md)
 - [Funding Manager](202603181007-funding-manager.md)
-- [Contract Court Resolution](202603251003-Contract-Court-Resolution.md)
