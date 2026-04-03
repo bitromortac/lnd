@@ -12,34 +12,34 @@ import (
 	"github.com/lightningnetwork/lnd/tlv"
 )
 
-// forwardAction contains the information needed to forward an onion message to
+// ForwardAction contains the information needed to forward an onion message to
 // the next node as well as update any subscribers with the payload we received.
-type forwardAction struct {
-	// nextNodeID is the public key of the peer to forward the message to
-	nextNodeID *btcec.PublicKey
+type ForwardAction struct {
+	// NextNodeID is the public key of the peer to forward the message to
+	NextNodeID *btcec.PublicKey
 
-	// nextPathKey is the path key for the next hop, used for route
+	// NextPathKey is the path key for the next hop, used for route
 	// blinding.
-	nextPathKey *btcec.PublicKey
+	NextPathKey *btcec.PublicKey
 
-	// nextPacket is the serialized onion packet to send to the next hop.
-	nextPacket []byte
+	// NextPacket is the serialized onion packet to send to the next hop.
+	NextPacket []byte
 
-	// payload contains the decoded payload for this hop, which may include
+	// Payload contains the decoded payload for this hop, which may include
 	// custom records and routing information.
-	payload *lnwire.OnionMessagePayload
+	Payload *lnwire.OnionMessagePayload
 }
 
-// deliverAction contains the information needed to deliver the payload to any
+// DeliverAction contains the information needed to deliver the payload to any
 // subscribers. Since we only support forwarding onion messages, this is only
 // needed in itest to verify correct handling and behavior.
-type deliverAction struct {
-	// payload contains the decoded payload for this hop, which may include
+type DeliverAction struct {
+	// Payload contains the decoded payload for this hop, which may include
 	// custom records and routing information.
-	payload *lnwire.OnionMessagePayload
+	Payload *lnwire.OnionMessagePayload
 }
 
-type routingAction = fn.Either[forwardAction, deliverAction]
+type RoutingAction = fn.Either[ForwardAction, DeliverAction]
 
 // NodeIDResolver defines an interface to resolve a node public key from a short
 // channel ID.
@@ -53,14 +53,14 @@ type NodeIDResolver interface {
 // recipient data, and derives the next path key. It returns a fn.Result type
 // containing a routingAction, which contains all the information required to
 // execute the next step in the routing process.
-func processOnionMessage(ctx context.Context, router OnionRouter,
+func ProcessOnionMessage(ctx context.Context, router OnionRouter,
 	resolver NodeIDResolver,
-	msg *lnwire.OnionMessage) fn.Result[routingAction] {
+	msg *lnwire.OnionMessage) fn.Result[RoutingAction] {
 
 	var onionPkt sphinx.OnionPacket
 	err := onionPkt.Decode(bytes.NewReader(msg.OnionBlob))
 	if err != nil {
-		return fn.Err[routingAction](err)
+		return fn.Err[RoutingAction](err)
 	}
 
 	// TODO(gijs): We should not use the magic value 10 here. It's the
@@ -70,7 +70,7 @@ func processOnionMessage(ctx context.Context, router OnionRouter,
 		&onionPkt, nil, 10, sphinx.WithBlindingPoint(msg.PathKey),
 	)
 	if err != nil {
-		return fn.Err[routingAction](err)
+		return fn.Err[RoutingAction](err)
 	}
 
 	payload := lnwire.NewOnionMessagePayload()
@@ -78,7 +78,7 @@ func processOnionMessage(ctx context.Context, router OnionRouter,
 		bytes.NewReader(processedPkt.Payload.Payload),
 	)
 	if err != nil {
-		return fn.Err[routingAction](err)
+		return fn.Err[RoutingAction](err)
 	}
 
 	// Create a shallow copy of the payload but deep copy the EncryptedData
@@ -91,14 +91,14 @@ func processOnionMessage(ctx context.Context, router OnionRouter,
 		msg.PathKey, payload.EncryptedData,
 	)
 	if err != nil {
-		return fn.Err[routingAction](err)
+		return fn.Err[RoutingAction](err)
 	}
 
 	routeData, err := record.DecodeBlindedRouteData(
 		bytes.NewReader(decrypted),
 	)
 	if err != nil {
-		return fn.Err[routingAction](err)
+		return fn.Err[RoutingAction](err)
 	}
 
 	nextPathKey := deriveNextPathKey(router, msg.PathKey,
@@ -109,7 +109,7 @@ func processOnionMessage(ctx context.Context, router OnionRouter,
 		nextPathKey,
 	)
 	if err != nil {
-		return fn.Err[routingAction](err)
+		return fn.Err[RoutingAction](err)
 	}
 
 	return fn.Ok(action)
@@ -120,7 +120,7 @@ func processOnionMessage(ctx context.Context, router OnionRouter,
 func createRoutingAction(ctx context.Context, resolver NodeIDResolver,
 	packet *sphinx.ProcessedPacket, payload *lnwire.OnionMessagePayload,
 	routeData *record.BlindedRouteData,
-	nextPathKey *btcec.PublicKey) (routingAction, error) {
+	nextPathKey *btcec.PublicKey) (RoutingAction, error) {
 
 	if isForwarding(packet) {
 		var nextNodeID *btcec.PublicKey
@@ -129,7 +129,7 @@ func createRoutingAction(ctx context.Context, resolver NodeIDResolver,
 				ErrNextNodeIdEmpty,
 			)
 			if err != nil {
-				return routingAction{}, err
+				return RoutingAction{}, err
 			}
 			nextNodeID = n.Val
 		} else {
@@ -137,33 +137,33 @@ func createRoutingAction(ctx context.Context, resolver NodeIDResolver,
 				ErrSCIDEmpty,
 			)
 			if err != nil {
-				return routingAction{}, err
+				return RoutingAction{}, err
 			}
 			nextNodeID, err = resolver.RemotePubFromSCID(
 				ctx, scid.Val,
 			)
 			if err != nil {
-				return routingAction{}, err
+				return RoutingAction{}, err
 			}
 		}
 
 		buf := new(bytes.Buffer)
 		err := packet.NextPacket.Encode(buf)
 		if err != nil {
-			return routingAction{}, err
+			return RoutingAction{}, err
 		}
 		nextPacket := buf.Bytes()
 
-		return fn.NewLeft[forwardAction, deliverAction](forwardAction{
-			nextNodeID:  nextNodeID,
-			nextPathKey: nextPathKey,
-			nextPacket:  nextPacket,
-			payload:     payload,
+		return fn.NewLeft[ForwardAction, DeliverAction](ForwardAction{
+			NextNodeID:  nextNodeID,
+			NextPathKey: nextPathKey,
+			NextPacket:  nextPacket,
+			Payload:     payload,
 		}), nil
 	}
 
-	return fn.NewRight[forwardAction](deliverAction{
-		payload: payload,
+	return fn.NewRight[ForwardAction](DeliverAction{
+		Payload: payload,
 	}), nil
 }
 
