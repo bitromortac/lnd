@@ -173,11 +173,11 @@ func (a *OnionPeerActor) Receive(ctx context.Context,
 		lnutils.LogPubKey("path_key", req.msg.PathKey),
 	)
 
-	log.DebugS(logCtx, "OnionPeerActor received OnionMessage",
+	log.InfoS(logCtx, "OnionPeerActor received OnionMessage",
 		btclog.HexN("onion_blob", req.msg.OnionBlob, 10),
 		slog.Int("blob_length", len(req.msg.OnionBlob)))
 
-	routingActionResult := processOnionMessage(
+	routingActionResult := ProcessOnionMessage(
 		ctx, a.router, a.resolver, &req.msg,
 	)
 
@@ -190,11 +190,11 @@ func (a *OnionPeerActor) Receive(ctx context.Context,
 
 	// Block same-peer cycles: do not forward a message back to
 	// the peer that sent it.
-	routingAction.WhenLeft(func(fwdAction forwardAction) {
+	routingAction.WhenLeft(func(fwdAction ForwardAction) {
 		var nextNodeIDBytes [33]byte
 		copy(
 			nextNodeIDBytes[:],
-			fwdAction.nextNodeID.SerializeCompressed(),
+			fwdAction.NextNodeID.SerializeCompressed(),
 		)
 
 		if nextNodeIDBytes == a.peerPubKey {
@@ -203,7 +203,7 @@ func (a *OnionPeerActor) Receive(ctx context.Context,
 				ErrSamePeerCycle,
 				lnutils.LogPubKey(
 					"next_node_id",
-					fwdAction.nextNodeID,
+					fwdAction.NextNodeID,
 				),
 			)
 
@@ -216,21 +216,21 @@ func (a *OnionPeerActor) Receive(ctx context.Context,
 
 	// Handle the routing action.
 	payload := fn.ElimEither(routingAction,
-		func(fwdAction forwardAction) *lnwire.OnionMessagePayload {
-			log.DebugS(logCtx, "Forwarding onion message",
+		func(fwdAction ForwardAction) *lnwire.OnionMessagePayload {
+			log.InfoS(logCtx, "Forwarding onion message",
 				lnutils.LogPubKey("next_node_id",
-					fwdAction.nextNodeID),
+					fwdAction.NextNodeID),
 			)
 
 			nextMsg := lnwire.NewOnionMessage(
-				fwdAction.nextPathKey,
-				fwdAction.nextPacket,
+				fwdAction.NextPathKey,
+				fwdAction.NextPacket,
 			)
 
 			var nextNodeIDBytes [33]byte
 			copy(
 				nextNodeIDBytes[:],
-				fwdAction.nextNodeID.SerializeCompressed(),
+				fwdAction.NextNodeID.SerializeCompressed(),
 			)
 
 			sendErr := a.peerSender.SendToPeer(
@@ -241,13 +241,16 @@ func (a *OnionPeerActor) Receive(ctx context.Context,
 					"onion message", sendErr)
 			}
 
-			return fwdAction.payload
+			log.InfoS(logCtx, "Successfully forwarded onion "+
+				"message")
+
+			return fwdAction.Payload
 		},
-		func(dlvrAction deliverAction) *lnwire.OnionMessagePayload {
-			log.DebugS(logCtx, "Delivering onion message "+
+		func(dlvrAction DeliverAction) *lnwire.OnionMessagePayload {
+			log.InfoS(logCtx, "Delivering onion message "+
 				"to self")
 
-			return dlvrAction.payload
+			return dlvrAction.Payload
 		})
 
 	// Convert path key to [33]byte.

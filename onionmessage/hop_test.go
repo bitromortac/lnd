@@ -12,9 +12,9 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// processOnionMessageTest defines the test parameters for testing
-// processOnionMessage with different routing scenarios.
-type processOnionMessageTest struct {
+// ProcessOnionMessageTest defines the test parameters for testing
+// ProcessOnionMessage with different routing scenarios.
+type ProcessOnionMessageTest struct {
 	name             string
 	hopsToBlind      []*sphinx.HopInfo
 	isDeliver        bool
@@ -22,7 +22,7 @@ type processOnionMessageTest struct {
 	expectedOverride *btcec.PublicKey
 }
 
-// TestProcessOnionMessage tests the processOnionMessage function with various
+// TestProcessOnionMessage tests the ProcessOnionMessage function with various
 // forwarding and delivery scenarios.
 func TestProcessOnionMessage(t *testing.T) {
 	// Helper to generate keys.
@@ -107,7 +107,7 @@ func TestProcessOnionMessage(t *testing.T) {
 		{NodePub: pubKeyA, PlainText: encodeData(rd4)},
 	}
 
-	tests := []processOnionMessageTest{
+	tests := []ProcessOnionMessageTest{
 		{
 			name:             "Forward Action Success",
 			hopsToBlind:      hops1,
@@ -146,9 +146,9 @@ func TestProcessOnionMessage(t *testing.T) {
 }
 
 // testProcessOnionMessageCase is a helper that executes a single test case for
-// processOnionMessage, building the blinded path and verifying the result.
+// ProcessOnionMessage, building the blinded path and verifying the result.
 func testProcessOnionMessageCase(t *testing.T, router OnionRouter,
-	resolver NodeIDResolver, tc processOnionMessageTest) {
+	resolver NodeIDResolver, tc ProcessOnionMessageTest) {
 
 	blindedPath := BuildBlindedPath(t, tc.hopsToBlind)
 	msg, expectedCipherTexts := BuildOnionMessage(
@@ -156,46 +156,46 @@ func testProcessOnionMessageCase(t *testing.T, router OnionRouter,
 	)
 
 	// Process the message.
-	result := processOnionMessage(t.Context(), router, resolver, msg)
+	result := ProcessOnionMessage(t.Context(), router, resolver, msg)
 	require.True(t, result.IsOk())
 
 	// Verify result.
 	if tc.isDeliver {
-		result.WhenOk(func(action routingAction) {
+		result.WhenOk(func(action RoutingAction) {
 			// Should be deliverAction.
 			require.True(t, action.IsRight())
-			action.WhenRight(func(dlvrAction deliverAction) {
+			action.WhenRight(func(dlvrAction DeliverAction) {
 				require.Equal(
 					t,
 					expectedCipherTexts[0],
-					dlvrAction.payload.EncryptedData,
+					dlvrAction.Payload.EncryptedData,
 				)
 			})
 		})
 	} else {
-		result.WhenOk(func(action routingAction) {
+		result.WhenOk(func(action RoutingAction) {
 			// Should be forwardAction.
 			require.True(t, action.IsLeft())
-			action.WhenLeft(func(fwdAction forwardAction) {
+			action.WhenLeft(func(fwdAction ForwardAction) {
 				require.Equal(
 					t, tc.expectedNextNode,
-					fwdAction.nextNodeID,
+					fwdAction.NextNodeID,
 				)
 
 				if tc.expectedOverride != nil {
 					require.Equal(
 						t, tc.expectedOverride,
-						fwdAction.nextPathKey,
+						fwdAction.NextPathKey,
 					)
 				} else {
-					require.NotNil(t, fwdAction.nextPathKey)
+					require.NotNil(t, fwdAction.NextPathKey)
 				}
 
-				require.NotEmpty(t, fwdAction.nextPacket)
+				require.NotEmpty(t, fwdAction.NextPacket)
 				require.Equal(
 					t,
 					expectedCipherTexts[0],
-					fwdAction.payload.EncryptedData,
+					fwdAction.Payload.EncryptedData,
 				)
 			})
 		})
