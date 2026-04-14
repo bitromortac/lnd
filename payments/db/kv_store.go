@@ -2119,3 +2119,19 @@ func deserializeHTLCFailInfo(r io.Reader) (*HTLCFailInfo, error) {
 
 	return f, nil
 }
+
+// HasNonFailedForOffer is not supported on the KV store.
+func (p *KVStore) HasNonFailedForOffer(_ context.Context,
+	_ []byte) (bool, error) {
+
+	return false, fmt.Errorf("HasNonFailedForOffer: not " +
+		"supported on KV store")
+}
+
+// CountPaymentsForOffer is not supported on the KV store.
+func (p *KVStore) CountPaymentsForOffer(_ context.Context,
+	_ []byte) (int64, int64, error) {
+
+	return 0, 0, fmt.Errorf("CountPaymentsForOffer: not " +
+		"supported on KV store")
+}

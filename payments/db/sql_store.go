@@ -23,6 +23,9 @@ type PaymentIntentType int16
 const (
 	// PaymentIntentTypeBolt11 indicates a BOLT11 invoice payment.
 	PaymentIntentTypeBolt11 PaymentIntentType = 0
+
+	// PaymentIntentTypeBolt12 indicates a BOLT12 offer payment.
+	PaymentIntentTypeBolt12 PaymentIntentType = 1
 )
 
 // HTLCAttemptResolutionType represents the type of HTLC attempt resolution.
@@ -52,6 +55,10 @@ type SQLQueries interface {
 	FetchNonTerminalPayments(ctx context.Context, arg sqlc.FetchNonTerminalPaymentsParams) ([]sqlc.FetchNonTerminalPaymentsRow, error)
 
 	CountPayments(ctx context.Context) (int64, error)
+
+	HasNonFailedForOffer(ctx context.Context, offerID []byte) (bool, error)
+	CountPaymentsForOffer(ctx context.Context, offerID []byte) (sqlc.CountPaymentsForOfferRow, error)
+	FetchPaymentsByOfferID(ctx context.Context, offerID []byte) ([]sqlc.FetchPaymentsByOfferIDRow, error)
 
 	FetchHtlcAttemptsForPayments(ctx context.Context, paymentIDs []int64) ([]sqlc.FetchHtlcAttemptsForPaymentsRow, error)
 	FetchHtlcAttemptResolutionsForPayments(ctx context.Context, paymentIDs []int64) ([]sqlc.FetchHtlcAttemptResolutionsForPaymentsRow, error)
@@ -1265,14 +1272,20 @@ func (s *SQLStore) InitPayment(ctx context.Context, paymentHash lntypes.Hash,
 
 		// If there's a payment request, insert the payment intent.
 		if len(paymentCreationInfo.PaymentRequest) > 0 {
+			intentType := PaymentIntentTypeBolt11
+			if len(paymentCreationInfo.OfferID) > 0 {
+				intentType = PaymentIntentTypeBolt12
+			}
+
 			_, err = db.InsertPaymentIntent(
 				ctx, sqlc.InsertPaymentIntentParams{
 					PaymentID: paymentID,
 					IntentType: int16(
-						PaymentIntentTypeBolt11,
+						intentType,
 					),
 					IntentPayload: paymentCreationInfo.
 						PaymentRequest,
+					OfferID: paymentCreationInfo.OfferID,
 				},
 			)
 			if err != nil {
@@ -1921,4 +1934,61 @@ func (s *SQLStore) DeletePayments(ctx context.Context, failedOnly,
 	}
 
 	return numPayments, nil
+}
+
+// HasNonFailedForOffer reports whether any non-failed (in-flight or succeeded)
+// payment exists for the given offer ID.
+func (s *SQLStore) HasNonFailedForOffer(ctx context.Context,
+	offerID []byte) (bool, error) {
+
+	var result bool
+	err := s.db.ExecTx(
+		ctx, sqldb.ReadTxOpt(), func(db SQLQueries) error {
+			hasNonFailed, err := db.HasNonFailedForOffer(
+				ctx, offerID,
+			)
+			if err != nil {
+				return err
+			}
+
+			result = hasNonFailed
+
+			return nil
+		}, sqldb.NoOpReset,
+	)
+	if err != nil {
+		return false, fmt.Errorf("has non-failed for offer: %w",
+			err)
+	}
+
+	return result, nil
+}
+
+// CountPaymentsForOffer returns the number of succeeded payments for the given
+// offer ID and their total amount in millisatoshis.
+func (s *SQLStore) CountPaymentsForOffer(ctx context.Context,
+	offerID []byte) (int64, int64, error) {
+
+	var count, totalMsat int64
+	err := s.db.ExecTx(
+		ctx, sqldb.ReadTxOpt(), func(db SQLQueries) error {
+			row, err := db.CountPaymentsForOffer(
+				ctx, offerID,
+			)
+			if err != nil {
+				return err
+			}
+
+			count = row.PaymentCount
+			totalMsat = row.TotalAmountMsat
+
+			return nil
+		}, sqldb.NoOpReset,
+	)
+	if err != nil {
+		return 0, 0, fmt.Errorf("count payments for offer: %w",
+			err)
+	}
+
+	return count, totalMsat, nil
 }

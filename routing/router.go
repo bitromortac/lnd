@@ -913,6 +913,11 @@ type LightningPayment struct {
 	// Metadata is additional data that is sent along with the payment to
 	// the payee.
 	Metadata []byte
+
+	// OfferID is the 32-byte SHA256 hash of the TLV-encoded BOLT 12
+	// offer. Nil for non-BOLT 12 payments. Propagated to
+	// PaymentCreationInfo for indexed offer-level queries.
+	OfferID []byte
 }
 
 // AMPOptions houses information that must be known in order to send an AMP
@@ -1072,6 +1077,7 @@ func (r *ChannelRouter) PreparePayment(payment *LightningPayment) (
 		CreationTime:          r.cfg.Clock.Now(),
 		PaymentRequest:        payment.PaymentRequest,
 		FirstHopCustomRecords: payment.FirstHopCustomRecords,
+		OfferID:               payment.OfferID,
 	}
 
 	// Create a new ShardTracker that we'll use during the life cycle of

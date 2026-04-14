@@ -83,6 +83,16 @@ type ControlTower interface {
 	// update with the current state of every inflight payment is always
 	// sent out immediately.
 	SubscribeAllPayments() (ControlTowerSubscriber, error)
+
+	// HasNonFailedForOffer reports whether any non-failed (in-flight
+	// or succeeded) payment exists for the given offer ID.
+	HasNonFailedForOffer(ctx context.Context,
+		offerID []byte) (bool, error)
+
+	// CountPaymentsForOffer returns the number of succeeded payments
+	// for the given offer ID and their total amount in millisatoshis.
+	CountPaymentsForOffer(ctx context.Context,
+		offerID []byte) (int64, int64, error)
 }
 
 // ControlTowerSubscriber contains the state for a payment update subscriber.
@@ -438,4 +448,20 @@ func (p *controlTower) notifySubscribers(paymentHash lntypes.Hash,
 			p.subscribersMtx.Unlock()
 		}
 	}
+}
+
+// HasNonFailedForOffer reports whether any non-failed (in-flight or succeeded)
+// payment exists for the given offer ID.
+func (p *controlTower) HasNonFailedForOffer(ctx context.Context,
+	offerID []byte) (bool, error) {
+
+	return p.db.HasNonFailedForOffer(ctx, offerID)
+}
+
+// CountPaymentsForOffer returns the number of succeeded payments for the given
+// offer ID and their total amount in millisatoshis.
+func (p *controlTower) CountPaymentsForOffer(ctx context.Context,
+	offerID []byte) (int64, int64, error) {
+
+	return p.db.CountPaymentsForOffer(ctx, offerID)
 }
