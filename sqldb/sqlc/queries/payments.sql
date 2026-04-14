@@ -242,16 +242,59 @@ AND EXISTS (
 
 -- name: InsertPaymentIntent :one
 -- Insert a payment intent for a given payment and return its ID.
+-- offer_id is NULL for BOLT 11 payments.
 INSERT INTO payment_intents (
     payment_id,
-    intent_type, 
-    intent_payload)
+    intent_type,
+    intent_payload,
+    offer_id)
 VALUES (
     @payment_id,
-    @intent_type, 
-    @intent_payload
+    @intent_type,
+    @intent_payload,
+    sqlc.narg('offer_id')
 )
 RETURNING id;
+
+-- name: HasNonFailedForOffer :one
+-- Check whether any non-failed payment exists for a given offer.
+-- Returns true if an in-flight or succeeded payment exists.
+SELECT EXISTS(
+    SELECT 1 FROM payment_intents pi
+    JOIN payments p ON pi.payment_id = p.id
+    WHERE pi.offer_id = $1
+      AND p.fail_reason IS NULL
+) AS has_non_failed;
+
+-- name: CountPaymentsForOffer :one
+-- Count succeeded payments for a given offer and their total amount.
+-- A payment is considered succeeded if it has at least one settled
+-- HTLC attempt (resolution_type = 1).
+SELECT
+    COUNT(DISTINCT p.id) AS payment_count,
+    CAST(COALESCE(SUM(p.amount_msat), 0) AS BIGINT) AS total_amount_msat
+FROM payment_intents pi
+JOIN payments p ON pi.payment_id = p.id
+WHERE pi.offer_id = $1
+  AND EXISTS (
+      SELECT 1 FROM payment_htlc_attempts ha
+      JOIN payment_htlc_attempt_resolutions hr
+          ON hr.attempt_index = ha.attempt_index
+      WHERE ha.payment_id = p.id
+        AND hr.resolution_type = 1
+  );
+
+-- name: FetchPaymentsByOfferID :many
+-- Fetch all payments linked to a given offer ID, ordered by creation
+-- time descending. Used by the ListPayments offer_id filter.
+SELECT
+    sqlc.embed(p),
+    pi.intent_type AS "intent_type",
+    pi.intent_payload AS "intent_payload"
+FROM payments p
+JOIN payment_intents pi ON pi.payment_id = p.id
+WHERE pi.offer_id = $1
+ORDER BY p.created_at DESC;
 
 -- name: InsertPayment :one
 -- Insert a new payment and return its ID.
