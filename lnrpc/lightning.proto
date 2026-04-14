@@ -4307,8 +4307,7 @@ message OfferInvoiceDetail {
     // The 32-byte hash of the offer this invoice answers.
     bytes offer_hash = 1;
 
-    // The 33-byte compressed pubkey that signed the BOLT 12 invoice.
-    bytes invoice_node_id = 2;
+    reserved 2;
 
     // The 33-byte compressed ephemeral payer pubkey from the invoice
     // request (invreq_payer_id, TLV type 88).
