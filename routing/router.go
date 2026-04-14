@@ -620,6 +620,38 @@ type BlindedPathRestrictions struct {
 	IncomingChainedChannels []uint64
 }
 
+// blindedHopsToRoutes converts raw blindedHop paths into route.Route objects.
+// Each path's first hop becomes the route's SourcePubKey (the introduction
+// node), and subsequent hops become route.Hop entries.
+func blindedHopsToRoutes(
+	paths [][]blindedHop) ([]*route.Route, error) {
+
+	routes := make([]*route.Route, 0, len(paths))
+	for _, path := range paths {
+		if len(path) < 1 {
+			return nil, fmt.Errorf("a blinded path must have " +
+				"at least one hop")
+		}
+
+		introNode := path[0].vertex
+		hops := make([]*route.Hop, 0, len(path)-1)
+
+		for j := 1; j < len(path); j++ {
+			hops = append(hops, &route.Hop{
+				PubKeyBytes: path[j].vertex,
+				ChannelID:   path[j-1].channelID,
+			})
+		}
+
+		routes = append(routes, &route.Route{
+			SourcePubKey: introNode,
+			Hops:         hops,
+		})
+	}
+
+	return routes, nil
+}
+
 // FindBlindedPaths finds a selection of paths to the destination node that can
 // be used in blinded payment paths.
 func (r *ChannelRouter) FindBlindedPaths(destination route.Vertex,
@@ -636,8 +668,14 @@ func (r *ChannelRouter) FindBlindedPaths(destination route.Vertex,
 			maxNumHops:              restrictions.NumHops,
 			nodeOmissionSet:         restrictions.NodeOmissionSet,
 			incomingChainedChannels: incomingChainedChannels,
+			requiredFeature:         lnwire.RouteBlindingOptional,
 		},
 	)
+	if err != nil {
+		return nil, err
+	}
+
+	allRoutes, err := blindedHopsToRoutes(paths)
 	if err != nil {
 		return nil, err
 	}
@@ -649,84 +687,108 @@ func (r *ChannelRouter) FindBlindedPaths(destination route.Vertex,
 		probability float64
 	}
 
-	// Iterate over all the candidate paths and determine the success
-	// probability of each path given the data we have about forwards
-	// between any two nodes on a path.
-	routes := make([]*routeWithProbability, 0, len(paths))
-	for _, path := range paths {
-		if len(path) < 1 {
-			return nil, fmt.Errorf("a blinded path must have at " +
-				"least one hop")
-		}
+	// Iterate over all the candidate routes and determine the success
+	// probability of each given the data we have about forwards between
+	// any two nodes on a path.
+	scored := make([]*routeWithProbability, 0, len(allRoutes))
+	for i, r := range allRoutes {
+		path := paths[i]
+		prevNode := r.SourcePubKey
+		totalProb := float64(1)
 
-		var (
-			introNode = path[0].vertex
-			prevNode  = introNode
-			hops      = make(
-				[]*route.Hop, 0, len(path)-1,
-			)
-			totalRouteProbability = float64(1)
-		)
-
-		// For each set of hops on the path, get the success probability
-		// of a forward between those two vertices and use that to
-		// update the overall route probability.
 		for j := 1; j < len(path); j++ {
-			probability := probabilitySrc(
+			prob := probabilitySrc(
 				prevNode, path[j].vertex, amt,
 				path[j-1].edgeCapacity,
 			)
 
-			totalRouteProbability *= probability
-
-			hops = append(hops, &route.Hop{
-				PubKeyBytes: path[j].vertex,
-				ChannelID:   path[j-1].channelID,
-			})
-
+			totalProb *= prob
 			prevNode = path[j].vertex
 		}
 
-		routeWithProbability := &routeWithProbability{
-			route: &route.Route{
-				SourcePubKey: introNode,
-				Hops:         hops,
-			},
-			probability: totalRouteProbability,
-		}
-
-		// Don't bother adding a route if its success probability less
-		// minimum that can be assigned to any single pair.
-		if totalRouteProbability <= DefaultMinRouteProbability {
+		// Don't bother adding a route if its success probability
+		// is less than the minimum that can be assigned to any
+		// single pair.
+		if totalProb <= DefaultMinRouteProbability {
 			log.Debugf("Not using route (%v) as a blinded "+
-				"path since it resulted in an low "+
+				"path since it resulted in a low "+
 				"probability path(%.3f)",
-				route.ChanIDString(routeWithProbability.route),
-				routeWithProbability.probability)
+				route.ChanIDString(r), totalProb)
 
 			continue
 		}
 
-		routes = append(routes, routeWithProbability)
+		scored = append(scored, &routeWithProbability{
+			route:       r,
+			probability: totalProb,
+		})
 	}
 
 	// Sort the routes based on probability.
-	sort.Slice(routes, func(i, j int) bool {
-		return routes[i].probability > routes[j].probability
+	sort.Slice(scored, func(i, j int) bool {
+		return scored[i].probability > scored[j].probability
 	})
 
-	// Now just choose the best paths up until the maximum number of allowed
-	// paths.
+	// Now just choose the best paths up until the maximum number of
+	// allowed paths.
 	bestRoutes := make([]*route.Route, 0, restrictions.MaxNumPaths)
-	for _, route := range routes {
+	for _, s := range scored {
 		if len(bestRoutes) >= int(restrictions.MaxNumPaths) {
 			break
 		}
 
-		bestRoutes = append(bestRoutes, route.route)
+		bestRoutes = append(bestRoutes, s.route)
 	}
 
 	return bestRoutes, nil
+}
+
+// BlindedMessagePathRestrictions are constraints for selecting blinded paths
+// suitable for onion message routing (reply paths and offer_paths).
+type BlindedMessagePathRestrictions struct {
+	// NumHops is the number of hops that each blinded path should consist
+	// of. This doesn't include our node, so if the value is 1, the path
+	// will contain our node along with an introduction node hop.
+	NumHops uint8
+
+	// MaxNumPaths is the maximum number of blinded paths to select.
+	MaxNumPaths uint8
+
+	// NodeOmissionSet is a set of nodes that should not be used within
+	// any of the blinded paths.
+	NodeOmissionSet fn.Set[route.Vertex]
+}
+
+// FindBlindedMessagePaths finds a selection of paths to the destination node
+// that can be used in blinded onion message paths. Unlike FindBlindedPaths,
+// this filters by OnionMessagesOptional (bit 39) instead of
+// RouteBlindingOptional (bit 25) and does not apply probability-based ranking
+// since onion messages have no liquidity requirements.
+func (r *ChannelRouter) FindBlindedMessagePaths(destination route.Vertex,
+	restrictions *BlindedMessagePathRestrictions) ([]*route.Route, error) {
+
+	paths, err := findBlindedPaths(
+		r.cfg.RoutingGraph, destination, &blindedPathRestrictions{
+			maxNumHops:      restrictions.NumHops,
+			nodeOmissionSet: restrictions.NodeOmissionSet,
+			requiredFeature: lnwire.OnionMessagesOptional,
+		},
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	allRoutes, err := blindedHopsToRoutes(paths)
+	if err != nil {
+		return nil, err
+	}
+
+	// Cap to the requested maximum number of paths.
+	if len(allRoutes) > int(restrictions.MaxNumPaths) {
+		allRoutes = allRoutes[:restrictions.MaxNumPaths]
+	}
+
+	return allRoutes, nil
 }
 
 // generateNewSessionKey generates a new ephemeral private key to be used for a
