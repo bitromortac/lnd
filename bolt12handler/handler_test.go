@@ -3,6 +3,7 @@ package bolt12handler
 import (
 	"context"
 	"testing"
+	"time"
 
 	"github.com/btcsuite/btcd/btcec/v2"
 	sphinx "github.com/lightningnetwork/lightning-onion"
@@ -176,6 +177,18 @@ func TestHandleInvoiceRequest_FullFlow(t *testing.T) {
 	// Verify reply was sent.
 	require.Len(t, replier.replies, 1)
 	require.NotEmpty(t, replier.replies[0])
+
+	// Verify the reply decodes as an invoice a payer would accept, which
+	// covers the signature, the mirror against the request and expiry.
+	replyInv, err := bolt12.DecodeInvoice(replier.replies[0])
+	require.NoError(t, err)
+
+	sentReq, err := bolt12.DecodeInvoiceRequest(invreqBytes)
+	require.NoError(t, err)
+
+	require.NoError(t, ValidateInvoiceReply(
+		replyInv, sentReq, nil, testChainHash(), time.Now(),
+	))
 }
 
 // TestHandleInvoiceRequest_NoReplyPath verifies that the handler works without
