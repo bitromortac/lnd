@@ -1,6 +1,7 @@
 package commands
 
 import (
+	"encoding/hex"
 	"fmt"
 
 	"github.com/lightningnetwork/lnd/lnrpc"
@@ -155,6 +156,105 @@ func requestInvoice(ctx *cli.Context) error {
 	printRespJSON(resp)
 
 	return nil
+}
+
+// PayOfferCommand defines the lncli payoffer command.
+var PayOfferCommand = cli.Command{
+	Name:     "payoffer",
+	Category: "Offers",
+	Usage:    "Pay a BOLT 12 offer from a connected peer.",
+	Description: `
+	Takes a BOLT 12 offer string, constructs and signs an
+	invoice request, sends it to the offer's issuer via onion
+	message, waits for the invoice reply, validates it, and
+	dispatches the payment via the blinded paths specified in
+	the invoice. Returns the payment preimage on success.`,
+	ArgsUsage: "offer_string",
+	Flags: []cli.Flag{
+		cli.Uint64Flag{
+			Name: "amt_msat",
+			Usage: "the amount in millisatoshis " +
+				"(required when the offer has " +
+				"no fixed amount)",
+		},
+		cli.Uint64Flag{
+			Name: "quantity",
+			Usage: "the number of items to request " +
+				"(required when the offer " +
+				"supports quantity)",
+		},
+		cli.StringFlag{
+			Name:  "payer_note",
+			Usage: "an optional note to the payee",
+		},
+		cli.Uint64Flag{
+			Name: "timeout",
+			Usage: "seconds to wait for the invoice " +
+				"reply (default 60)",
+			Value: 60,
+		},
+		cli.Int64Flag{
+			Name:  "fee_limit_msat",
+			Usage: "the maximum routing fee in msat",
+		},
+		cli.StringFlag{
+			Name: "idempotency_key",
+			Usage: "a hex key that names this payment; a " +
+				"retry with the same key returns the " +
+				"first payment instead of paying again, " +
+				"and the node picks a key if it is empty",
+		},
+	},
+	Action: actionDecorator(payOffer),
+}
+
+func payOffer(ctx *cli.Context) error {
+	ctxc := getContext()
+	client, cleanUp := getClient(ctx)
+	defer cleanUp()
+
+	if ctx.NArg() == 0 {
+		return fmt.Errorf("offer_string argument required")
+	}
+
+	key, err := hex.DecodeString(ctx.String("idempotency_key"))
+	if err != nil {
+		return fmt.Errorf("invalid idempotency_key: %w", err)
+	}
+
+	stream, err := client.PayOffer(
+		ctxc, &lnrpc.PayOfferRequest{
+			Offer:          ctx.Args().First(),
+			AmountMsat:     ctx.Uint64("amt_msat"),
+			Quantity:       ctx.Uint64("quantity"),
+			PayerNote:      ctx.String("payer_note"),
+			TimeoutSeconds: ctx.Uint64("timeout"),
+			FeeLimitMsat:   ctx.Int64("fee_limit_msat"),
+			IdempotencyKey: key,
+		},
+	)
+	if err != nil {
+		return err
+	}
+
+	// Read the stream as a blocking call. Print each update
+	// and return after the final payment_result.
+	for {
+		update, recvErr := stream.Recv()
+		if recvErr != nil {
+			return recvErr
+		}
+
+		switch u := update.Update.(type) {
+		case *lnrpc.PayOfferUpdate_PaymentResult:
+			printRespJSON(u.PaymentResult)
+
+			return nil
+
+		default:
+			printRespJSON(update)
+		}
+	}
 }
 
 func createOffer(ctx *cli.Context) error {
