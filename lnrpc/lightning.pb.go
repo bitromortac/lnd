@@ -935,7 +935,7 @@ func (x ChannelCloseSummary_ClosureType) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use ChannelCloseSummary_ClosureType.Descriptor instead.
 func (ChannelCloseSummary_ClosureType) EnumDescriptor() ([]byte, []int) {
-	return file_lightning_proto_rawDescGZIP(), []int{48, 0}
+	return file_lightning_proto_rawDescGZIP(), []int{50, 0}
 }
 
 type Peer_SyncType int32
@@ -991,7 +991,7 @@ func (x Peer_SyncType) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use Peer_SyncType.Descriptor instead.
 func (Peer_SyncType) EnumDescriptor() ([]byte, []int) {
-	return file_lightning_proto_rawDescGZIP(), []int{52, 0}
+	return file_lightning_proto_rawDescGZIP(), []int{54, 0}
 }
 
 type PeerEvent_EventType int32
@@ -1037,7 +1037,7 @@ func (x PeerEvent_EventType) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use PeerEvent_EventType.Descriptor instead.
 func (PeerEvent_EventType) EnumDescriptor() ([]byte, []int) {
-	return file_lightning_proto_rawDescGZIP(), []int{57, 0}
+	return file_lightning_proto_rawDescGZIP(), []int{59, 0}
 }
 
 // There are three resolution states for the anchor:
@@ -1092,7 +1092,7 @@ func (x PendingChannelsResponse_ForceClosedChannel_AnchorState) Number() protore
 
 // Deprecated: Use PendingChannelsResponse_ForceClosedChannel_AnchorState.Descriptor instead.
 func (PendingChannelsResponse_ForceClosedChannel_AnchorState) EnumDescriptor() ([]byte, []int) {
-	return file_lightning_proto_rawDescGZIP(), []int{90, 5, 0}
+	return file_lightning_proto_rawDescGZIP(), []int{92, 5, 0}
 }
 
 type ChannelEventUpdate_UpdateType int32
@@ -1156,7 +1156,7 @@ func (x ChannelEventUpdate_UpdateType) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use ChannelEventUpdate_UpdateType.Descriptor instead.
 func (ChannelEventUpdate_UpdateType) EnumDescriptor() ([]byte, []int) {
-	return file_lightning_proto_rawDescGZIP(), []int{93, 0}
+	return file_lightning_proto_rawDescGZIP(), []int{95, 0}
 }
 
 type Invoice_InvoiceState int32
@@ -1208,7 +1208,7 @@ func (x Invoice_InvoiceState) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use Invoice_InvoiceState.Descriptor instead.
 func (Invoice_InvoiceState) EnumDescriptor() ([]byte, []int) {
-	return file_lightning_proto_rawDescGZIP(), []int{137, 0}
+	return file_lightning_proto_rawDescGZIP(), []int{139, 0}
 }
 
 type Payment_PaymentStatus int32
@@ -1270,7 +1270,7 @@ func (x Payment_PaymentStatus) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use Payment_PaymentStatus.Descriptor instead.
 func (Payment_PaymentStatus) EnumDescriptor() ([]byte, []int) {
-	return file_lightning_proto_rawDescGZIP(), []int{148, 0}
+	return file_lightning_proto_rawDescGZIP(), []int{150, 0}
 }
 
 type HTLCAttempt_HTLCStatus int32
@@ -1319,7 +1319,7 @@ func (x HTLCAttempt_HTLCStatus) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use HTLCAttempt_HTLCStatus.Descriptor instead.
 func (HTLCAttempt_HTLCStatus) EnumDescriptor() ([]byte, []int) {
-	return file_lightning_proto_rawDescGZIP(), []int{149, 0}
+	return file_lightning_proto_rawDescGZIP(), []int{151, 0}
 }
 
 type Failure_FailureCode int32
@@ -1453,7 +1453,7 @@ func (x Failure_FailureCode) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use Failure_FailureCode.Descriptor instead.
 func (Failure_FailureCode) EnumDescriptor() ([]byte, []int) {
-	return file_lightning_proto_rawDescGZIP(), []int{193, 0}
+	return file_lightning_proto_rawDescGZIP(), []int{195, 0}
 }
 
 type LookupHtlcResolutionRequest struct {
@@ -2034,6 +2034,138 @@ func (x *SendOnionMessageResponse) GetStatus() string {
 	return ""
 }
 
+type CreateOfferRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// A UTF-8 description of the purpose of the payment. Required when
+	// amount_msat is set.
+	Description string `protobuf:"bytes,1,opt,name=description,proto3" json:"description,omitempty"`
+	// The amount expected per item in millisatoshis. Zero or unset means
+	// the payer chooses the amount.
+	AmountMsat uint64 `protobuf:"varint,2,opt,name=amount_msat,json=amountMsat,proto3" json:"amount_msat,omitempty"`
+	// Seconds since epoch after which the offer expires. Zero or unset
+	// means no expiry.
+	AbsoluteExpiry uint64 `protobuf:"varint,3,opt,name=absolute_expiry,json=absoluteExpiry,proto3" json:"absolute_expiry,omitempty"`
+	// Maximum number of items that can be requested in a single invoice.
+	// Zero means unlimited. If not set, quantity selection is not
+	// supported.
+	QuantityMax   *uint64 `protobuf:"varint,4,opt,name=quantity_max,json=quantityMax,proto3,oneof" json:"quantity_max,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *CreateOfferRequest) Reset() {
+	*x = CreateOfferRequest{}
+	mi := &file_lightning_proto_msgTypes[10]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CreateOfferRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CreateOfferRequest) ProtoMessage() {}
+
+func (x *CreateOfferRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_lightning_proto_msgTypes[10]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CreateOfferRequest.ProtoReflect.Descriptor instead.
+func (*CreateOfferRequest) Descriptor() ([]byte, []int) {
+	return file_lightning_proto_rawDescGZIP(), []int{10}
+}
+
+func (x *CreateOfferRequest) GetDescription() string {
+	if x != nil {
+		return x.Description
+	}
+	return ""
+}
+
+func (x *CreateOfferRequest) GetAmountMsat() uint64 {
+	if x != nil {
+		return x.AmountMsat
+	}
+	return 0
+}
+
+func (x *CreateOfferRequest) GetAbsoluteExpiry() uint64 {
+	if x != nil {
+		return x.AbsoluteExpiry
+	}
+	return 0
+}
+
+func (x *CreateOfferRequest) GetQuantityMax() uint64 {
+	if x != nil && x.QuantityMax != nil {
+		return *x.QuantityMax
+	}
+	return 0
+}
+
+type CreateOfferResponse struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// The bech32-encoded offer string (lno1...).
+	Offer string `protobuf:"bytes,1,opt,name=offer,proto3" json:"offer,omitempty"`
+	// The 32-byte offer ID (SHA256 of the TLV-encoded offer), hex
+	// encoded.
+	OfferId       []byte `protobuf:"bytes,2,opt,name=offer_id,json=offerId,proto3" json:"offer_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *CreateOfferResponse) Reset() {
+	*x = CreateOfferResponse{}
+	mi := &file_lightning_proto_msgTypes[11]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CreateOfferResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CreateOfferResponse) ProtoMessage() {}
+
+func (x *CreateOfferResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_lightning_proto_msgTypes[11]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CreateOfferResponse.ProtoReflect.Descriptor instead.
+func (*CreateOfferResponse) Descriptor() ([]byte, []int) {
+	return file_lightning_proto_rawDescGZIP(), []int{11}
+}
+
+func (x *CreateOfferResponse) GetOffer() string {
+	if x != nil {
+		return x.Offer
+	}
+	return ""
+}
+
+func (x *CreateOfferResponse) GetOfferId() []byte {
+	if x != nil {
+		return x.OfferId
+	}
+	return nil
+}
+
 type Utxo struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// The type of address
@@ -2054,7 +2186,7 @@ type Utxo struct {
 
 func (x *Utxo) Reset() {
 	*x = Utxo{}
-	mi := &file_lightning_proto_msgTypes[10]
+	mi := &file_lightning_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2066,7 +2198,7 @@ func (x *Utxo) String() string {
 func (*Utxo) ProtoMessage() {}
 
 func (x *Utxo) ProtoReflect() protoreflect.Message {
-	mi := &file_lightning_proto_msgTypes[10]
+	mi := &file_lightning_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2079,7 +2211,7 @@ func (x *Utxo) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Utxo.ProtoReflect.Descriptor instead.
 func (*Utxo) Descriptor() ([]byte, []int) {
-	return file_lightning_proto_rawDescGZIP(), []int{10}
+	return file_lightning_proto_rawDescGZIP(), []int{12}
 }
 
 func (x *Utxo) GetAddressType() AddressType {
@@ -2144,7 +2276,7 @@ type OutputDetail struct {
 
 func (x *OutputDetail) Reset() {
 	*x = OutputDetail{}
-	mi := &file_lightning_proto_msgTypes[11]
+	mi := &file_lightning_proto_msgTypes[13]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2156,7 +2288,7 @@ func (x *OutputDetail) String() string {
 func (*OutputDetail) ProtoMessage() {}
 
 func (x *OutputDetail) ProtoReflect() protoreflect.Message {
-	mi := &file_lightning_proto_msgTypes[11]
+	mi := &file_lightning_proto_msgTypes[13]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2169,7 +2301,7 @@ func (x *OutputDetail) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use OutputDetail.ProtoReflect.Descriptor instead.
 func (*OutputDetail) Descriptor() ([]byte, []int) {
-	return file_lightning_proto_rawDescGZIP(), []int{11}
+	return file_lightning_proto_rawDescGZIP(), []int{13}
 }
 
 func (x *OutputDetail) GetOutputType() OutputScriptType {
@@ -2249,7 +2381,7 @@ type Transaction struct {
 
 func (x *Transaction) Reset() {
 	*x = Transaction{}
-	mi := &file_lightning_proto_msgTypes[12]
+	mi := &file_lightning_proto_msgTypes[14]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2261,7 +2393,7 @@ func (x *Transaction) String() string {
 func (*Transaction) ProtoMessage() {}
 
 func (x *Transaction) ProtoReflect() protoreflect.Message {
-	mi := &file_lightning_proto_msgTypes[12]
+	mi := &file_lightning_proto_msgTypes[14]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2274,7 +2406,7 @@ func (x *Transaction) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Transaction.ProtoReflect.Descriptor instead.
 func (*Transaction) Descriptor() ([]byte, []int) {
-	return file_lightning_proto_rawDescGZIP(), []int{12}
+	return file_lightning_proto_rawDescGZIP(), []int{14}
 }
 
 func (x *Transaction) GetTxHash() string {
@@ -2387,7 +2519,7 @@ type GetTransactionsRequest struct {
 
 func (x *GetTransactionsRequest) Reset() {
 	*x = GetTransactionsRequest{}
-	mi := &file_lightning_proto_msgTypes[13]
+	mi := &file_lightning_proto_msgTypes[15]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2399,7 +2531,7 @@ func (x *GetTransactionsRequest) String() string {
 func (*GetTransactionsRequest) ProtoMessage() {}
 
 func (x *GetTransactionsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_lightning_proto_msgTypes[13]
+	mi := &file_lightning_proto_msgTypes[15]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2412,7 +2544,7 @@ func (x *GetTransactionsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetTransactionsRequest.ProtoReflect.Descriptor instead.
 func (*GetTransactionsRequest) Descriptor() ([]byte, []int) {
-	return file_lightning_proto_rawDescGZIP(), []int{13}
+	return file_lightning_proto_rawDescGZIP(), []int{15}
 }
 
 func (x *GetTransactionsRequest) GetStartHeight() int32 {
@@ -2466,7 +2598,7 @@ type TransactionDetails struct {
 
 func (x *TransactionDetails) Reset() {
 	*x = TransactionDetails{}
-	mi := &file_lightning_proto_msgTypes[14]
+	mi := &file_lightning_proto_msgTypes[16]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2478,7 +2610,7 @@ func (x *TransactionDetails) String() string {
 func (*TransactionDetails) ProtoMessage() {}
 
 func (x *TransactionDetails) ProtoReflect() protoreflect.Message {
-	mi := &file_lightning_proto_msgTypes[14]
+	mi := &file_lightning_proto_msgTypes[16]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2491,7 +2623,7 @@ func (x *TransactionDetails) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use TransactionDetails.ProtoReflect.Descriptor instead.
 func (*TransactionDetails) Descriptor() ([]byte, []int) {
-	return file_lightning_proto_rawDescGZIP(), []int{14}
+	return file_lightning_proto_rawDescGZIP(), []int{16}
 }
 
 func (x *TransactionDetails) GetTransactions() []*Transaction {
@@ -2529,7 +2661,7 @@ type FeeLimit struct {
 
 func (x *FeeLimit) Reset() {
 	*x = FeeLimit{}
-	mi := &file_lightning_proto_msgTypes[15]
+	mi := &file_lightning_proto_msgTypes[17]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2541,7 +2673,7 @@ func (x *FeeLimit) String() string {
 func (*FeeLimit) ProtoMessage() {}
 
 func (x *FeeLimit) ProtoReflect() protoreflect.Message {
-	mi := &file_lightning_proto_msgTypes[15]
+	mi := &file_lightning_proto_msgTypes[17]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2554,7 +2686,7 @@ func (x *FeeLimit) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use FeeLimit.ProtoReflect.Descriptor instead.
 func (*FeeLimit) Descriptor() ([]byte, []int) {
-	return file_lightning_proto_rawDescGZIP(), []int{15}
+	return file_lightning_proto_rawDescGZIP(), []int{17}
 }
 
 func (x *FeeLimit) GetLimit() isFeeLimit_Limit {
@@ -2668,7 +2800,7 @@ type ChannelAcceptRequest struct {
 
 func (x *ChannelAcceptRequest) Reset() {
 	*x = ChannelAcceptRequest{}
-	mi := &file_lightning_proto_msgTypes[16]
+	mi := &file_lightning_proto_msgTypes[18]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2680,7 +2812,7 @@ func (x *ChannelAcceptRequest) String() string {
 func (*ChannelAcceptRequest) ProtoMessage() {}
 
 func (x *ChannelAcceptRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_lightning_proto_msgTypes[16]
+	mi := &file_lightning_proto_msgTypes[18]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2693,7 +2825,7 @@ func (x *ChannelAcceptRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ChannelAcceptRequest.ProtoReflect.Descriptor instead.
 func (*ChannelAcceptRequest) Descriptor() ([]byte, []int) {
-	return file_lightning_proto_rawDescGZIP(), []int{16}
+	return file_lightning_proto_rawDescGZIP(), []int{18}
 }
 
 func (x *ChannelAcceptRequest) GetNodePubkey() []byte {
@@ -2852,7 +2984,7 @@ type ChannelAcceptResponse struct {
 
 func (x *ChannelAcceptResponse) Reset() {
 	*x = ChannelAcceptResponse{}
-	mi := &file_lightning_proto_msgTypes[17]
+	mi := &file_lightning_proto_msgTypes[19]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2864,7 +2996,7 @@ func (x *ChannelAcceptResponse) String() string {
 func (*ChannelAcceptResponse) ProtoMessage() {}
 
 func (x *ChannelAcceptResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_lightning_proto_msgTypes[17]
+	mi := &file_lightning_proto_msgTypes[19]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2877,7 +3009,7 @@ func (x *ChannelAcceptResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ChannelAcceptResponse.ProtoReflect.Descriptor instead.
 func (*ChannelAcceptResponse) Descriptor() ([]byte, []int) {
-	return file_lightning_proto_rawDescGZIP(), []int{17}
+	return file_lightning_proto_rawDescGZIP(), []int{19}
 }
 
 func (x *ChannelAcceptResponse) GetAccept() bool {
@@ -2972,7 +3104,7 @@ type ChannelPoint struct {
 
 func (x *ChannelPoint) Reset() {
 	*x = ChannelPoint{}
-	mi := &file_lightning_proto_msgTypes[18]
+	mi := &file_lightning_proto_msgTypes[20]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2984,7 +3116,7 @@ func (x *ChannelPoint) String() string {
 func (*ChannelPoint) ProtoMessage() {}
 
 func (x *ChannelPoint) ProtoReflect() protoreflect.Message {
-	mi := &file_lightning_proto_msgTypes[18]
+	mi := &file_lightning_proto_msgTypes[20]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2997,7 +3129,7 @@ func (x *ChannelPoint) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ChannelPoint.ProtoReflect.Descriptor instead.
 func (*ChannelPoint) Descriptor() ([]byte, []int) {
-	return file_lightning_proto_rawDescGZIP(), []int{18}
+	return file_lightning_proto_rawDescGZIP(), []int{20}
 }
 
 func (x *ChannelPoint) GetFundingTxid() isChannelPoint_FundingTxid {
@@ -3066,7 +3198,7 @@ type OutPoint struct {
 
 func (x *OutPoint) Reset() {
 	*x = OutPoint{}
-	mi := &file_lightning_proto_msgTypes[19]
+	mi := &file_lightning_proto_msgTypes[21]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3078,7 +3210,7 @@ func (x *OutPoint) String() string {
 func (*OutPoint) ProtoMessage() {}
 
 func (x *OutPoint) ProtoReflect() protoreflect.Message {
-	mi := &file_lightning_proto_msgTypes[19]
+	mi := &file_lightning_proto_msgTypes[21]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3091,7 +3223,7 @@ func (x *OutPoint) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use OutPoint.ProtoReflect.Descriptor instead.
 func (*OutPoint) Descriptor() ([]byte, []int) {
-	return file_lightning_proto_rawDescGZIP(), []int{19}
+	return file_lightning_proto_rawDescGZIP(), []int{21}
 }
 
 func (x *OutPoint) GetTxidBytes() []byte {
@@ -3128,7 +3260,7 @@ type PreviousOutPoint struct {
 
 func (x *PreviousOutPoint) Reset() {
 	*x = PreviousOutPoint{}
-	mi := &file_lightning_proto_msgTypes[20]
+	mi := &file_lightning_proto_msgTypes[22]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3140,7 +3272,7 @@ func (x *PreviousOutPoint) String() string {
 func (*PreviousOutPoint) ProtoMessage() {}
 
 func (x *PreviousOutPoint) ProtoReflect() protoreflect.Message {
-	mi := &file_lightning_proto_msgTypes[20]
+	mi := &file_lightning_proto_msgTypes[22]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3153,7 +3285,7 @@ func (x *PreviousOutPoint) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PreviousOutPoint.ProtoReflect.Descriptor instead.
 func (*PreviousOutPoint) Descriptor() ([]byte, []int) {
-	return file_lightning_proto_rawDescGZIP(), []int{20}
+	return file_lightning_proto_rawDescGZIP(), []int{22}
 }
 
 func (x *PreviousOutPoint) GetOutpoint() string {
@@ -3183,7 +3315,7 @@ type LightningAddress struct {
 
 func (x *LightningAddress) Reset() {
 	*x = LightningAddress{}
-	mi := &file_lightning_proto_msgTypes[21]
+	mi := &file_lightning_proto_msgTypes[23]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3195,7 +3327,7 @@ func (x *LightningAddress) String() string {
 func (*LightningAddress) ProtoMessage() {}
 
 func (x *LightningAddress) ProtoReflect() protoreflect.Message {
-	mi := &file_lightning_proto_msgTypes[21]
+	mi := &file_lightning_proto_msgTypes[23]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3208,7 +3340,7 @@ func (x *LightningAddress) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use LightningAddress.ProtoReflect.Descriptor instead.
 func (*LightningAddress) Descriptor() ([]byte, []int) {
-	return file_lightning_proto_rawDescGZIP(), []int{21}
+	return file_lightning_proto_rawDescGZIP(), []int{23}
 }
 
 func (x *LightningAddress) GetPubkey() string {
@@ -3247,7 +3379,7 @@ type EstimateFeeRequest struct {
 
 func (x *EstimateFeeRequest) Reset() {
 	*x = EstimateFeeRequest{}
-	mi := &file_lightning_proto_msgTypes[22]
+	mi := &file_lightning_proto_msgTypes[24]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3259,7 +3391,7 @@ func (x *EstimateFeeRequest) String() string {
 func (*EstimateFeeRequest) ProtoMessage() {}
 
 func (x *EstimateFeeRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_lightning_proto_msgTypes[22]
+	mi := &file_lightning_proto_msgTypes[24]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3272,7 +3404,7 @@ func (x *EstimateFeeRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use EstimateFeeRequest.ProtoReflect.Descriptor instead.
 func (*EstimateFeeRequest) Descriptor() ([]byte, []int) {
-	return file_lightning_proto_rawDescGZIP(), []int{22}
+	return file_lightning_proto_rawDescGZIP(), []int{24}
 }
 
 func (x *EstimateFeeRequest) GetAddrToAmount() map[string]int64 {
@@ -3336,7 +3468,7 @@ type EstimateFeeResponse struct {
 
 func (x *EstimateFeeResponse) Reset() {
 	*x = EstimateFeeResponse{}
-	mi := &file_lightning_proto_msgTypes[23]
+	mi := &file_lightning_proto_msgTypes[25]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3348,7 +3480,7 @@ func (x *EstimateFeeResponse) String() string {
 func (*EstimateFeeResponse) ProtoMessage() {}
 
 func (x *EstimateFeeResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_lightning_proto_msgTypes[23]
+	mi := &file_lightning_proto_msgTypes[25]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3361,7 +3493,7 @@ func (x *EstimateFeeResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use EstimateFeeResponse.ProtoReflect.Descriptor instead.
 func (*EstimateFeeResponse) Descriptor() ([]byte, []int) {
-	return file_lightning_proto_rawDescGZIP(), []int{23}
+	return file_lightning_proto_rawDescGZIP(), []int{25}
 }
 
 func (x *EstimateFeeResponse) GetFeeSat() int64 {
@@ -3424,7 +3556,7 @@ type SendManyRequest struct {
 
 func (x *SendManyRequest) Reset() {
 	*x = SendManyRequest{}
-	mi := &file_lightning_proto_msgTypes[24]
+	mi := &file_lightning_proto_msgTypes[26]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3436,7 +3568,7 @@ func (x *SendManyRequest) String() string {
 func (*SendManyRequest) ProtoMessage() {}
 
 func (x *SendManyRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_lightning_proto_msgTypes[24]
+	mi := &file_lightning_proto_msgTypes[26]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3449,7 +3581,7 @@ func (x *SendManyRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SendManyRequest.ProtoReflect.Descriptor instead.
 func (*SendManyRequest) Descriptor() ([]byte, []int) {
-	return file_lightning_proto_rawDescGZIP(), []int{24}
+	return file_lightning_proto_rawDescGZIP(), []int{26}
 }
 
 func (x *SendManyRequest) GetAddrToAmount() map[string]int64 {
@@ -3519,7 +3651,7 @@ type SendManyResponse struct {
 
 func (x *SendManyResponse) Reset() {
 	*x = SendManyResponse{}
-	mi := &file_lightning_proto_msgTypes[25]
+	mi := &file_lightning_proto_msgTypes[27]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3531,7 +3663,7 @@ func (x *SendManyResponse) String() string {
 func (*SendManyResponse) ProtoMessage() {}
 
 func (x *SendManyResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_lightning_proto_msgTypes[25]
+	mi := &file_lightning_proto_msgTypes[27]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3544,7 +3676,7 @@ func (x *SendManyResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SendManyResponse.ProtoReflect.Descriptor instead.
 func (*SendManyResponse) Descriptor() ([]byte, []int) {
-	return file_lightning_proto_rawDescGZIP(), []int{25}
+	return file_lightning_proto_rawDescGZIP(), []int{27}
 }
 
 func (x *SendManyResponse) GetTxid() string {
@@ -3592,7 +3724,7 @@ type SendCoinsRequest struct {
 
 func (x *SendCoinsRequest) Reset() {
 	*x = SendCoinsRequest{}
-	mi := &file_lightning_proto_msgTypes[26]
+	mi := &file_lightning_proto_msgTypes[28]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3604,7 +3736,7 @@ func (x *SendCoinsRequest) String() string {
 func (*SendCoinsRequest) ProtoMessage() {}
 
 func (x *SendCoinsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_lightning_proto_msgTypes[26]
+	mi := &file_lightning_proto_msgTypes[28]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3617,7 +3749,7 @@ func (x *SendCoinsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SendCoinsRequest.ProtoReflect.Descriptor instead.
 func (*SendCoinsRequest) Descriptor() ([]byte, []int) {
-	return file_lightning_proto_rawDescGZIP(), []int{26}
+	return file_lightning_proto_rawDescGZIP(), []int{28}
 }
 
 func (x *SendCoinsRequest) GetAddr() string {
@@ -3708,7 +3840,7 @@ type SendCoinsResponse struct {
 
 func (x *SendCoinsResponse) Reset() {
 	*x = SendCoinsResponse{}
-	mi := &file_lightning_proto_msgTypes[27]
+	mi := &file_lightning_proto_msgTypes[29]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3720,7 +3852,7 @@ func (x *SendCoinsResponse) String() string {
 func (*SendCoinsResponse) ProtoMessage() {}
 
 func (x *SendCoinsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_lightning_proto_msgTypes[27]
+	mi := &file_lightning_proto_msgTypes[29]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3733,7 +3865,7 @@ func (x *SendCoinsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SendCoinsResponse.ProtoReflect.Descriptor instead.
 func (*SendCoinsResponse) Descriptor() ([]byte, []int) {
-	return file_lightning_proto_rawDescGZIP(), []int{27}
+	return file_lightning_proto_rawDescGZIP(), []int{29}
 }
 
 func (x *SendCoinsResponse) GetTxid() string {
@@ -3757,7 +3889,7 @@ type ListUnspentRequest struct {
 
 func (x *ListUnspentRequest) Reset() {
 	*x = ListUnspentRequest{}
-	mi := &file_lightning_proto_msgTypes[28]
+	mi := &file_lightning_proto_msgTypes[30]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3769,7 +3901,7 @@ func (x *ListUnspentRequest) String() string {
 func (*ListUnspentRequest) ProtoMessage() {}
 
 func (x *ListUnspentRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_lightning_proto_msgTypes[28]
+	mi := &file_lightning_proto_msgTypes[30]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3782,7 +3914,7 @@ func (x *ListUnspentRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListUnspentRequest.ProtoReflect.Descriptor instead.
 func (*ListUnspentRequest) Descriptor() ([]byte, []int) {
-	return file_lightning_proto_rawDescGZIP(), []int{28}
+	return file_lightning_proto_rawDescGZIP(), []int{30}
 }
 
 func (x *ListUnspentRequest) GetMinConfs() int32 {
@@ -3816,7 +3948,7 @@ type ListUnspentResponse struct {
 
 func (x *ListUnspentResponse) Reset() {
 	*x = ListUnspentResponse{}
-	mi := &file_lightning_proto_msgTypes[29]
+	mi := &file_lightning_proto_msgTypes[31]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3828,7 +3960,7 @@ func (x *ListUnspentResponse) String() string {
 func (*ListUnspentResponse) ProtoMessage() {}
 
 func (x *ListUnspentResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_lightning_proto_msgTypes[29]
+	mi := &file_lightning_proto_msgTypes[31]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3841,7 +3973,7 @@ func (x *ListUnspentResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListUnspentResponse.ProtoReflect.Descriptor instead.
 func (*ListUnspentResponse) Descriptor() ([]byte, []int) {
-	return file_lightning_proto_rawDescGZIP(), []int{29}
+	return file_lightning_proto_rawDescGZIP(), []int{31}
 }
 
 func (x *ListUnspentResponse) GetUtxos() []*Utxo {
@@ -3864,7 +3996,7 @@ type NewAddressRequest struct {
 
 func (x *NewAddressRequest) Reset() {
 	*x = NewAddressRequest{}
-	mi := &file_lightning_proto_msgTypes[30]
+	mi := &file_lightning_proto_msgTypes[32]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3876,7 +4008,7 @@ func (x *NewAddressRequest) String() string {
 func (*NewAddressRequest) ProtoMessage() {}
 
 func (x *NewAddressRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_lightning_proto_msgTypes[30]
+	mi := &file_lightning_proto_msgTypes[32]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3889,7 +4021,7 @@ func (x *NewAddressRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use NewAddressRequest.ProtoReflect.Descriptor instead.
 func (*NewAddressRequest) Descriptor() ([]byte, []int) {
-	return file_lightning_proto_rawDescGZIP(), []int{30}
+	return file_lightning_proto_rawDescGZIP(), []int{32}
 }
 
 func (x *NewAddressRequest) GetType() AddressType {
@@ -3916,7 +4048,7 @@ type NewAddressResponse struct {
 
 func (x *NewAddressResponse) Reset() {
 	*x = NewAddressResponse{}
-	mi := &file_lightning_proto_msgTypes[31]
+	mi := &file_lightning_proto_msgTypes[33]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3928,7 +4060,7 @@ func (x *NewAddressResponse) String() string {
 func (*NewAddressResponse) ProtoMessage() {}
 
 func (x *NewAddressResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_lightning_proto_msgTypes[31]
+	mi := &file_lightning_proto_msgTypes[33]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3941,7 +4073,7 @@ func (x *NewAddressResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use NewAddressResponse.ProtoReflect.Descriptor instead.
 func (*NewAddressResponse) Descriptor() ([]byte, []int) {
-	return file_lightning_proto_rawDescGZIP(), []int{31}
+	return file_lightning_proto_rawDescGZIP(), []int{33}
 }
 
 func (x *NewAddressResponse) GetAddress() string {
@@ -3965,7 +4097,7 @@ type SignMessageRequest struct {
 
 func (x *SignMessageRequest) Reset() {
 	*x = SignMessageRequest{}
-	mi := &file_lightning_proto_msgTypes[32]
+	mi := &file_lightning_proto_msgTypes[34]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3977,7 +4109,7 @@ func (x *SignMessageRequest) String() string {
 func (*SignMessageRequest) ProtoMessage() {}
 
 func (x *SignMessageRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_lightning_proto_msgTypes[32]
+	mi := &file_lightning_proto_msgTypes[34]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3990,7 +4122,7 @@ func (x *SignMessageRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SignMessageRequest.ProtoReflect.Descriptor instead.
 func (*SignMessageRequest) Descriptor() ([]byte, []int) {
-	return file_lightning_proto_rawDescGZIP(), []int{32}
+	return file_lightning_proto_rawDescGZIP(), []int{34}
 }
 
 func (x *SignMessageRequest) GetMsg() []byte {
@@ -4017,7 +4149,7 @@ type SignMessageResponse struct {
 
 func (x *SignMessageResponse) Reset() {
 	*x = SignMessageResponse{}
-	mi := &file_lightning_proto_msgTypes[33]
+	mi := &file_lightning_proto_msgTypes[35]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4029,7 +4161,7 @@ func (x *SignMessageResponse) String() string {
 func (*SignMessageResponse) ProtoMessage() {}
 
 func (x *SignMessageResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_lightning_proto_msgTypes[33]
+	mi := &file_lightning_proto_msgTypes[35]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4042,7 +4174,7 @@ func (x *SignMessageResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SignMessageResponse.ProtoReflect.Descriptor instead.
 func (*SignMessageResponse) Descriptor() ([]byte, []int) {
-	return file_lightning_proto_rawDescGZIP(), []int{33}
+	return file_lightning_proto_rawDescGZIP(), []int{35}
 }
 
 func (x *SignMessageResponse) GetSignature() string {
@@ -4065,7 +4197,7 @@ type VerifyMessageRequest struct {
 
 func (x *VerifyMessageRequest) Reset() {
 	*x = VerifyMessageRequest{}
-	mi := &file_lightning_proto_msgTypes[34]
+	mi := &file_lightning_proto_msgTypes[36]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4077,7 +4209,7 @@ func (x *VerifyMessageRequest) String() string {
 func (*VerifyMessageRequest) ProtoMessage() {}
 
 func (x *VerifyMessageRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_lightning_proto_msgTypes[34]
+	mi := &file_lightning_proto_msgTypes[36]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4090,7 +4222,7 @@ func (x *VerifyMessageRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use VerifyMessageRequest.ProtoReflect.Descriptor instead.
 func (*VerifyMessageRequest) Descriptor() ([]byte, []int) {
-	return file_lightning_proto_rawDescGZIP(), []int{34}
+	return file_lightning_proto_rawDescGZIP(), []int{36}
 }
 
 func (x *VerifyMessageRequest) GetMsg() []byte {
@@ -4119,7 +4251,7 @@ type VerifyMessageResponse struct {
 
 func (x *VerifyMessageResponse) Reset() {
 	*x = VerifyMessageResponse{}
-	mi := &file_lightning_proto_msgTypes[35]
+	mi := &file_lightning_proto_msgTypes[37]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4131,7 +4263,7 @@ func (x *VerifyMessageResponse) String() string {
 func (*VerifyMessageResponse) ProtoMessage() {}
 
 func (x *VerifyMessageResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_lightning_proto_msgTypes[35]
+	mi := &file_lightning_proto_msgTypes[37]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4144,7 +4276,7 @@ func (x *VerifyMessageResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use VerifyMessageResponse.ProtoReflect.Descriptor instead.
 func (*VerifyMessageResponse) Descriptor() ([]byte, []int) {
-	return file_lightning_proto_rawDescGZIP(), []int{35}
+	return file_lightning_proto_rawDescGZIP(), []int{37}
 }
 
 func (x *VerifyMessageResponse) GetValid() bool {
@@ -4177,7 +4309,7 @@ type ConnectPeerRequest struct {
 
 func (x *ConnectPeerRequest) Reset() {
 	*x = ConnectPeerRequest{}
-	mi := &file_lightning_proto_msgTypes[36]
+	mi := &file_lightning_proto_msgTypes[38]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4189,7 +4321,7 @@ func (x *ConnectPeerRequest) String() string {
 func (*ConnectPeerRequest) ProtoMessage() {}
 
 func (x *ConnectPeerRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_lightning_proto_msgTypes[36]
+	mi := &file_lightning_proto_msgTypes[38]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4202,7 +4334,7 @@ func (x *ConnectPeerRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ConnectPeerRequest.ProtoReflect.Descriptor instead.
 func (*ConnectPeerRequest) Descriptor() ([]byte, []int) {
-	return file_lightning_proto_rawDescGZIP(), []int{36}
+	return file_lightning_proto_rawDescGZIP(), []int{38}
 }
 
 func (x *ConnectPeerRequest) GetAddr() *LightningAddress {
@@ -4236,7 +4368,7 @@ type ConnectPeerResponse struct {
 
 func (x *ConnectPeerResponse) Reset() {
 	*x = ConnectPeerResponse{}
-	mi := &file_lightning_proto_msgTypes[37]
+	mi := &file_lightning_proto_msgTypes[39]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4248,7 +4380,7 @@ func (x *ConnectPeerResponse) String() string {
 func (*ConnectPeerResponse) ProtoMessage() {}
 
 func (x *ConnectPeerResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_lightning_proto_msgTypes[37]
+	mi := &file_lightning_proto_msgTypes[39]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4261,7 +4393,7 @@ func (x *ConnectPeerResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ConnectPeerResponse.ProtoReflect.Descriptor instead.
 func (*ConnectPeerResponse) Descriptor() ([]byte, []int) {
-	return file_lightning_proto_rawDescGZIP(), []int{37}
+	return file_lightning_proto_rawDescGZIP(), []int{39}
 }
 
 func (x *ConnectPeerResponse) GetStatus() string {
@@ -4281,7 +4413,7 @@ type DisconnectPeerRequest struct {
 
 func (x *DisconnectPeerRequest) Reset() {
 	*x = DisconnectPeerRequest{}
-	mi := &file_lightning_proto_msgTypes[38]
+	mi := &file_lightning_proto_msgTypes[40]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4293,7 +4425,7 @@ func (x *DisconnectPeerRequest) String() string {
 func (*DisconnectPeerRequest) ProtoMessage() {}
 
 func (x *DisconnectPeerRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_lightning_proto_msgTypes[38]
+	mi := &file_lightning_proto_msgTypes[40]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4306,7 +4438,7 @@ func (x *DisconnectPeerRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DisconnectPeerRequest.ProtoReflect.Descriptor instead.
 func (*DisconnectPeerRequest) Descriptor() ([]byte, []int) {
-	return file_lightning_proto_rawDescGZIP(), []int{38}
+	return file_lightning_proto_rawDescGZIP(), []int{40}
 }
 
 func (x *DisconnectPeerRequest) GetPubKey() string {
@@ -4326,7 +4458,7 @@ type DisconnectPeerResponse struct {
 
 func (x *DisconnectPeerResponse) Reset() {
 	*x = DisconnectPeerResponse{}
-	mi := &file_lightning_proto_msgTypes[39]
+	mi := &file_lightning_proto_msgTypes[41]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4338,7 +4470,7 @@ func (x *DisconnectPeerResponse) String() string {
 func (*DisconnectPeerResponse) ProtoMessage() {}
 
 func (x *DisconnectPeerResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_lightning_proto_msgTypes[39]
+	mi := &file_lightning_proto_msgTypes[41]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4351,7 +4483,7 @@ func (x *DisconnectPeerResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DisconnectPeerResponse.ProtoReflect.Descriptor instead.
 func (*DisconnectPeerResponse) Descriptor() ([]byte, []int) {
-	return file_lightning_proto_rawDescGZIP(), []int{39}
+	return file_lightning_proto_rawDescGZIP(), []int{41}
 }
 
 func (x *DisconnectPeerResponse) GetStatus() string {
@@ -4389,7 +4521,7 @@ type HTLC struct {
 
 func (x *HTLC) Reset() {
 	*x = HTLC{}
-	mi := &file_lightning_proto_msgTypes[40]
+	mi := &file_lightning_proto_msgTypes[42]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4401,7 +4533,7 @@ func (x *HTLC) String() string {
 func (*HTLC) ProtoMessage() {}
 
 func (x *HTLC) ProtoReflect() protoreflect.Message {
-	mi := &file_lightning_proto_msgTypes[40]
+	mi := &file_lightning_proto_msgTypes[42]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4414,7 +4546,7 @@ func (x *HTLC) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use HTLC.ProtoReflect.Descriptor instead.
 func (*HTLC) Descriptor() ([]byte, []int) {
-	return file_lightning_proto_rawDescGZIP(), []int{40}
+	return file_lightning_proto_rawDescGZIP(), []int{42}
 }
 
 func (x *HTLC) GetIncoming() bool {
@@ -4495,7 +4627,7 @@ type ChannelConstraints struct {
 
 func (x *ChannelConstraints) Reset() {
 	*x = ChannelConstraints{}
-	mi := &file_lightning_proto_msgTypes[41]
+	mi := &file_lightning_proto_msgTypes[43]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4507,7 +4639,7 @@ func (x *ChannelConstraints) String() string {
 func (*ChannelConstraints) ProtoMessage() {}
 
 func (x *ChannelConstraints) ProtoReflect() protoreflect.Message {
-	mi := &file_lightning_proto_msgTypes[41]
+	mi := &file_lightning_proto_msgTypes[43]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4520,7 +4652,7 @@ func (x *ChannelConstraints) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ChannelConstraints.ProtoReflect.Descriptor instead.
 func (*ChannelConstraints) Descriptor() ([]byte, []int) {
-	return file_lightning_proto_rawDescGZIP(), []int{41}
+	return file_lightning_proto_rawDescGZIP(), []int{43}
 }
 
 func (x *ChannelConstraints) GetCsvDelay() uint32 {
@@ -4689,7 +4821,7 @@ type Channel struct {
 
 func (x *Channel) Reset() {
 	*x = Channel{}
-	mi := &file_lightning_proto_msgTypes[42]
+	mi := &file_lightning_proto_msgTypes[44]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4701,7 +4833,7 @@ func (x *Channel) String() string {
 func (*Channel) ProtoMessage() {}
 
 func (x *Channel) ProtoReflect() protoreflect.Message {
-	mi := &file_lightning_proto_msgTypes[42]
+	mi := &file_lightning_proto_msgTypes[44]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4714,7 +4846,7 @@ func (x *Channel) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Channel.ProtoReflect.Descriptor instead.
 func (*Channel) Descriptor() ([]byte, []int) {
-	return file_lightning_proto_rawDescGZIP(), []int{42}
+	return file_lightning_proto_rawDescGZIP(), []int{44}
 }
 
 func (x *Channel) GetActive() bool {
@@ -4999,7 +5131,7 @@ type ListChannelsRequest struct {
 
 func (x *ListChannelsRequest) Reset() {
 	*x = ListChannelsRequest{}
-	mi := &file_lightning_proto_msgTypes[43]
+	mi := &file_lightning_proto_msgTypes[45]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5011,7 +5143,7 @@ func (x *ListChannelsRequest) String() string {
 func (*ListChannelsRequest) ProtoMessage() {}
 
 func (x *ListChannelsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_lightning_proto_msgTypes[43]
+	mi := &file_lightning_proto_msgTypes[45]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5024,7 +5156,7 @@ func (x *ListChannelsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListChannelsRequest.ProtoReflect.Descriptor instead.
 func (*ListChannelsRequest) Descriptor() ([]byte, []int) {
-	return file_lightning_proto_rawDescGZIP(), []int{43}
+	return file_lightning_proto_rawDescGZIP(), []int{45}
 }
 
 func (x *ListChannelsRequest) GetActiveOnly() bool {
@@ -5079,7 +5211,7 @@ type ListChannelsResponse struct {
 
 func (x *ListChannelsResponse) Reset() {
 	*x = ListChannelsResponse{}
-	mi := &file_lightning_proto_msgTypes[44]
+	mi := &file_lightning_proto_msgTypes[46]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5091,7 +5223,7 @@ func (x *ListChannelsResponse) String() string {
 func (*ListChannelsResponse) ProtoMessage() {}
 
 func (x *ListChannelsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_lightning_proto_msgTypes[44]
+	mi := &file_lightning_proto_msgTypes[46]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5104,7 +5236,7 @@ func (x *ListChannelsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListChannelsResponse.ProtoReflect.Descriptor instead.
 func (*ListChannelsResponse) Descriptor() ([]byte, []int) {
-	return file_lightning_proto_rawDescGZIP(), []int{44}
+	return file_lightning_proto_rawDescGZIP(), []int{46}
 }
 
 func (x *ListChannelsResponse) GetChannels() []*Channel {
@@ -5127,7 +5259,7 @@ type AliasMap struct {
 
 func (x *AliasMap) Reset() {
 	*x = AliasMap{}
-	mi := &file_lightning_proto_msgTypes[45]
+	mi := &file_lightning_proto_msgTypes[47]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5139,7 +5271,7 @@ func (x *AliasMap) String() string {
 func (*AliasMap) ProtoMessage() {}
 
 func (x *AliasMap) ProtoReflect() protoreflect.Message {
-	mi := &file_lightning_proto_msgTypes[45]
+	mi := &file_lightning_proto_msgTypes[47]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5152,7 +5284,7 @@ func (x *AliasMap) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AliasMap.ProtoReflect.Descriptor instead.
 func (*AliasMap) Descriptor() ([]byte, []int) {
-	return file_lightning_proto_rawDescGZIP(), []int{45}
+	return file_lightning_proto_rawDescGZIP(), []int{47}
 }
 
 func (x *AliasMap) GetBaseScid() uint64 {
@@ -5177,7 +5309,7 @@ type ListAliasesRequest struct {
 
 func (x *ListAliasesRequest) Reset() {
 	*x = ListAliasesRequest{}
-	mi := &file_lightning_proto_msgTypes[46]
+	mi := &file_lightning_proto_msgTypes[48]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5189,7 +5321,7 @@ func (x *ListAliasesRequest) String() string {
 func (*ListAliasesRequest) ProtoMessage() {}
 
 func (x *ListAliasesRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_lightning_proto_msgTypes[46]
+	mi := &file_lightning_proto_msgTypes[48]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5202,7 +5334,7 @@ func (x *ListAliasesRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListAliasesRequest.ProtoReflect.Descriptor instead.
 func (*ListAliasesRequest) Descriptor() ([]byte, []int) {
-	return file_lightning_proto_rawDescGZIP(), []int{46}
+	return file_lightning_proto_rawDescGZIP(), []int{48}
 }
 
 type ListAliasesResponse struct {
@@ -5214,7 +5346,7 @@ type ListAliasesResponse struct {
 
 func (x *ListAliasesResponse) Reset() {
 	*x = ListAliasesResponse{}
-	mi := &file_lightning_proto_msgTypes[47]
+	mi := &file_lightning_proto_msgTypes[49]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5226,7 +5358,7 @@ func (x *ListAliasesResponse) String() string {
 func (*ListAliasesResponse) ProtoMessage() {}
 
 func (x *ListAliasesResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_lightning_proto_msgTypes[47]
+	mi := &file_lightning_proto_msgTypes[49]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5239,7 +5371,7 @@ func (x *ListAliasesResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListAliasesResponse.ProtoReflect.Descriptor instead.
 func (*ListAliasesResponse) Descriptor() ([]byte, []int) {
-	return file_lightning_proto_rawDescGZIP(), []int{47}
+	return file_lightning_proto_rawDescGZIP(), []int{49}
 }
 
 func (x *ListAliasesResponse) GetAliasMaps() []*AliasMap {
@@ -5296,7 +5428,7 @@ type ChannelCloseSummary struct {
 
 func (x *ChannelCloseSummary) Reset() {
 	*x = ChannelCloseSummary{}
-	mi := &file_lightning_proto_msgTypes[48]
+	mi := &file_lightning_proto_msgTypes[50]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5308,7 +5440,7 @@ func (x *ChannelCloseSummary) String() string {
 func (*ChannelCloseSummary) ProtoMessage() {}
 
 func (x *ChannelCloseSummary) ProtoReflect() protoreflect.Message {
-	mi := &file_lightning_proto_msgTypes[48]
+	mi := &file_lightning_proto_msgTypes[50]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5321,7 +5453,7 @@ func (x *ChannelCloseSummary) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ChannelCloseSummary.ProtoReflect.Descriptor instead.
 func (*ChannelCloseSummary) Descriptor() ([]byte, []int) {
-	return file_lightning_proto_rawDescGZIP(), []int{48}
+	return file_lightning_proto_rawDescGZIP(), []int{50}
 }
 
 func (x *ChannelCloseSummary) GetChannelPoint() string {
@@ -5455,7 +5587,7 @@ type Resolution struct {
 
 func (x *Resolution) Reset() {
 	*x = Resolution{}
-	mi := &file_lightning_proto_msgTypes[49]
+	mi := &file_lightning_proto_msgTypes[51]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5467,7 +5599,7 @@ func (x *Resolution) String() string {
 func (*Resolution) ProtoMessage() {}
 
 func (x *Resolution) ProtoReflect() protoreflect.Message {
-	mi := &file_lightning_proto_msgTypes[49]
+	mi := &file_lightning_proto_msgTypes[51]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5480,7 +5612,7 @@ func (x *Resolution) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Resolution.ProtoReflect.Descriptor instead.
 func (*Resolution) Descriptor() ([]byte, []int) {
-	return file_lightning_proto_rawDescGZIP(), []int{49}
+	return file_lightning_proto_rawDescGZIP(), []int{51}
 }
 
 func (x *Resolution) GetResolutionType() ResolutionType {
@@ -5532,7 +5664,7 @@ type ClosedChannelsRequest struct {
 
 func (x *ClosedChannelsRequest) Reset() {
 	*x = ClosedChannelsRequest{}
-	mi := &file_lightning_proto_msgTypes[50]
+	mi := &file_lightning_proto_msgTypes[52]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5544,7 +5676,7 @@ func (x *ClosedChannelsRequest) String() string {
 func (*ClosedChannelsRequest) ProtoMessage() {}
 
 func (x *ClosedChannelsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_lightning_proto_msgTypes[50]
+	mi := &file_lightning_proto_msgTypes[52]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5557,7 +5689,7 @@ func (x *ClosedChannelsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ClosedChannelsRequest.ProtoReflect.Descriptor instead.
 func (*ClosedChannelsRequest) Descriptor() ([]byte, []int) {
-	return file_lightning_proto_rawDescGZIP(), []int{50}
+	return file_lightning_proto_rawDescGZIP(), []int{52}
 }
 
 func (x *ClosedChannelsRequest) GetCooperative() bool {
@@ -5611,7 +5743,7 @@ type ClosedChannelsResponse struct {
 
 func (x *ClosedChannelsResponse) Reset() {
 	*x = ClosedChannelsResponse{}
-	mi := &file_lightning_proto_msgTypes[51]
+	mi := &file_lightning_proto_msgTypes[53]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5623,7 +5755,7 @@ func (x *ClosedChannelsResponse) String() string {
 func (*ClosedChannelsResponse) ProtoMessage() {}
 
 func (x *ClosedChannelsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_lightning_proto_msgTypes[51]
+	mi := &file_lightning_proto_msgTypes[53]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5636,7 +5768,7 @@ func (x *ClosedChannelsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ClosedChannelsResponse.ProtoReflect.Descriptor instead.
 func (*ClosedChannelsResponse) Descriptor() ([]byte, []int) {
-	return file_lightning_proto_rawDescGZIP(), []int{51}
+	return file_lightning_proto_rawDescGZIP(), []int{53}
 }
 
 func (x *ClosedChannelsResponse) GetChannels() []*ChannelCloseSummary {
@@ -5692,7 +5824,7 @@ type Peer struct {
 
 func (x *Peer) Reset() {
 	*x = Peer{}
-	mi := &file_lightning_proto_msgTypes[52]
+	mi := &file_lightning_proto_msgTypes[54]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5704,7 +5836,7 @@ func (x *Peer) String() string {
 func (*Peer) ProtoMessage() {}
 
 func (x *Peer) ProtoReflect() protoreflect.Message {
-	mi := &file_lightning_proto_msgTypes[52]
+	mi := &file_lightning_proto_msgTypes[54]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5717,7 +5849,7 @@ func (x *Peer) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Peer.ProtoReflect.Descriptor instead.
 func (*Peer) Descriptor() ([]byte, []int) {
-	return file_lightning_proto_rawDescGZIP(), []int{52}
+	return file_lightning_proto_rawDescGZIP(), []int{54}
 }
 
 func (x *Peer) GetPubKey() string {
@@ -5830,7 +5962,7 @@ type TimestampedError struct {
 
 func (x *TimestampedError) Reset() {
 	*x = TimestampedError{}
-	mi := &file_lightning_proto_msgTypes[53]
+	mi := &file_lightning_proto_msgTypes[55]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5842,7 +5974,7 @@ func (x *TimestampedError) String() string {
 func (*TimestampedError) ProtoMessage() {}
 
 func (x *TimestampedError) ProtoReflect() protoreflect.Message {
-	mi := &file_lightning_proto_msgTypes[53]
+	mi := &file_lightning_proto_msgTypes[55]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5855,7 +5987,7 @@ func (x *TimestampedError) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use TimestampedError.ProtoReflect.Descriptor instead.
 func (*TimestampedError) Descriptor() ([]byte, []int) {
-	return file_lightning_proto_rawDescGZIP(), []int{53}
+	return file_lightning_proto_rawDescGZIP(), []int{55}
 }
 
 func (x *TimestampedError) GetTimestamp() uint64 {
@@ -5884,7 +6016,7 @@ type ListPeersRequest struct {
 
 func (x *ListPeersRequest) Reset() {
 	*x = ListPeersRequest{}
-	mi := &file_lightning_proto_msgTypes[54]
+	mi := &file_lightning_proto_msgTypes[56]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5896,7 +6028,7 @@ func (x *ListPeersRequest) String() string {
 func (*ListPeersRequest) ProtoMessage() {}
 
 func (x *ListPeersRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_lightning_proto_msgTypes[54]
+	mi := &file_lightning_proto_msgTypes[56]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5909,7 +6041,7 @@ func (x *ListPeersRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListPeersRequest.ProtoReflect.Descriptor instead.
 func (*ListPeersRequest) Descriptor() ([]byte, []int) {
-	return file_lightning_proto_rawDescGZIP(), []int{54}
+	return file_lightning_proto_rawDescGZIP(), []int{56}
 }
 
 func (x *ListPeersRequest) GetLatestError() bool {
@@ -5929,7 +6061,7 @@ type ListPeersResponse struct {
 
 func (x *ListPeersResponse) Reset() {
 	*x = ListPeersResponse{}
-	mi := &file_lightning_proto_msgTypes[55]
+	mi := &file_lightning_proto_msgTypes[57]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5941,7 +6073,7 @@ func (x *ListPeersResponse) String() string {
 func (*ListPeersResponse) ProtoMessage() {}
 
 func (x *ListPeersResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_lightning_proto_msgTypes[55]
+	mi := &file_lightning_proto_msgTypes[57]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5954,7 +6086,7 @@ func (x *ListPeersResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListPeersResponse.ProtoReflect.Descriptor instead.
 func (*ListPeersResponse) Descriptor() ([]byte, []int) {
-	return file_lightning_proto_rawDescGZIP(), []int{55}
+	return file_lightning_proto_rawDescGZIP(), []int{57}
 }
 
 func (x *ListPeersResponse) GetPeers() []*Peer {
@@ -5972,7 +6104,7 @@ type PeerEventSubscription struct {
 
 func (x *PeerEventSubscription) Reset() {
 	*x = PeerEventSubscription{}
-	mi := &file_lightning_proto_msgTypes[56]
+	mi := &file_lightning_proto_msgTypes[58]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5984,7 +6116,7 @@ func (x *PeerEventSubscription) String() string {
 func (*PeerEventSubscription) ProtoMessage() {}
 
 func (x *PeerEventSubscription) ProtoReflect() protoreflect.Message {
-	mi := &file_lightning_proto_msgTypes[56]
+	mi := &file_lightning_proto_msgTypes[58]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5997,7 +6129,7 @@ func (x *PeerEventSubscription) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PeerEventSubscription.ProtoReflect.Descriptor instead.
 func (*PeerEventSubscription) Descriptor() ([]byte, []int) {
-	return file_lightning_proto_rawDescGZIP(), []int{56}
+	return file_lightning_proto_rawDescGZIP(), []int{58}
 }
 
 type PeerEvent struct {
@@ -6011,7 +6143,7 @@ type PeerEvent struct {
 
 func (x *PeerEvent) Reset() {
 	*x = PeerEvent{}
-	mi := &file_lightning_proto_msgTypes[57]
+	mi := &file_lightning_proto_msgTypes[59]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -6023,7 +6155,7 @@ func (x *PeerEvent) String() string {
 func (*PeerEvent) ProtoMessage() {}
 
 func (x *PeerEvent) ProtoReflect() protoreflect.Message {
-	mi := &file_lightning_proto_msgTypes[57]
+	mi := &file_lightning_proto_msgTypes[59]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6036,7 +6168,7 @@ func (x *PeerEvent) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PeerEvent.ProtoReflect.Descriptor instead.
 func (*PeerEvent) Descriptor() ([]byte, []int) {
-	return file_lightning_proto_rawDescGZIP(), []int{57}
+	return file_lightning_proto_rawDescGZIP(), []int{59}
 }
 
 func (x *PeerEvent) GetPubKey() string {
@@ -6061,7 +6193,7 @@ type GetInfoRequest struct {
 
 func (x *GetInfoRequest) Reset() {
 	*x = GetInfoRequest{}
-	mi := &file_lightning_proto_msgTypes[58]
+	mi := &file_lightning_proto_msgTypes[60]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -6073,7 +6205,7 @@ func (x *GetInfoRequest) String() string {
 func (*GetInfoRequest) ProtoMessage() {}
 
 func (x *GetInfoRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_lightning_proto_msgTypes[58]
+	mi := &file_lightning_proto_msgTypes[60]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6086,7 +6218,7 @@ func (x *GetInfoRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetInfoRequest.ProtoReflect.Descriptor instead.
 func (*GetInfoRequest) Descriptor() ([]byte, []int) {
-	return file_lightning_proto_rawDescGZIP(), []int{58}
+	return file_lightning_proto_rawDescGZIP(), []int{60}
 }
 
 type GetInfoResponse struct {
@@ -6148,7 +6280,7 @@ type GetInfoResponse struct {
 
 func (x *GetInfoResponse) Reset() {
 	*x = GetInfoResponse{}
-	mi := &file_lightning_proto_msgTypes[59]
+	mi := &file_lightning_proto_msgTypes[61]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -6160,7 +6292,7 @@ func (x *GetInfoResponse) String() string {
 func (*GetInfoResponse) ProtoMessage() {}
 
 func (x *GetInfoResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_lightning_proto_msgTypes[59]
+	mi := &file_lightning_proto_msgTypes[61]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6173,7 +6305,7 @@ func (x *GetInfoResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetInfoResponse.ProtoReflect.Descriptor instead.
 func (*GetInfoResponse) Descriptor() ([]byte, []int) {
-	return file_lightning_proto_rawDescGZIP(), []int{59}
+	return file_lightning_proto_rawDescGZIP(), []int{61}
 }
 
 func (x *GetInfoResponse) GetVersion() string {
@@ -6342,7 +6474,7 @@ type GetDebugInfoRequest struct {
 
 func (x *GetDebugInfoRequest) Reset() {
 	*x = GetDebugInfoRequest{}
-	mi := &file_lightning_proto_msgTypes[60]
+	mi := &file_lightning_proto_msgTypes[62]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -6354,7 +6486,7 @@ func (x *GetDebugInfoRequest) String() string {
 func (*GetDebugInfoRequest) ProtoMessage() {}
 
 func (x *GetDebugInfoRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_lightning_proto_msgTypes[60]
+	mi := &file_lightning_proto_msgTypes[62]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6367,7 +6499,7 @@ func (x *GetDebugInfoRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetDebugInfoRequest.ProtoReflect.Descriptor instead.
 func (*GetDebugInfoRequest) Descriptor() ([]byte, []int) {
-	return file_lightning_proto_rawDescGZIP(), []int{60}
+	return file_lightning_proto_rawDescGZIP(), []int{62}
 }
 
 func (x *GetDebugInfoRequest) GetIncludeLog() bool {
@@ -6387,7 +6519,7 @@ type GetDebugInfoResponse struct {
 
 func (x *GetDebugInfoResponse) Reset() {
 	*x = GetDebugInfoResponse{}
-	mi := &file_lightning_proto_msgTypes[61]
+	mi := &file_lightning_proto_msgTypes[63]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -6399,7 +6531,7 @@ func (x *GetDebugInfoResponse) String() string {
 func (*GetDebugInfoResponse) ProtoMessage() {}
 
 func (x *GetDebugInfoResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_lightning_proto_msgTypes[61]
+	mi := &file_lightning_proto_msgTypes[63]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6412,7 +6544,7 @@ func (x *GetDebugInfoResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetDebugInfoResponse.ProtoReflect.Descriptor instead.
 func (*GetDebugInfoResponse) Descriptor() ([]byte, []int) {
-	return file_lightning_proto_rawDescGZIP(), []int{61}
+	return file_lightning_proto_rawDescGZIP(), []int{63}
 }
 
 func (x *GetDebugInfoResponse) GetConfig() map[string]string {
@@ -6437,7 +6569,7 @@ type GetRecoveryInfoRequest struct {
 
 func (x *GetRecoveryInfoRequest) Reset() {
 	*x = GetRecoveryInfoRequest{}
-	mi := &file_lightning_proto_msgTypes[62]
+	mi := &file_lightning_proto_msgTypes[64]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -6449,7 +6581,7 @@ func (x *GetRecoveryInfoRequest) String() string {
 func (*GetRecoveryInfoRequest) ProtoMessage() {}
 
 func (x *GetRecoveryInfoRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_lightning_proto_msgTypes[62]
+	mi := &file_lightning_proto_msgTypes[64]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6462,7 +6594,7 @@ func (x *GetRecoveryInfoRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetRecoveryInfoRequest.ProtoReflect.Descriptor instead.
 func (*GetRecoveryInfoRequest) Descriptor() ([]byte, []int) {
-	return file_lightning_proto_rawDescGZIP(), []int{62}
+	return file_lightning_proto_rawDescGZIP(), []int{64}
 }
 
 type GetRecoveryInfoResponse struct {
@@ -6479,7 +6611,7 @@ type GetRecoveryInfoResponse struct {
 
 func (x *GetRecoveryInfoResponse) Reset() {
 	*x = GetRecoveryInfoResponse{}
-	mi := &file_lightning_proto_msgTypes[63]
+	mi := &file_lightning_proto_msgTypes[65]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -6491,7 +6623,7 @@ func (x *GetRecoveryInfoResponse) String() string {
 func (*GetRecoveryInfoResponse) ProtoMessage() {}
 
 func (x *GetRecoveryInfoResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_lightning_proto_msgTypes[63]
+	mi := &file_lightning_proto_msgTypes[65]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6504,7 +6636,7 @@ func (x *GetRecoveryInfoResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetRecoveryInfoResponse.ProtoReflect.Descriptor instead.
 func (*GetRecoveryInfoResponse) Descriptor() ([]byte, []int) {
-	return file_lightning_proto_rawDescGZIP(), []int{63}
+	return file_lightning_proto_rawDescGZIP(), []int{65}
 }
 
 func (x *GetRecoveryInfoResponse) GetRecoveryMode() bool {
@@ -6543,7 +6675,7 @@ type Chain struct {
 
 func (x *Chain) Reset() {
 	*x = Chain{}
-	mi := &file_lightning_proto_msgTypes[64]
+	mi := &file_lightning_proto_msgTypes[66]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -6555,7 +6687,7 @@ func (x *Chain) String() string {
 func (*Chain) ProtoMessage() {}
 
 func (x *Chain) ProtoReflect() protoreflect.Message {
-	mi := &file_lightning_proto_msgTypes[64]
+	mi := &file_lightning_proto_msgTypes[66]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6568,7 +6700,7 @@ func (x *Chain) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Chain.ProtoReflect.Descriptor instead.
 func (*Chain) Descriptor() ([]byte, []int) {
-	return file_lightning_proto_rawDescGZIP(), []int{64}
+	return file_lightning_proto_rawDescGZIP(), []int{66}
 }
 
 // Deprecated: Marked as deprecated in lightning.proto.
@@ -6595,7 +6727,7 @@ type ChannelOpenUpdate struct {
 
 func (x *ChannelOpenUpdate) Reset() {
 	*x = ChannelOpenUpdate{}
-	mi := &file_lightning_proto_msgTypes[65]
+	mi := &file_lightning_proto_msgTypes[67]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -6607,7 +6739,7 @@ func (x *ChannelOpenUpdate) String() string {
 func (*ChannelOpenUpdate) ProtoMessage() {}
 
 func (x *ChannelOpenUpdate) ProtoReflect() protoreflect.Message {
-	mi := &file_lightning_proto_msgTypes[65]
+	mi := &file_lightning_proto_msgTypes[67]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6620,7 +6752,7 @@ func (x *ChannelOpenUpdate) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ChannelOpenUpdate.ProtoReflect.Descriptor instead.
 func (*ChannelOpenUpdate) Descriptor() ([]byte, []int) {
-	return file_lightning_proto_rawDescGZIP(), []int{65}
+	return file_lightning_proto_rawDescGZIP(), []int{67}
 }
 
 func (x *ChannelOpenUpdate) GetChannelPoint() *ChannelPoint {
@@ -6649,7 +6781,7 @@ type CloseOutput struct {
 
 func (x *CloseOutput) Reset() {
 	*x = CloseOutput{}
-	mi := &file_lightning_proto_msgTypes[66]
+	mi := &file_lightning_proto_msgTypes[68]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -6661,7 +6793,7 @@ func (x *CloseOutput) String() string {
 func (*CloseOutput) ProtoMessage() {}
 
 func (x *CloseOutput) ProtoReflect() protoreflect.Message {
-	mi := &file_lightning_proto_msgTypes[66]
+	mi := &file_lightning_proto_msgTypes[68]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6674,7 +6806,7 @@ func (x *CloseOutput) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CloseOutput.ProtoReflect.Descriptor instead.
 func (*CloseOutput) Descriptor() ([]byte, []int) {
-	return file_lightning_proto_rawDescGZIP(), []int{66}
+	return file_lightning_proto_rawDescGZIP(), []int{68}
 }
 
 func (x *CloseOutput) GetAmountSat() int64 {
@@ -6723,7 +6855,7 @@ type ChannelCloseUpdate struct {
 
 func (x *ChannelCloseUpdate) Reset() {
 	*x = ChannelCloseUpdate{}
-	mi := &file_lightning_proto_msgTypes[67]
+	mi := &file_lightning_proto_msgTypes[69]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -6735,7 +6867,7 @@ func (x *ChannelCloseUpdate) String() string {
 func (*ChannelCloseUpdate) ProtoMessage() {}
 
 func (x *ChannelCloseUpdate) ProtoReflect() protoreflect.Message {
-	mi := &file_lightning_proto_msgTypes[67]
+	mi := &file_lightning_proto_msgTypes[69]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6748,7 +6880,7 @@ func (x *ChannelCloseUpdate) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ChannelCloseUpdate.ProtoReflect.Descriptor instead.
 func (*ChannelCloseUpdate) Descriptor() ([]byte, []int) {
-	return file_lightning_proto_rawDescGZIP(), []int{67}
+	return file_lightning_proto_rawDescGZIP(), []int{69}
 }
 
 func (x *ChannelCloseUpdate) GetClosingTxid() []byte {
@@ -6830,7 +6962,7 @@ type CloseChannelRequest struct {
 
 func (x *CloseChannelRequest) Reset() {
 	*x = CloseChannelRequest{}
-	mi := &file_lightning_proto_msgTypes[68]
+	mi := &file_lightning_proto_msgTypes[70]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -6842,7 +6974,7 @@ func (x *CloseChannelRequest) String() string {
 func (*CloseChannelRequest) ProtoMessage() {}
 
 func (x *CloseChannelRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_lightning_proto_msgTypes[68]
+	mi := &file_lightning_proto_msgTypes[70]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6855,7 +6987,7 @@ func (x *CloseChannelRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CloseChannelRequest.ProtoReflect.Descriptor instead.
 func (*CloseChannelRequest) Descriptor() ([]byte, []int) {
-	return file_lightning_proto_rawDescGZIP(), []int{68}
+	return file_lightning_proto_rawDescGZIP(), []int{70}
 }
 
 func (x *CloseChannelRequest) GetChannelPoint() *ChannelPoint {
@@ -6929,7 +7061,7 @@ type CloseStatusUpdate struct {
 
 func (x *CloseStatusUpdate) Reset() {
 	*x = CloseStatusUpdate{}
-	mi := &file_lightning_proto_msgTypes[69]
+	mi := &file_lightning_proto_msgTypes[71]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -6941,7 +7073,7 @@ func (x *CloseStatusUpdate) String() string {
 func (*CloseStatusUpdate) ProtoMessage() {}
 
 func (x *CloseStatusUpdate) ProtoReflect() protoreflect.Message {
-	mi := &file_lightning_proto_msgTypes[69]
+	mi := &file_lightning_proto_msgTypes[71]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6954,7 +7086,7 @@ func (x *CloseStatusUpdate) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CloseStatusUpdate.ProtoReflect.Descriptor instead.
 func (*CloseStatusUpdate) Descriptor() ([]byte, []int) {
-	return file_lightning_proto_rawDescGZIP(), []int{69}
+	return file_lightning_proto_rawDescGZIP(), []int{71}
 }
 
 func (x *CloseStatusUpdate) GetUpdate() isCloseStatusUpdate_Update {
@@ -7025,7 +7157,7 @@ type PendingUpdate struct {
 
 func (x *PendingUpdate) Reset() {
 	*x = PendingUpdate{}
-	mi := &file_lightning_proto_msgTypes[70]
+	mi := &file_lightning_proto_msgTypes[72]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -7037,7 +7169,7 @@ func (x *PendingUpdate) String() string {
 func (*PendingUpdate) ProtoMessage() {}
 
 func (x *PendingUpdate) ProtoReflect() protoreflect.Message {
-	mi := &file_lightning_proto_msgTypes[70]
+	mi := &file_lightning_proto_msgTypes[72]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7050,7 +7182,7 @@ func (x *PendingUpdate) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PendingUpdate.ProtoReflect.Descriptor instead.
 func (*PendingUpdate) Descriptor() ([]byte, []int) {
-	return file_lightning_proto_rawDescGZIP(), []int{70}
+	return file_lightning_proto_rawDescGZIP(), []int{72}
 }
 
 func (x *PendingUpdate) GetTxid() []byte {
@@ -7093,7 +7225,7 @@ type InstantUpdate struct {
 
 func (x *InstantUpdate) Reset() {
 	*x = InstantUpdate{}
-	mi := &file_lightning_proto_msgTypes[71]
+	mi := &file_lightning_proto_msgTypes[73]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -7105,7 +7237,7 @@ func (x *InstantUpdate) String() string {
 func (*InstantUpdate) ProtoMessage() {}
 
 func (x *InstantUpdate) ProtoReflect() protoreflect.Message {
-	mi := &file_lightning_proto_msgTypes[71]
+	mi := &file_lightning_proto_msgTypes[73]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7118,7 +7250,7 @@ func (x *InstantUpdate) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use InstantUpdate.ProtoReflect.Descriptor instead.
 func (*InstantUpdate) Descriptor() ([]byte, []int) {
-	return file_lightning_proto_rawDescGZIP(), []int{71}
+	return file_lightning_proto_rawDescGZIP(), []int{73}
 }
 
 func (x *InstantUpdate) GetNumPendingHtlcs() int32 {
@@ -7147,7 +7279,7 @@ type ReadyForPsbtFunding struct {
 
 func (x *ReadyForPsbtFunding) Reset() {
 	*x = ReadyForPsbtFunding{}
-	mi := &file_lightning_proto_msgTypes[72]
+	mi := &file_lightning_proto_msgTypes[74]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -7159,7 +7291,7 @@ func (x *ReadyForPsbtFunding) String() string {
 func (*ReadyForPsbtFunding) ProtoMessage() {}
 
 func (x *ReadyForPsbtFunding) ProtoReflect() protoreflect.Message {
-	mi := &file_lightning_proto_msgTypes[72]
+	mi := &file_lightning_proto_msgTypes[74]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7172,7 +7304,7 @@ func (x *ReadyForPsbtFunding) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ReadyForPsbtFunding.ProtoReflect.Descriptor instead.
 func (*ReadyForPsbtFunding) Descriptor() ([]byte, []int) {
-	return file_lightning_proto_rawDescGZIP(), []int{72}
+	return file_lightning_proto_rawDescGZIP(), []int{74}
 }
 
 func (x *ReadyForPsbtFunding) GetFundingAddress() string {
@@ -7222,7 +7354,7 @@ type BatchOpenChannelRequest struct {
 
 func (x *BatchOpenChannelRequest) Reset() {
 	*x = BatchOpenChannelRequest{}
-	mi := &file_lightning_proto_msgTypes[73]
+	mi := &file_lightning_proto_msgTypes[75]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -7234,7 +7366,7 @@ func (x *BatchOpenChannelRequest) String() string {
 func (*BatchOpenChannelRequest) ProtoMessage() {}
 
 func (x *BatchOpenChannelRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_lightning_proto_msgTypes[73]
+	mi := &file_lightning_proto_msgTypes[75]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7247,7 +7379,7 @@ func (x *BatchOpenChannelRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use BatchOpenChannelRequest.ProtoReflect.Descriptor instead.
 func (*BatchOpenChannelRequest) Descriptor() ([]byte, []int) {
-	return file_lightning_proto_rawDescGZIP(), []int{73}
+	return file_lightning_proto_rawDescGZIP(), []int{75}
 }
 
 func (x *BatchOpenChannelRequest) GetChannels() []*BatchOpenChannel {
@@ -7377,7 +7509,7 @@ type BatchOpenChannel struct {
 
 func (x *BatchOpenChannel) Reset() {
 	*x = BatchOpenChannel{}
-	mi := &file_lightning_proto_msgTypes[74]
+	mi := &file_lightning_proto_msgTypes[76]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -7389,7 +7521,7 @@ func (x *BatchOpenChannel) String() string {
 func (*BatchOpenChannel) ProtoMessage() {}
 
 func (x *BatchOpenChannel) ProtoReflect() protoreflect.Message {
-	mi := &file_lightning_proto_msgTypes[74]
+	mi := &file_lightning_proto_msgTypes[76]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7402,7 +7534,7 @@ func (x *BatchOpenChannel) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use BatchOpenChannel.ProtoReflect.Descriptor instead.
 func (*BatchOpenChannel) Descriptor() ([]byte, []int) {
-	return file_lightning_proto_rawDescGZIP(), []int{74}
+	return file_lightning_proto_rawDescGZIP(), []int{76}
 }
 
 func (x *BatchOpenChannel) GetNodePubkey() []byte {
@@ -7554,7 +7686,7 @@ type BatchOpenChannelResponse struct {
 
 func (x *BatchOpenChannelResponse) Reset() {
 	*x = BatchOpenChannelResponse{}
-	mi := &file_lightning_proto_msgTypes[75]
+	mi := &file_lightning_proto_msgTypes[77]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -7566,7 +7698,7 @@ func (x *BatchOpenChannelResponse) String() string {
 func (*BatchOpenChannelResponse) ProtoMessage() {}
 
 func (x *BatchOpenChannelResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_lightning_proto_msgTypes[75]
+	mi := &file_lightning_proto_msgTypes[77]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7579,7 +7711,7 @@ func (x *BatchOpenChannelResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use BatchOpenChannelResponse.ProtoReflect.Descriptor instead.
 func (*BatchOpenChannelResponse) Descriptor() ([]byte, []int) {
-	return file_lightning_proto_rawDescGZIP(), []int{75}
+	return file_lightning_proto_rawDescGZIP(), []int{77}
 }
 
 func (x *BatchOpenChannelResponse) GetPendingChannels() []*PendingUpdate {
@@ -7698,7 +7830,7 @@ type OpenChannelRequest struct {
 
 func (x *OpenChannelRequest) Reset() {
 	*x = OpenChannelRequest{}
-	mi := &file_lightning_proto_msgTypes[76]
+	mi := &file_lightning_proto_msgTypes[78]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -7710,7 +7842,7 @@ func (x *OpenChannelRequest) String() string {
 func (*OpenChannelRequest) ProtoMessage() {}
 
 func (x *OpenChannelRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_lightning_proto_msgTypes[76]
+	mi := &file_lightning_proto_msgTypes[78]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7723,7 +7855,7 @@ func (x *OpenChannelRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use OpenChannelRequest.ProtoReflect.Descriptor instead.
 func (*OpenChannelRequest) Descriptor() ([]byte, []int) {
-	return file_lightning_proto_rawDescGZIP(), []int{76}
+	return file_lightning_proto_rawDescGZIP(), []int{78}
 }
 
 func (x *OpenChannelRequest) GetSatPerVbyte() uint64 {
@@ -7941,7 +8073,7 @@ type OpenStatusUpdate struct {
 
 func (x *OpenStatusUpdate) Reset() {
 	*x = OpenStatusUpdate{}
-	mi := &file_lightning_proto_msgTypes[77]
+	mi := &file_lightning_proto_msgTypes[79]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -7953,7 +8085,7 @@ func (x *OpenStatusUpdate) String() string {
 func (*OpenStatusUpdate) ProtoMessage() {}
 
 func (x *OpenStatusUpdate) ProtoReflect() protoreflect.Message {
-	mi := &file_lightning_proto_msgTypes[77]
+	mi := &file_lightning_proto_msgTypes[79]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7966,7 +8098,7 @@ func (x *OpenStatusUpdate) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use OpenStatusUpdate.ProtoReflect.Descriptor instead.
 func (*OpenStatusUpdate) Descriptor() ([]byte, []int) {
-	return file_lightning_proto_rawDescGZIP(), []int{77}
+	return file_lightning_proto_rawDescGZIP(), []int{79}
 }
 
 func (x *OpenStatusUpdate) GetUpdate() isOpenStatusUpdate_Update {
@@ -8050,7 +8182,7 @@ type KeyLocator struct {
 
 func (x *KeyLocator) Reset() {
 	*x = KeyLocator{}
-	mi := &file_lightning_proto_msgTypes[78]
+	mi := &file_lightning_proto_msgTypes[80]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -8062,7 +8194,7 @@ func (x *KeyLocator) String() string {
 func (*KeyLocator) ProtoMessage() {}
 
 func (x *KeyLocator) ProtoReflect() protoreflect.Message {
-	mi := &file_lightning_proto_msgTypes[78]
+	mi := &file_lightning_proto_msgTypes[80]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -8075,7 +8207,7 @@ func (x *KeyLocator) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use KeyLocator.ProtoReflect.Descriptor instead.
 func (*KeyLocator) Descriptor() ([]byte, []int) {
-	return file_lightning_proto_rawDescGZIP(), []int{78}
+	return file_lightning_proto_rawDescGZIP(), []int{80}
 }
 
 func (x *KeyLocator) GetKeyFamily() int32 {
@@ -8104,7 +8236,7 @@ type KeyDescriptor struct {
 
 func (x *KeyDescriptor) Reset() {
 	*x = KeyDescriptor{}
-	mi := &file_lightning_proto_msgTypes[79]
+	mi := &file_lightning_proto_msgTypes[81]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -8116,7 +8248,7 @@ func (x *KeyDescriptor) String() string {
 func (*KeyDescriptor) ProtoMessage() {}
 
 func (x *KeyDescriptor) ProtoReflect() protoreflect.Message {
-	mi := &file_lightning_proto_msgTypes[79]
+	mi := &file_lightning_proto_msgTypes[81]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -8129,7 +8261,7 @@ func (x *KeyDescriptor) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use KeyDescriptor.ProtoReflect.Descriptor instead.
 func (*KeyDescriptor) Descriptor() ([]byte, []int) {
-	return file_lightning_proto_rawDescGZIP(), []int{79}
+	return file_lightning_proto_rawDescGZIP(), []int{81}
 }
 
 func (x *KeyDescriptor) GetRawKeyBytes() []byte {
@@ -8176,7 +8308,7 @@ type ChanPointShim struct {
 
 func (x *ChanPointShim) Reset() {
 	*x = ChanPointShim{}
-	mi := &file_lightning_proto_msgTypes[80]
+	mi := &file_lightning_proto_msgTypes[82]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -8188,7 +8320,7 @@ func (x *ChanPointShim) String() string {
 func (*ChanPointShim) ProtoMessage() {}
 
 func (x *ChanPointShim) ProtoReflect() protoreflect.Message {
-	mi := &file_lightning_proto_msgTypes[80]
+	mi := &file_lightning_proto_msgTypes[82]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -8201,7 +8333,7 @@ func (x *ChanPointShim) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ChanPointShim.ProtoReflect.Descriptor instead.
 func (*ChanPointShim) Descriptor() ([]byte, []int) {
-	return file_lightning_proto_rawDescGZIP(), []int{80}
+	return file_lightning_proto_rawDescGZIP(), []int{82}
 }
 
 func (x *ChanPointShim) GetAmt() int64 {
@@ -8275,7 +8407,7 @@ type PsbtShim struct {
 
 func (x *PsbtShim) Reset() {
 	*x = PsbtShim{}
-	mi := &file_lightning_proto_msgTypes[81]
+	mi := &file_lightning_proto_msgTypes[83]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -8287,7 +8419,7 @@ func (x *PsbtShim) String() string {
 func (*PsbtShim) ProtoMessage() {}
 
 func (x *PsbtShim) ProtoReflect() protoreflect.Message {
-	mi := &file_lightning_proto_msgTypes[81]
+	mi := &file_lightning_proto_msgTypes[83]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -8300,7 +8432,7 @@ func (x *PsbtShim) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PsbtShim.ProtoReflect.Descriptor instead.
 func (*PsbtShim) Descriptor() ([]byte, []int) {
-	return file_lightning_proto_rawDescGZIP(), []int{81}
+	return file_lightning_proto_rawDescGZIP(), []int{83}
 }
 
 func (x *PsbtShim) GetPendingChanId() []byte {
@@ -8337,7 +8469,7 @@ type FundingShim struct {
 
 func (x *FundingShim) Reset() {
 	*x = FundingShim{}
-	mi := &file_lightning_proto_msgTypes[82]
+	mi := &file_lightning_proto_msgTypes[84]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -8349,7 +8481,7 @@ func (x *FundingShim) String() string {
 func (*FundingShim) ProtoMessage() {}
 
 func (x *FundingShim) ProtoReflect() protoreflect.Message {
-	mi := &file_lightning_proto_msgTypes[82]
+	mi := &file_lightning_proto_msgTypes[84]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -8362,7 +8494,7 @@ func (x *FundingShim) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use FundingShim.ProtoReflect.Descriptor instead.
 func (*FundingShim) Descriptor() ([]byte, []int) {
-	return file_lightning_proto_rawDescGZIP(), []int{82}
+	return file_lightning_proto_rawDescGZIP(), []int{84}
 }
 
 func (x *FundingShim) GetShim() isFundingShim_Shim {
@@ -8420,7 +8552,7 @@ type FundingShimCancel struct {
 
 func (x *FundingShimCancel) Reset() {
 	*x = FundingShimCancel{}
-	mi := &file_lightning_proto_msgTypes[83]
+	mi := &file_lightning_proto_msgTypes[85]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -8432,7 +8564,7 @@ func (x *FundingShimCancel) String() string {
 func (*FundingShimCancel) ProtoMessage() {}
 
 func (x *FundingShimCancel) ProtoReflect() protoreflect.Message {
-	mi := &file_lightning_proto_msgTypes[83]
+	mi := &file_lightning_proto_msgTypes[85]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -8445,7 +8577,7 @@ func (x *FundingShimCancel) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use FundingShimCancel.ProtoReflect.Descriptor instead.
 func (*FundingShimCancel) Descriptor() ([]byte, []int) {
-	return file_lightning_proto_rawDescGZIP(), []int{83}
+	return file_lightning_proto_rawDescGZIP(), []int{85}
 }
 
 func (x *FundingShimCancel) GetPendingChanId() []byte {
@@ -8480,7 +8612,7 @@ type FundingPsbtVerify struct {
 
 func (x *FundingPsbtVerify) Reset() {
 	*x = FundingPsbtVerify{}
-	mi := &file_lightning_proto_msgTypes[84]
+	mi := &file_lightning_proto_msgTypes[86]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -8492,7 +8624,7 @@ func (x *FundingPsbtVerify) String() string {
 func (*FundingPsbtVerify) ProtoMessage() {}
 
 func (x *FundingPsbtVerify) ProtoReflect() protoreflect.Message {
-	mi := &file_lightning_proto_msgTypes[84]
+	mi := &file_lightning_proto_msgTypes[86]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -8505,7 +8637,7 @@ func (x *FundingPsbtVerify) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use FundingPsbtVerify.ProtoReflect.Descriptor instead.
 func (*FundingPsbtVerify) Descriptor() ([]byte, []int) {
-	return file_lightning_proto_rawDescGZIP(), []int{84}
+	return file_lightning_proto_rawDescGZIP(), []int{86}
 }
 
 func (x *FundingPsbtVerify) GetFundedPsbt() []byte {
@@ -8547,7 +8679,7 @@ type FundingPsbtFinalize struct {
 
 func (x *FundingPsbtFinalize) Reset() {
 	*x = FundingPsbtFinalize{}
-	mi := &file_lightning_proto_msgTypes[85]
+	mi := &file_lightning_proto_msgTypes[87]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -8559,7 +8691,7 @@ func (x *FundingPsbtFinalize) String() string {
 func (*FundingPsbtFinalize) ProtoMessage() {}
 
 func (x *FundingPsbtFinalize) ProtoReflect() protoreflect.Message {
-	mi := &file_lightning_proto_msgTypes[85]
+	mi := &file_lightning_proto_msgTypes[87]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -8572,7 +8704,7 @@ func (x *FundingPsbtFinalize) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use FundingPsbtFinalize.ProtoReflect.Descriptor instead.
 func (*FundingPsbtFinalize) Descriptor() ([]byte, []int) {
-	return file_lightning_proto_rawDescGZIP(), []int{85}
+	return file_lightning_proto_rawDescGZIP(), []int{87}
 }
 
 func (x *FundingPsbtFinalize) GetSignedPsbt() []byte {
@@ -8611,7 +8743,7 @@ type FundingTransitionMsg struct {
 
 func (x *FundingTransitionMsg) Reset() {
 	*x = FundingTransitionMsg{}
-	mi := &file_lightning_proto_msgTypes[86]
+	mi := &file_lightning_proto_msgTypes[88]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -8623,7 +8755,7 @@ func (x *FundingTransitionMsg) String() string {
 func (*FundingTransitionMsg) ProtoMessage() {}
 
 func (x *FundingTransitionMsg) ProtoReflect() protoreflect.Message {
-	mi := &file_lightning_proto_msgTypes[86]
+	mi := &file_lightning_proto_msgTypes[88]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -8636,7 +8768,7 @@ func (x *FundingTransitionMsg) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use FundingTransitionMsg.ProtoReflect.Descriptor instead.
 func (*FundingTransitionMsg) Descriptor() ([]byte, []int) {
-	return file_lightning_proto_rawDescGZIP(), []int{86}
+	return file_lightning_proto_rawDescGZIP(), []int{88}
 }
 
 func (x *FundingTransitionMsg) GetTrigger() isFundingTransitionMsg_Trigger {
@@ -8729,7 +8861,7 @@ type FundingStateStepResp struct {
 
 func (x *FundingStateStepResp) Reset() {
 	*x = FundingStateStepResp{}
-	mi := &file_lightning_proto_msgTypes[87]
+	mi := &file_lightning_proto_msgTypes[89]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -8741,7 +8873,7 @@ func (x *FundingStateStepResp) String() string {
 func (*FundingStateStepResp) ProtoMessage() {}
 
 func (x *FundingStateStepResp) ProtoReflect() protoreflect.Message {
-	mi := &file_lightning_proto_msgTypes[87]
+	mi := &file_lightning_proto_msgTypes[89]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -8754,7 +8886,7 @@ func (x *FundingStateStepResp) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use FundingStateStepResp.ProtoReflect.Descriptor instead.
 func (*FundingStateStepResp) Descriptor() ([]byte, []int) {
-	return file_lightning_proto_rawDescGZIP(), []int{87}
+	return file_lightning_proto_rawDescGZIP(), []int{89}
 }
 
 type PendingHTLC struct {
@@ -8779,7 +8911,7 @@ type PendingHTLC struct {
 
 func (x *PendingHTLC) Reset() {
 	*x = PendingHTLC{}
-	mi := &file_lightning_proto_msgTypes[88]
+	mi := &file_lightning_proto_msgTypes[90]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -8791,7 +8923,7 @@ func (x *PendingHTLC) String() string {
 func (*PendingHTLC) ProtoMessage() {}
 
 func (x *PendingHTLC) ProtoReflect() protoreflect.Message {
-	mi := &file_lightning_proto_msgTypes[88]
+	mi := &file_lightning_proto_msgTypes[90]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -8804,7 +8936,7 @@ func (x *PendingHTLC) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PendingHTLC.ProtoReflect.Descriptor instead.
 func (*PendingHTLC) Descriptor() ([]byte, []int) {
-	return file_lightning_proto_rawDescGZIP(), []int{88}
+	return file_lightning_proto_rawDescGZIP(), []int{90}
 }
 
 func (x *PendingHTLC) GetIncoming() bool {
@@ -8860,7 +8992,7 @@ type PendingChannelsRequest struct {
 
 func (x *PendingChannelsRequest) Reset() {
 	*x = PendingChannelsRequest{}
-	mi := &file_lightning_proto_msgTypes[89]
+	mi := &file_lightning_proto_msgTypes[91]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -8872,7 +9004,7 @@ func (x *PendingChannelsRequest) String() string {
 func (*PendingChannelsRequest) ProtoMessage() {}
 
 func (x *PendingChannelsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_lightning_proto_msgTypes[89]
+	mi := &file_lightning_proto_msgTypes[91]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -8885,7 +9017,7 @@ func (x *PendingChannelsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PendingChannelsRequest.ProtoReflect.Descriptor instead.
 func (*PendingChannelsRequest) Descriptor() ([]byte, []int) {
-	return file_lightning_proto_rawDescGZIP(), []int{89}
+	return file_lightning_proto_rawDescGZIP(), []int{91}
 }
 
 func (x *PendingChannelsRequest) GetIncludeRawTx() bool {
@@ -8917,7 +9049,7 @@ type PendingChannelsResponse struct {
 
 func (x *PendingChannelsResponse) Reset() {
 	*x = PendingChannelsResponse{}
-	mi := &file_lightning_proto_msgTypes[90]
+	mi := &file_lightning_proto_msgTypes[92]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -8929,7 +9061,7 @@ func (x *PendingChannelsResponse) String() string {
 func (*PendingChannelsResponse) ProtoMessage() {}
 
 func (x *PendingChannelsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_lightning_proto_msgTypes[90]
+	mi := &file_lightning_proto_msgTypes[92]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -8942,7 +9074,7 @@ func (x *PendingChannelsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PendingChannelsResponse.ProtoReflect.Descriptor instead.
 func (*PendingChannelsResponse) Descriptor() ([]byte, []int) {
-	return file_lightning_proto_rawDescGZIP(), []int{90}
+	return file_lightning_proto_rawDescGZIP(), []int{92}
 }
 
 func (x *PendingChannelsResponse) GetTotalLimboBalance() int64 {
@@ -8989,7 +9121,7 @@ type ChannelEventSubscription struct {
 
 func (x *ChannelEventSubscription) Reset() {
 	*x = ChannelEventSubscription{}
-	mi := &file_lightning_proto_msgTypes[91]
+	mi := &file_lightning_proto_msgTypes[93]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -9001,7 +9133,7 @@ func (x *ChannelEventSubscription) String() string {
 func (*ChannelEventSubscription) ProtoMessage() {}
 
 func (x *ChannelEventSubscription) ProtoReflect() protoreflect.Message {
-	mi := &file_lightning_proto_msgTypes[91]
+	mi := &file_lightning_proto_msgTypes[93]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -9014,7 +9146,7 @@ func (x *ChannelEventSubscription) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ChannelEventSubscription.ProtoReflect.Descriptor instead.
 func (*ChannelEventSubscription) Descriptor() ([]byte, []int) {
-	return file_lightning_proto_rawDescGZIP(), []int{91}
+	return file_lightning_proto_rawDescGZIP(), []int{93}
 }
 
 type ChannelCommitUpdate struct {
@@ -9026,7 +9158,7 @@ type ChannelCommitUpdate struct {
 
 func (x *ChannelCommitUpdate) Reset() {
 	*x = ChannelCommitUpdate{}
-	mi := &file_lightning_proto_msgTypes[92]
+	mi := &file_lightning_proto_msgTypes[94]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -9038,7 +9170,7 @@ func (x *ChannelCommitUpdate) String() string {
 func (*ChannelCommitUpdate) ProtoMessage() {}
 
 func (x *ChannelCommitUpdate) ProtoReflect() protoreflect.Message {
-	mi := &file_lightning_proto_msgTypes[92]
+	mi := &file_lightning_proto_msgTypes[94]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -9051,7 +9183,7 @@ func (x *ChannelCommitUpdate) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ChannelCommitUpdate.ProtoReflect.Descriptor instead.
 func (*ChannelCommitUpdate) Descriptor() ([]byte, []int) {
-	return file_lightning_proto_rawDescGZIP(), []int{92}
+	return file_lightning_proto_rawDescGZIP(), []int{94}
 }
 
 func (x *ChannelCommitUpdate) GetChannel() *Channel {
@@ -9081,7 +9213,7 @@ type ChannelEventUpdate struct {
 
 func (x *ChannelEventUpdate) Reset() {
 	*x = ChannelEventUpdate{}
-	mi := &file_lightning_proto_msgTypes[93]
+	mi := &file_lightning_proto_msgTypes[95]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -9093,7 +9225,7 @@ func (x *ChannelEventUpdate) String() string {
 func (*ChannelEventUpdate) ProtoMessage() {}
 
 func (x *ChannelEventUpdate) ProtoReflect() protoreflect.Message {
-	mi := &file_lightning_proto_msgTypes[93]
+	mi := &file_lightning_proto_msgTypes[95]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -9106,7 +9238,7 @@ func (x *ChannelEventUpdate) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ChannelEventUpdate.ProtoReflect.Descriptor instead.
 func (*ChannelEventUpdate) Descriptor() ([]byte, []int) {
-	return file_lightning_proto_rawDescGZIP(), []int{93}
+	return file_lightning_proto_rawDescGZIP(), []int{95}
 }
 
 func (x *ChannelEventUpdate) GetChannel() isChannelEventUpdate_Channel {
@@ -9259,7 +9391,7 @@ type WalletAccountBalance struct {
 
 func (x *WalletAccountBalance) Reset() {
 	*x = WalletAccountBalance{}
-	mi := &file_lightning_proto_msgTypes[94]
+	mi := &file_lightning_proto_msgTypes[96]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -9271,7 +9403,7 @@ func (x *WalletAccountBalance) String() string {
 func (*WalletAccountBalance) ProtoMessage() {}
 
 func (x *WalletAccountBalance) ProtoReflect() protoreflect.Message {
-	mi := &file_lightning_proto_msgTypes[94]
+	mi := &file_lightning_proto_msgTypes[96]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -9284,7 +9416,7 @@ func (x *WalletAccountBalance) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use WalletAccountBalance.ProtoReflect.Descriptor instead.
 func (*WalletAccountBalance) Descriptor() ([]byte, []int) {
-	return file_lightning_proto_rawDescGZIP(), []int{94}
+	return file_lightning_proto_rawDescGZIP(), []int{96}
 }
 
 func (x *WalletAccountBalance) GetConfirmedBalance() int64 {
@@ -9316,7 +9448,7 @@ type WalletBalanceRequest struct {
 
 func (x *WalletBalanceRequest) Reset() {
 	*x = WalletBalanceRequest{}
-	mi := &file_lightning_proto_msgTypes[95]
+	mi := &file_lightning_proto_msgTypes[97]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -9328,7 +9460,7 @@ func (x *WalletBalanceRequest) String() string {
 func (*WalletBalanceRequest) ProtoMessage() {}
 
 func (x *WalletBalanceRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_lightning_proto_msgTypes[95]
+	mi := &file_lightning_proto_msgTypes[97]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -9341,7 +9473,7 @@ func (x *WalletBalanceRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use WalletBalanceRequest.ProtoReflect.Descriptor instead.
 func (*WalletBalanceRequest) Descriptor() ([]byte, []int) {
-	return file_lightning_proto_rawDescGZIP(), []int{95}
+	return file_lightning_proto_rawDescGZIP(), []int{97}
 }
 
 func (x *WalletBalanceRequest) GetAccount() string {
@@ -9379,7 +9511,7 @@ type WalletBalanceResponse struct {
 
 func (x *WalletBalanceResponse) Reset() {
 	*x = WalletBalanceResponse{}
-	mi := &file_lightning_proto_msgTypes[96]
+	mi := &file_lightning_proto_msgTypes[98]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -9391,7 +9523,7 @@ func (x *WalletBalanceResponse) String() string {
 func (*WalletBalanceResponse) ProtoMessage() {}
 
 func (x *WalletBalanceResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_lightning_proto_msgTypes[96]
+	mi := &file_lightning_proto_msgTypes[98]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -9404,7 +9536,7 @@ func (x *WalletBalanceResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use WalletBalanceResponse.ProtoReflect.Descriptor instead.
 func (*WalletBalanceResponse) Descriptor() ([]byte, []int) {
-	return file_lightning_proto_rawDescGZIP(), []int{96}
+	return file_lightning_proto_rawDescGZIP(), []int{98}
 }
 
 func (x *WalletBalanceResponse) GetTotalBalance() int64 {
@@ -9461,7 +9593,7 @@ type Amount struct {
 
 func (x *Amount) Reset() {
 	*x = Amount{}
-	mi := &file_lightning_proto_msgTypes[97]
+	mi := &file_lightning_proto_msgTypes[99]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -9473,7 +9605,7 @@ func (x *Amount) String() string {
 func (*Amount) ProtoMessage() {}
 
 func (x *Amount) ProtoReflect() protoreflect.Message {
-	mi := &file_lightning_proto_msgTypes[97]
+	mi := &file_lightning_proto_msgTypes[99]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -9486,7 +9618,7 @@ func (x *Amount) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Amount.ProtoReflect.Descriptor instead.
 func (*Amount) Descriptor() ([]byte, []int) {
-	return file_lightning_proto_rawDescGZIP(), []int{97}
+	return file_lightning_proto_rawDescGZIP(), []int{99}
 }
 
 func (x *Amount) GetSat() uint64 {
@@ -9511,7 +9643,7 @@ type ChannelBalanceRequest struct {
 
 func (x *ChannelBalanceRequest) Reset() {
 	*x = ChannelBalanceRequest{}
-	mi := &file_lightning_proto_msgTypes[98]
+	mi := &file_lightning_proto_msgTypes[100]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -9523,7 +9655,7 @@ func (x *ChannelBalanceRequest) String() string {
 func (*ChannelBalanceRequest) ProtoMessage() {}
 
 func (x *ChannelBalanceRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_lightning_proto_msgTypes[98]
+	mi := &file_lightning_proto_msgTypes[100]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -9536,7 +9668,7 @@ func (x *ChannelBalanceRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ChannelBalanceRequest.ProtoReflect.Descriptor instead.
 func (*ChannelBalanceRequest) Descriptor() ([]byte, []int) {
-	return file_lightning_proto_rawDescGZIP(), []int{98}
+	return file_lightning_proto_rawDescGZIP(), []int{100}
 }
 
 type ChannelBalanceResponse struct {
@@ -9570,7 +9702,7 @@ type ChannelBalanceResponse struct {
 
 func (x *ChannelBalanceResponse) Reset() {
 	*x = ChannelBalanceResponse{}
-	mi := &file_lightning_proto_msgTypes[99]
+	mi := &file_lightning_proto_msgTypes[101]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -9582,7 +9714,7 @@ func (x *ChannelBalanceResponse) String() string {
 func (*ChannelBalanceResponse) ProtoMessage() {}
 
 func (x *ChannelBalanceResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_lightning_proto_msgTypes[99]
+	mi := &file_lightning_proto_msgTypes[101]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -9595,7 +9727,7 @@ func (x *ChannelBalanceResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ChannelBalanceResponse.ProtoReflect.Descriptor instead.
 func (*ChannelBalanceResponse) Descriptor() ([]byte, []int) {
-	return file_lightning_proto_rawDescGZIP(), []int{99}
+	return file_lightning_proto_rawDescGZIP(), []int{101}
 }
 
 // Deprecated: Marked as deprecated in lightning.proto.
@@ -9744,7 +9876,7 @@ type QueryRoutesRequest struct {
 
 func (x *QueryRoutesRequest) Reset() {
 	*x = QueryRoutesRequest{}
-	mi := &file_lightning_proto_msgTypes[100]
+	mi := &file_lightning_proto_msgTypes[102]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -9756,7 +9888,7 @@ func (x *QueryRoutesRequest) String() string {
 func (*QueryRoutesRequest) ProtoMessage() {}
 
 func (x *QueryRoutesRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_lightning_proto_msgTypes[100]
+	mi := &file_lightning_proto_msgTypes[102]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -9769,7 +9901,7 @@ func (x *QueryRoutesRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use QueryRoutesRequest.ProtoReflect.Descriptor instead.
 func (*QueryRoutesRequest) Descriptor() ([]byte, []int) {
-	return file_lightning_proto_rawDescGZIP(), []int{100}
+	return file_lightning_proto_rawDescGZIP(), []int{102}
 }
 
 func (x *QueryRoutesRequest) GetPubKey() string {
@@ -9913,7 +10045,7 @@ type NodePair struct {
 
 func (x *NodePair) Reset() {
 	*x = NodePair{}
-	mi := &file_lightning_proto_msgTypes[101]
+	mi := &file_lightning_proto_msgTypes[103]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -9925,7 +10057,7 @@ func (x *NodePair) String() string {
 func (*NodePair) ProtoMessage() {}
 
 func (x *NodePair) ProtoReflect() protoreflect.Message {
-	mi := &file_lightning_proto_msgTypes[101]
+	mi := &file_lightning_proto_msgTypes[103]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -9938,7 +10070,7 @@ func (x *NodePair) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use NodePair.ProtoReflect.Descriptor instead.
 func (*NodePair) Descriptor() ([]byte, []int) {
-	return file_lightning_proto_rawDescGZIP(), []int{101}
+	return file_lightning_proto_rawDescGZIP(), []int{103}
 }
 
 func (x *NodePair) GetFrom() []byte {
@@ -9970,7 +10102,7 @@ type EdgeLocator struct {
 
 func (x *EdgeLocator) Reset() {
 	*x = EdgeLocator{}
-	mi := &file_lightning_proto_msgTypes[102]
+	mi := &file_lightning_proto_msgTypes[104]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -9982,7 +10114,7 @@ func (x *EdgeLocator) String() string {
 func (*EdgeLocator) ProtoMessage() {}
 
 func (x *EdgeLocator) ProtoReflect() protoreflect.Message {
-	mi := &file_lightning_proto_msgTypes[102]
+	mi := &file_lightning_proto_msgTypes[104]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -9995,7 +10127,7 @@ func (x *EdgeLocator) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use EdgeLocator.ProtoReflect.Descriptor instead.
 func (*EdgeLocator) Descriptor() ([]byte, []int) {
-	return file_lightning_proto_rawDescGZIP(), []int{102}
+	return file_lightning_proto_rawDescGZIP(), []int{104}
 }
 
 func (x *EdgeLocator) GetChannelId() uint64 {
@@ -10026,7 +10158,7 @@ type QueryRoutesResponse struct {
 
 func (x *QueryRoutesResponse) Reset() {
 	*x = QueryRoutesResponse{}
-	mi := &file_lightning_proto_msgTypes[103]
+	mi := &file_lightning_proto_msgTypes[105]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -10038,7 +10170,7 @@ func (x *QueryRoutesResponse) String() string {
 func (*QueryRoutesResponse) ProtoMessage() {}
 
 func (x *QueryRoutesResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_lightning_proto_msgTypes[103]
+	mi := &file_lightning_proto_msgTypes[105]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -10051,7 +10183,7 @@ func (x *QueryRoutesResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use QueryRoutesResponse.ProtoReflect.Descriptor instead.
 func (*QueryRoutesResponse) Descriptor() ([]byte, []int) {
-	return file_lightning_proto_rawDescGZIP(), []int{103}
+	return file_lightning_proto_rawDescGZIP(), []int{105}
 }
 
 func (x *QueryRoutesResponse) GetRoutes() []*Route {
@@ -10133,7 +10265,7 @@ type Hop struct {
 
 func (x *Hop) Reset() {
 	*x = Hop{}
-	mi := &file_lightning_proto_msgTypes[104]
+	mi := &file_lightning_proto_msgTypes[106]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -10145,7 +10277,7 @@ func (x *Hop) String() string {
 func (*Hop) ProtoMessage() {}
 
 func (x *Hop) ProtoReflect() protoreflect.Message {
-	mi := &file_lightning_proto_msgTypes[104]
+	mi := &file_lightning_proto_msgTypes[106]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -10158,7 +10290,7 @@ func (x *Hop) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Hop.ProtoReflect.Descriptor instead.
 func (*Hop) Descriptor() ([]byte, []int) {
-	return file_lightning_proto_rawDescGZIP(), []int{104}
+	return file_lightning_proto_rawDescGZIP(), []int{106}
 }
 
 func (x *Hop) GetChanId() uint64 {
@@ -10296,7 +10428,7 @@ type MPPRecord struct {
 
 func (x *MPPRecord) Reset() {
 	*x = MPPRecord{}
-	mi := &file_lightning_proto_msgTypes[105]
+	mi := &file_lightning_proto_msgTypes[107]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -10308,7 +10440,7 @@ func (x *MPPRecord) String() string {
 func (*MPPRecord) ProtoMessage() {}
 
 func (x *MPPRecord) ProtoReflect() protoreflect.Message {
-	mi := &file_lightning_proto_msgTypes[105]
+	mi := &file_lightning_proto_msgTypes[107]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -10321,7 +10453,7 @@ func (x *MPPRecord) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use MPPRecord.ProtoReflect.Descriptor instead.
 func (*MPPRecord) Descriptor() ([]byte, []int) {
-	return file_lightning_proto_rawDescGZIP(), []int{105}
+	return file_lightning_proto_rawDescGZIP(), []int{107}
 }
 
 func (x *MPPRecord) GetPaymentAddr() []byte {
@@ -10349,7 +10481,7 @@ type AMPRecord struct {
 
 func (x *AMPRecord) Reset() {
 	*x = AMPRecord{}
-	mi := &file_lightning_proto_msgTypes[106]
+	mi := &file_lightning_proto_msgTypes[108]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -10361,7 +10493,7 @@ func (x *AMPRecord) String() string {
 func (*AMPRecord) ProtoMessage() {}
 
 func (x *AMPRecord) ProtoReflect() protoreflect.Message {
-	mi := &file_lightning_proto_msgTypes[106]
+	mi := &file_lightning_proto_msgTypes[108]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -10374,7 +10506,7 @@ func (x *AMPRecord) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AMPRecord.ProtoReflect.Descriptor instead.
 func (*AMPRecord) Descriptor() ([]byte, []int) {
-	return file_lightning_proto_rawDescGZIP(), []int{106}
+	return file_lightning_proto_rawDescGZIP(), []int{108}
 }
 
 func (x *AMPRecord) GetRootShare() []byte {
@@ -10444,7 +10576,7 @@ type Route struct {
 
 func (x *Route) Reset() {
 	*x = Route{}
-	mi := &file_lightning_proto_msgTypes[107]
+	mi := &file_lightning_proto_msgTypes[109]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -10456,7 +10588,7 @@ func (x *Route) String() string {
 func (*Route) ProtoMessage() {}
 
 func (x *Route) ProtoReflect() protoreflect.Message {
-	mi := &file_lightning_proto_msgTypes[107]
+	mi := &file_lightning_proto_msgTypes[109]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -10469,7 +10601,7 @@ func (x *Route) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Route.ProtoReflect.Descriptor instead.
 func (*Route) Descriptor() ([]byte, []int) {
-	return file_lightning_proto_rawDescGZIP(), []int{107}
+	return file_lightning_proto_rawDescGZIP(), []int{109}
 }
 
 func (x *Route) GetTotalTimeLock() uint32 {
@@ -10545,7 +10677,7 @@ type NodeInfoRequest struct {
 
 func (x *NodeInfoRequest) Reset() {
 	*x = NodeInfoRequest{}
-	mi := &file_lightning_proto_msgTypes[108]
+	mi := &file_lightning_proto_msgTypes[110]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -10557,7 +10689,7 @@ func (x *NodeInfoRequest) String() string {
 func (*NodeInfoRequest) ProtoMessage() {}
 
 func (x *NodeInfoRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_lightning_proto_msgTypes[108]
+	mi := &file_lightning_proto_msgTypes[110]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -10570,7 +10702,7 @@ func (x *NodeInfoRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use NodeInfoRequest.ProtoReflect.Descriptor instead.
 func (*NodeInfoRequest) Descriptor() ([]byte, []int) {
-	return file_lightning_proto_rawDescGZIP(), []int{108}
+	return file_lightning_proto_rawDescGZIP(), []int{110}
 }
 
 func (x *NodeInfoRequest) GetPubKey() string {
@@ -10613,7 +10745,7 @@ type NodeInfo struct {
 
 func (x *NodeInfo) Reset() {
 	*x = NodeInfo{}
-	mi := &file_lightning_proto_msgTypes[109]
+	mi := &file_lightning_proto_msgTypes[111]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -10625,7 +10757,7 @@ func (x *NodeInfo) String() string {
 func (*NodeInfo) ProtoMessage() {}
 
 func (x *NodeInfo) ProtoReflect() protoreflect.Message {
-	mi := &file_lightning_proto_msgTypes[109]
+	mi := &file_lightning_proto_msgTypes[111]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -10638,7 +10770,7 @@ func (x *NodeInfo) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use NodeInfo.ProtoReflect.Descriptor instead.
 func (*NodeInfo) Descriptor() ([]byte, []int) {
-	return file_lightning_proto_rawDescGZIP(), []int{109}
+	return file_lightning_proto_rawDescGZIP(), []int{111}
 }
 
 func (x *NodeInfo) GetNode() *LightningNode {
@@ -10689,7 +10821,7 @@ type LightningNode struct {
 
 func (x *LightningNode) Reset() {
 	*x = LightningNode{}
-	mi := &file_lightning_proto_msgTypes[110]
+	mi := &file_lightning_proto_msgTypes[112]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -10701,7 +10833,7 @@ func (x *LightningNode) String() string {
 func (*LightningNode) ProtoMessage() {}
 
 func (x *LightningNode) ProtoReflect() protoreflect.Message {
-	mi := &file_lightning_proto_msgTypes[110]
+	mi := &file_lightning_proto_msgTypes[112]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -10714,7 +10846,7 @@ func (x *LightningNode) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use LightningNode.ProtoReflect.Descriptor instead.
 func (*LightningNode) Descriptor() ([]byte, []int) {
-	return file_lightning_proto_rawDescGZIP(), []int{110}
+	return file_lightning_proto_rawDescGZIP(), []int{112}
 }
 
 func (x *LightningNode) GetLastUpdate() uint32 {
@@ -10776,7 +10908,7 @@ type NodeAddress struct {
 
 func (x *NodeAddress) Reset() {
 	*x = NodeAddress{}
-	mi := &file_lightning_proto_msgTypes[111]
+	mi := &file_lightning_proto_msgTypes[113]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -10788,7 +10920,7 @@ func (x *NodeAddress) String() string {
 func (*NodeAddress) ProtoMessage() {}
 
 func (x *NodeAddress) ProtoReflect() protoreflect.Message {
-	mi := &file_lightning_proto_msgTypes[111]
+	mi := &file_lightning_proto_msgTypes[113]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -10801,7 +10933,7 @@ func (x *NodeAddress) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use NodeAddress.ProtoReflect.Descriptor instead.
 func (*NodeAddress) Descriptor() ([]byte, []int) {
-	return file_lightning_proto_rawDescGZIP(), []int{111}
+	return file_lightning_proto_rawDescGZIP(), []int{113}
 }
 
 func (x *NodeAddress) GetNetwork() string {
@@ -10838,7 +10970,7 @@ type RoutingPolicy struct {
 
 func (x *RoutingPolicy) Reset() {
 	*x = RoutingPolicy{}
-	mi := &file_lightning_proto_msgTypes[112]
+	mi := &file_lightning_proto_msgTypes[114]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -10850,7 +10982,7 @@ func (x *RoutingPolicy) String() string {
 func (*RoutingPolicy) ProtoMessage() {}
 
 func (x *RoutingPolicy) ProtoReflect() protoreflect.Message {
-	mi := &file_lightning_proto_msgTypes[112]
+	mi := &file_lightning_proto_msgTypes[114]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -10863,7 +10995,7 @@ func (x *RoutingPolicy) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RoutingPolicy.ProtoReflect.Descriptor instead.
 func (*RoutingPolicy) Descriptor() ([]byte, []int) {
-	return file_lightning_proto_rawDescGZIP(), []int{112}
+	return file_lightning_proto_rawDescGZIP(), []int{114}
 }
 
 func (x *RoutingPolicy) GetTimeLockDelta() uint32 {
@@ -10961,7 +11093,7 @@ type ChannelAuthProof struct {
 
 func (x *ChannelAuthProof) Reset() {
 	*x = ChannelAuthProof{}
-	mi := &file_lightning_proto_msgTypes[113]
+	mi := &file_lightning_proto_msgTypes[115]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -10973,7 +11105,7 @@ func (x *ChannelAuthProof) String() string {
 func (*ChannelAuthProof) ProtoMessage() {}
 
 func (x *ChannelAuthProof) ProtoReflect() protoreflect.Message {
-	mi := &file_lightning_proto_msgTypes[113]
+	mi := &file_lightning_proto_msgTypes[115]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -10986,7 +11118,7 @@ func (x *ChannelAuthProof) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ChannelAuthProof.ProtoReflect.Descriptor instead.
 func (*ChannelAuthProof) Descriptor() ([]byte, []int) {
-	return file_lightning_proto_rawDescGZIP(), []int{113}
+	return file_lightning_proto_rawDescGZIP(), []int{115}
 }
 
 func (x *ChannelAuthProof) GetNodeSig1() []byte {
@@ -11050,7 +11182,7 @@ type ChannelEdge struct {
 
 func (x *ChannelEdge) Reset() {
 	*x = ChannelEdge{}
-	mi := &file_lightning_proto_msgTypes[114]
+	mi := &file_lightning_proto_msgTypes[116]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -11062,7 +11194,7 @@ func (x *ChannelEdge) String() string {
 func (*ChannelEdge) ProtoMessage() {}
 
 func (x *ChannelEdge) ProtoReflect() protoreflect.Message {
-	mi := &file_lightning_proto_msgTypes[114]
+	mi := &file_lightning_proto_msgTypes[116]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -11075,7 +11207,7 @@ func (x *ChannelEdge) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ChannelEdge.ProtoReflect.Descriptor instead.
 func (*ChannelEdge) Descriptor() ([]byte, []int) {
-	return file_lightning_proto_rawDescGZIP(), []int{114}
+	return file_lightning_proto_rawDescGZIP(), []int{116}
 }
 
 func (x *ChannelEdge) GetChannelId() uint64 {
@@ -11163,7 +11295,7 @@ type ChannelGraphRequest struct {
 
 func (x *ChannelGraphRequest) Reset() {
 	*x = ChannelGraphRequest{}
-	mi := &file_lightning_proto_msgTypes[115]
+	mi := &file_lightning_proto_msgTypes[117]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -11175,7 +11307,7 @@ func (x *ChannelGraphRequest) String() string {
 func (*ChannelGraphRequest) ProtoMessage() {}
 
 func (x *ChannelGraphRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_lightning_proto_msgTypes[115]
+	mi := &file_lightning_proto_msgTypes[117]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -11188,7 +11320,7 @@ func (x *ChannelGraphRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ChannelGraphRequest.ProtoReflect.Descriptor instead.
 func (*ChannelGraphRequest) Descriptor() ([]byte, []int) {
-	return file_lightning_proto_rawDescGZIP(), []int{115}
+	return file_lightning_proto_rawDescGZIP(), []int{117}
 }
 
 func (x *ChannelGraphRequest) GetIncludeUnannounced() bool {
@@ -11218,7 +11350,7 @@ type ChannelGraph struct {
 
 func (x *ChannelGraph) Reset() {
 	*x = ChannelGraph{}
-	mi := &file_lightning_proto_msgTypes[116]
+	mi := &file_lightning_proto_msgTypes[118]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -11230,7 +11362,7 @@ func (x *ChannelGraph) String() string {
 func (*ChannelGraph) ProtoMessage() {}
 
 func (x *ChannelGraph) ProtoReflect() protoreflect.Message {
-	mi := &file_lightning_proto_msgTypes[116]
+	mi := &file_lightning_proto_msgTypes[118]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -11243,7 +11375,7 @@ func (x *ChannelGraph) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ChannelGraph.ProtoReflect.Descriptor instead.
 func (*ChannelGraph) Descriptor() ([]byte, []int) {
-	return file_lightning_proto_rawDescGZIP(), []int{116}
+	return file_lightning_proto_rawDescGZIP(), []int{118}
 }
 
 func (x *ChannelGraph) GetNodes() []*LightningNode {
@@ -11270,7 +11402,7 @@ type NodeMetricsRequest struct {
 
 func (x *NodeMetricsRequest) Reset() {
 	*x = NodeMetricsRequest{}
-	mi := &file_lightning_proto_msgTypes[117]
+	mi := &file_lightning_proto_msgTypes[119]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -11282,7 +11414,7 @@ func (x *NodeMetricsRequest) String() string {
 func (*NodeMetricsRequest) ProtoMessage() {}
 
 func (x *NodeMetricsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_lightning_proto_msgTypes[117]
+	mi := &file_lightning_proto_msgTypes[119]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -11295,7 +11427,7 @@ func (x *NodeMetricsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use NodeMetricsRequest.ProtoReflect.Descriptor instead.
 func (*NodeMetricsRequest) Descriptor() ([]byte, []int) {
-	return file_lightning_proto_rawDescGZIP(), []int{117}
+	return file_lightning_proto_rawDescGZIP(), []int{119}
 }
 
 func (x *NodeMetricsRequest) GetTypes() []NodeMetricType {
@@ -11319,7 +11451,7 @@ type NodeMetricsResponse struct {
 
 func (x *NodeMetricsResponse) Reset() {
 	*x = NodeMetricsResponse{}
-	mi := &file_lightning_proto_msgTypes[118]
+	mi := &file_lightning_proto_msgTypes[120]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -11331,7 +11463,7 @@ func (x *NodeMetricsResponse) String() string {
 func (*NodeMetricsResponse) ProtoMessage() {}
 
 func (x *NodeMetricsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_lightning_proto_msgTypes[118]
+	mi := &file_lightning_proto_msgTypes[120]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -11344,7 +11476,7 @@ func (x *NodeMetricsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use NodeMetricsResponse.ProtoReflect.Descriptor instead.
 func (*NodeMetricsResponse) Descriptor() ([]byte, []int) {
-	return file_lightning_proto_rawDescGZIP(), []int{118}
+	return file_lightning_proto_rawDescGZIP(), []int{120}
 }
 
 func (x *NodeMetricsResponse) GetBetweennessCentrality() map[string]*FloatMetric {
@@ -11366,7 +11498,7 @@ type FloatMetric struct {
 
 func (x *FloatMetric) Reset() {
 	*x = FloatMetric{}
-	mi := &file_lightning_proto_msgTypes[119]
+	mi := &file_lightning_proto_msgTypes[121]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -11378,7 +11510,7 @@ func (x *FloatMetric) String() string {
 func (*FloatMetric) ProtoMessage() {}
 
 func (x *FloatMetric) ProtoReflect() protoreflect.Message {
-	mi := &file_lightning_proto_msgTypes[119]
+	mi := &file_lightning_proto_msgTypes[121]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -11391,7 +11523,7 @@ func (x *FloatMetric) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use FloatMetric.ProtoReflect.Descriptor instead.
 func (*FloatMetric) Descriptor() ([]byte, []int) {
-	return file_lightning_proto_rawDescGZIP(), []int{119}
+	return file_lightning_proto_rawDescGZIP(), []int{121}
 }
 
 func (x *FloatMetric) GetValue() float64 {
@@ -11425,7 +11557,7 @@ type ChanInfoRequest struct {
 
 func (x *ChanInfoRequest) Reset() {
 	*x = ChanInfoRequest{}
-	mi := &file_lightning_proto_msgTypes[120]
+	mi := &file_lightning_proto_msgTypes[122]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -11437,7 +11569,7 @@ func (x *ChanInfoRequest) String() string {
 func (*ChanInfoRequest) ProtoMessage() {}
 
 func (x *ChanInfoRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_lightning_proto_msgTypes[120]
+	mi := &file_lightning_proto_msgTypes[122]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -11450,7 +11582,7 @@ func (x *ChanInfoRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ChanInfoRequest.ProtoReflect.Descriptor instead.
 func (*ChanInfoRequest) Descriptor() ([]byte, []int) {
-	return file_lightning_proto_rawDescGZIP(), []int{120}
+	return file_lightning_proto_rawDescGZIP(), []int{122}
 }
 
 func (x *ChanInfoRequest) GetChanId() uint64 {
@@ -11482,7 +11614,7 @@ type NetworkInfoRequest struct {
 
 func (x *NetworkInfoRequest) Reset() {
 	*x = NetworkInfoRequest{}
-	mi := &file_lightning_proto_msgTypes[121]
+	mi := &file_lightning_proto_msgTypes[123]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -11494,7 +11626,7 @@ func (x *NetworkInfoRequest) String() string {
 func (*NetworkInfoRequest) ProtoMessage() {}
 
 func (x *NetworkInfoRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_lightning_proto_msgTypes[121]
+	mi := &file_lightning_proto_msgTypes[123]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -11507,7 +11639,7 @@ func (x *NetworkInfoRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use NetworkInfoRequest.ProtoReflect.Descriptor instead.
 func (*NetworkInfoRequest) Descriptor() ([]byte, []int) {
-	return file_lightning_proto_rawDescGZIP(), []int{121}
+	return file_lightning_proto_rawDescGZIP(), []int{123}
 }
 
 type NetworkInfo struct {
@@ -11530,7 +11662,7 @@ type NetworkInfo struct {
 
 func (x *NetworkInfo) Reset() {
 	*x = NetworkInfo{}
-	mi := &file_lightning_proto_msgTypes[122]
+	mi := &file_lightning_proto_msgTypes[124]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -11542,7 +11674,7 @@ func (x *NetworkInfo) String() string {
 func (*NetworkInfo) ProtoMessage() {}
 
 func (x *NetworkInfo) ProtoReflect() protoreflect.Message {
-	mi := &file_lightning_proto_msgTypes[122]
+	mi := &file_lightning_proto_msgTypes[124]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -11555,7 +11687,7 @@ func (x *NetworkInfo) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use NetworkInfo.ProtoReflect.Descriptor instead.
 func (*NetworkInfo) Descriptor() ([]byte, []int) {
-	return file_lightning_proto_rawDescGZIP(), []int{122}
+	return file_lightning_proto_rawDescGZIP(), []int{124}
 }
 
 func (x *NetworkInfo) GetGraphDiameter() uint32 {
@@ -11643,7 +11775,7 @@ type StopRequest struct {
 
 func (x *StopRequest) Reset() {
 	*x = StopRequest{}
-	mi := &file_lightning_proto_msgTypes[123]
+	mi := &file_lightning_proto_msgTypes[125]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -11655,7 +11787,7 @@ func (x *StopRequest) String() string {
 func (*StopRequest) ProtoMessage() {}
 
 func (x *StopRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_lightning_proto_msgTypes[123]
+	mi := &file_lightning_proto_msgTypes[125]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -11668,7 +11800,7 @@ func (x *StopRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use StopRequest.ProtoReflect.Descriptor instead.
 func (*StopRequest) Descriptor() ([]byte, []int) {
-	return file_lightning_proto_rawDescGZIP(), []int{123}
+	return file_lightning_proto_rawDescGZIP(), []int{125}
 }
 
 type StopResponse struct {
@@ -11681,7 +11813,7 @@ type StopResponse struct {
 
 func (x *StopResponse) Reset() {
 	*x = StopResponse{}
-	mi := &file_lightning_proto_msgTypes[124]
+	mi := &file_lightning_proto_msgTypes[126]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -11693,7 +11825,7 @@ func (x *StopResponse) String() string {
 func (*StopResponse) ProtoMessage() {}
 
 func (x *StopResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_lightning_proto_msgTypes[124]
+	mi := &file_lightning_proto_msgTypes[126]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -11706,7 +11838,7 @@ func (x *StopResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use StopResponse.ProtoReflect.Descriptor instead.
 func (*StopResponse) Descriptor() ([]byte, []int) {
-	return file_lightning_proto_rawDescGZIP(), []int{124}
+	return file_lightning_proto_rawDescGZIP(), []int{126}
 }
 
 func (x *StopResponse) GetStatus() string {
@@ -11724,7 +11856,7 @@ type GraphTopologySubscription struct {
 
 func (x *GraphTopologySubscription) Reset() {
 	*x = GraphTopologySubscription{}
-	mi := &file_lightning_proto_msgTypes[125]
+	mi := &file_lightning_proto_msgTypes[127]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -11736,7 +11868,7 @@ func (x *GraphTopologySubscription) String() string {
 func (*GraphTopologySubscription) ProtoMessage() {}
 
 func (x *GraphTopologySubscription) ProtoReflect() protoreflect.Message {
-	mi := &file_lightning_proto_msgTypes[125]
+	mi := &file_lightning_proto_msgTypes[127]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -11749,7 +11881,7 @@ func (x *GraphTopologySubscription) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GraphTopologySubscription.ProtoReflect.Descriptor instead.
 func (*GraphTopologySubscription) Descriptor() ([]byte, []int) {
-	return file_lightning_proto_rawDescGZIP(), []int{125}
+	return file_lightning_proto_rawDescGZIP(), []int{127}
 }
 
 type GraphTopologyUpdate struct {
@@ -11763,7 +11895,7 @@ type GraphTopologyUpdate struct {
 
 func (x *GraphTopologyUpdate) Reset() {
 	*x = GraphTopologyUpdate{}
-	mi := &file_lightning_proto_msgTypes[126]
+	mi := &file_lightning_proto_msgTypes[128]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -11775,7 +11907,7 @@ func (x *GraphTopologyUpdate) String() string {
 func (*GraphTopologyUpdate) ProtoMessage() {}
 
 func (x *GraphTopologyUpdate) ProtoReflect() protoreflect.Message {
-	mi := &file_lightning_proto_msgTypes[126]
+	mi := &file_lightning_proto_msgTypes[128]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -11788,7 +11920,7 @@ func (x *GraphTopologyUpdate) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GraphTopologyUpdate.ProtoReflect.Descriptor instead.
 func (*GraphTopologyUpdate) Descriptor() ([]byte, []int) {
-	return file_lightning_proto_rawDescGZIP(), []int{126}
+	return file_lightning_proto_rawDescGZIP(), []int{128}
 }
 
 func (x *GraphTopologyUpdate) GetNodeUpdates() []*NodeUpdate {
@@ -11835,7 +11967,7 @@ type NodeUpdate struct {
 
 func (x *NodeUpdate) Reset() {
 	*x = NodeUpdate{}
-	mi := &file_lightning_proto_msgTypes[127]
+	mi := &file_lightning_proto_msgTypes[129]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -11847,7 +11979,7 @@ func (x *NodeUpdate) String() string {
 func (*NodeUpdate) ProtoMessage() {}
 
 func (x *NodeUpdate) ProtoReflect() protoreflect.Message {
-	mi := &file_lightning_proto_msgTypes[127]
+	mi := &file_lightning_proto_msgTypes[129]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -11860,7 +11992,7 @@ func (x *NodeUpdate) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use NodeUpdate.ProtoReflect.Descriptor instead.
 func (*NodeUpdate) Descriptor() ([]byte, []int) {
-	return file_lightning_proto_rawDescGZIP(), []int{127}
+	return file_lightning_proto_rawDescGZIP(), []int{129}
 }
 
 // Deprecated: Marked as deprecated in lightning.proto.
@@ -11931,7 +12063,7 @@ type ChannelEdgeUpdate struct {
 
 func (x *ChannelEdgeUpdate) Reset() {
 	*x = ChannelEdgeUpdate{}
-	mi := &file_lightning_proto_msgTypes[128]
+	mi := &file_lightning_proto_msgTypes[130]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -11943,7 +12075,7 @@ func (x *ChannelEdgeUpdate) String() string {
 func (*ChannelEdgeUpdate) ProtoMessage() {}
 
 func (x *ChannelEdgeUpdate) ProtoReflect() protoreflect.Message {
-	mi := &file_lightning_proto_msgTypes[128]
+	mi := &file_lightning_proto_msgTypes[130]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -11956,7 +12088,7 @@ func (x *ChannelEdgeUpdate) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ChannelEdgeUpdate.ProtoReflect.Descriptor instead.
 func (*ChannelEdgeUpdate) Descriptor() ([]byte, []int) {
-	return file_lightning_proto_rawDescGZIP(), []int{128}
+	return file_lightning_proto_rawDescGZIP(), []int{130}
 }
 
 func (x *ChannelEdgeUpdate) GetChanId() uint64 {
@@ -12016,7 +12148,7 @@ type ClosedChannelUpdate struct {
 
 func (x *ClosedChannelUpdate) Reset() {
 	*x = ClosedChannelUpdate{}
-	mi := &file_lightning_proto_msgTypes[129]
+	mi := &file_lightning_proto_msgTypes[131]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -12028,7 +12160,7 @@ func (x *ClosedChannelUpdate) String() string {
 func (*ClosedChannelUpdate) ProtoMessage() {}
 
 func (x *ClosedChannelUpdate) ProtoReflect() protoreflect.Message {
-	mi := &file_lightning_proto_msgTypes[129]
+	mi := &file_lightning_proto_msgTypes[131]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -12041,7 +12173,7 @@ func (x *ClosedChannelUpdate) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ClosedChannelUpdate.ProtoReflect.Descriptor instead.
 func (*ClosedChannelUpdate) Descriptor() ([]byte, []int) {
-	return file_lightning_proto_rawDescGZIP(), []int{129}
+	return file_lightning_proto_rawDescGZIP(), []int{131}
 }
 
 func (x *ClosedChannelUpdate) GetChanId() uint64 {
@@ -12091,7 +12223,7 @@ type HopHint struct {
 
 func (x *HopHint) Reset() {
 	*x = HopHint{}
-	mi := &file_lightning_proto_msgTypes[130]
+	mi := &file_lightning_proto_msgTypes[132]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -12103,7 +12235,7 @@ func (x *HopHint) String() string {
 func (*HopHint) ProtoMessage() {}
 
 func (x *HopHint) ProtoReflect() protoreflect.Message {
-	mi := &file_lightning_proto_msgTypes[130]
+	mi := &file_lightning_proto_msgTypes[132]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -12116,7 +12248,7 @@ func (x *HopHint) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use HopHint.ProtoReflect.Descriptor instead.
 func (*HopHint) Descriptor() ([]byte, []int) {
-	return file_lightning_proto_rawDescGZIP(), []int{130}
+	return file_lightning_proto_rawDescGZIP(), []int{132}
 }
 
 func (x *HopHint) GetNodeId() string {
@@ -12163,7 +12295,7 @@ type SetID struct {
 
 func (x *SetID) Reset() {
 	*x = SetID{}
-	mi := &file_lightning_proto_msgTypes[131]
+	mi := &file_lightning_proto_msgTypes[133]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -12175,7 +12307,7 @@ func (x *SetID) String() string {
 func (*SetID) ProtoMessage() {}
 
 func (x *SetID) ProtoReflect() protoreflect.Message {
-	mi := &file_lightning_proto_msgTypes[131]
+	mi := &file_lightning_proto_msgTypes[133]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -12188,7 +12320,7 @@ func (x *SetID) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SetID.ProtoReflect.Descriptor instead.
 func (*SetID) Descriptor() ([]byte, []int) {
-	return file_lightning_proto_rawDescGZIP(), []int{131}
+	return file_lightning_proto_rawDescGZIP(), []int{133}
 }
 
 func (x *SetID) GetSetId() []byte {
@@ -12209,7 +12341,7 @@ type RouteHint struct {
 
 func (x *RouteHint) Reset() {
 	*x = RouteHint{}
-	mi := &file_lightning_proto_msgTypes[132]
+	mi := &file_lightning_proto_msgTypes[134]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -12221,7 +12353,7 @@ func (x *RouteHint) String() string {
 func (*RouteHint) ProtoMessage() {}
 
 func (x *RouteHint) ProtoReflect() protoreflect.Message {
-	mi := &file_lightning_proto_msgTypes[132]
+	mi := &file_lightning_proto_msgTypes[134]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -12234,7 +12366,7 @@ func (x *RouteHint) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RouteHint.ProtoReflect.Descriptor instead.
 func (*RouteHint) Descriptor() ([]byte, []int) {
-	return file_lightning_proto_rawDescGZIP(), []int{132}
+	return file_lightning_proto_rawDescGZIP(), []int{134}
 }
 
 func (x *RouteHint) GetHopHints() []*HopHint {
@@ -12270,7 +12402,7 @@ type BlindedPaymentPath struct {
 
 func (x *BlindedPaymentPath) Reset() {
 	*x = BlindedPaymentPath{}
-	mi := &file_lightning_proto_msgTypes[133]
+	mi := &file_lightning_proto_msgTypes[135]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -12282,7 +12414,7 @@ func (x *BlindedPaymentPath) String() string {
 func (*BlindedPaymentPath) ProtoMessage() {}
 
 func (x *BlindedPaymentPath) ProtoReflect() protoreflect.Message {
-	mi := &file_lightning_proto_msgTypes[133]
+	mi := &file_lightning_proto_msgTypes[135]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -12295,7 +12427,7 @@ func (x *BlindedPaymentPath) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use BlindedPaymentPath.ProtoReflect.Descriptor instead.
 func (*BlindedPaymentPath) Descriptor() ([]byte, []int) {
-	return file_lightning_proto_rawDescGZIP(), []int{133}
+	return file_lightning_proto_rawDescGZIP(), []int{135}
 }
 
 func (x *BlindedPaymentPath) GetBlindedPath() *BlindedPath {
@@ -12363,7 +12495,7 @@ type BlindedPath struct {
 
 func (x *BlindedPath) Reset() {
 	*x = BlindedPath{}
-	mi := &file_lightning_proto_msgTypes[134]
+	mi := &file_lightning_proto_msgTypes[136]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -12375,7 +12507,7 @@ func (x *BlindedPath) String() string {
 func (*BlindedPath) ProtoMessage() {}
 
 func (x *BlindedPath) ProtoReflect() protoreflect.Message {
-	mi := &file_lightning_proto_msgTypes[134]
+	mi := &file_lightning_proto_msgTypes[136]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -12388,7 +12520,7 @@ func (x *BlindedPath) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use BlindedPath.ProtoReflect.Descriptor instead.
 func (*BlindedPath) Descriptor() ([]byte, []int) {
-	return file_lightning_proto_rawDescGZIP(), []int{134}
+	return file_lightning_proto_rawDescGZIP(), []int{136}
 }
 
 func (x *BlindedPath) GetIntroductionNode() []byte {
@@ -12424,7 +12556,7 @@ type BlindedHop struct {
 
 func (x *BlindedHop) Reset() {
 	*x = BlindedHop{}
-	mi := &file_lightning_proto_msgTypes[135]
+	mi := &file_lightning_proto_msgTypes[137]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -12436,7 +12568,7 @@ func (x *BlindedHop) String() string {
 func (*BlindedHop) ProtoMessage() {}
 
 func (x *BlindedHop) ProtoReflect() protoreflect.Message {
-	mi := &file_lightning_proto_msgTypes[135]
+	mi := &file_lightning_proto_msgTypes[137]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -12449,7 +12581,7 @@ func (x *BlindedHop) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use BlindedHop.ProtoReflect.Descriptor instead.
 func (*BlindedHop) Descriptor() ([]byte, []int) {
-	return file_lightning_proto_rawDescGZIP(), []int{135}
+	return file_lightning_proto_rawDescGZIP(), []int{137}
 }
 
 func (x *BlindedHop) GetBlindedNode() []byte {
@@ -12482,7 +12614,7 @@ type AMPInvoiceState struct {
 
 func (x *AMPInvoiceState) Reset() {
 	*x = AMPInvoiceState{}
-	mi := &file_lightning_proto_msgTypes[136]
+	mi := &file_lightning_proto_msgTypes[138]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -12494,7 +12626,7 @@ func (x *AMPInvoiceState) String() string {
 func (*AMPInvoiceState) ProtoMessage() {}
 
 func (x *AMPInvoiceState) ProtoReflect() protoreflect.Message {
-	mi := &file_lightning_proto_msgTypes[136]
+	mi := &file_lightning_proto_msgTypes[138]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -12507,7 +12639,7 @@ func (x *AMPInvoiceState) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AMPInvoiceState.ProtoReflect.Descriptor instead.
 func (*AMPInvoiceState) Descriptor() ([]byte, []int) {
-	return file_lightning_proto_rawDescGZIP(), []int{136}
+	return file_lightning_proto_rawDescGZIP(), []int{138}
 }
 
 func (x *AMPInvoiceState) GetState() InvoiceHTLCState {
@@ -12672,7 +12804,7 @@ type Invoice struct {
 
 func (x *Invoice) Reset() {
 	*x = Invoice{}
-	mi := &file_lightning_proto_msgTypes[137]
+	mi := &file_lightning_proto_msgTypes[139]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -12684,7 +12816,7 @@ func (x *Invoice) String() string {
 func (*Invoice) ProtoMessage() {}
 
 func (x *Invoice) ProtoReflect() protoreflect.Message {
-	mi := &file_lightning_proto_msgTypes[137]
+	mi := &file_lightning_proto_msgTypes[139]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -12697,7 +12829,7 @@ func (x *Invoice) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Invoice.ProtoReflect.Descriptor instead.
 func (*Invoice) Descriptor() ([]byte, []int) {
-	return file_lightning_proto_rawDescGZIP(), []int{137}
+	return file_lightning_proto_rawDescGZIP(), []int{139}
 }
 
 func (x *Invoice) GetMemo() string {
@@ -12931,7 +13063,7 @@ type BlindedPathConfig struct {
 
 func (x *BlindedPathConfig) Reset() {
 	*x = BlindedPathConfig{}
-	mi := &file_lightning_proto_msgTypes[138]
+	mi := &file_lightning_proto_msgTypes[140]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -12943,7 +13075,7 @@ func (x *BlindedPathConfig) String() string {
 func (*BlindedPathConfig) ProtoMessage() {}
 
 func (x *BlindedPathConfig) ProtoReflect() protoreflect.Message {
-	mi := &file_lightning_proto_msgTypes[138]
+	mi := &file_lightning_proto_msgTypes[140]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -12956,7 +13088,7 @@ func (x *BlindedPathConfig) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use BlindedPathConfig.ProtoReflect.Descriptor instead.
 func (*BlindedPathConfig) Descriptor() ([]byte, []int) {
-	return file_lightning_proto_rawDescGZIP(), []int{138}
+	return file_lightning_proto_rawDescGZIP(), []int{140}
 }
 
 func (x *BlindedPathConfig) GetMinNumRealHops() uint32 {
@@ -13027,7 +13159,7 @@ type InvoiceHTLC struct {
 
 func (x *InvoiceHTLC) Reset() {
 	*x = InvoiceHTLC{}
-	mi := &file_lightning_proto_msgTypes[139]
+	mi := &file_lightning_proto_msgTypes[141]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -13039,7 +13171,7 @@ func (x *InvoiceHTLC) String() string {
 func (*InvoiceHTLC) ProtoMessage() {}
 
 func (x *InvoiceHTLC) ProtoReflect() protoreflect.Message {
-	mi := &file_lightning_proto_msgTypes[139]
+	mi := &file_lightning_proto_msgTypes[141]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -13052,7 +13184,7 @@ func (x *InvoiceHTLC) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use InvoiceHTLC.ProtoReflect.Descriptor instead.
 func (*InvoiceHTLC) Descriptor() ([]byte, []int) {
-	return file_lightning_proto_rawDescGZIP(), []int{139}
+	return file_lightning_proto_rawDescGZIP(), []int{141}
 }
 
 func (x *InvoiceHTLC) GetChanId() uint64 {
@@ -13162,7 +13294,7 @@ type AMP struct {
 
 func (x *AMP) Reset() {
 	*x = AMP{}
-	mi := &file_lightning_proto_msgTypes[140]
+	mi := &file_lightning_proto_msgTypes[142]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -13174,7 +13306,7 @@ func (x *AMP) String() string {
 func (*AMP) ProtoMessage() {}
 
 func (x *AMP) ProtoReflect() protoreflect.Message {
-	mi := &file_lightning_proto_msgTypes[140]
+	mi := &file_lightning_proto_msgTypes[142]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -13187,7 +13319,7 @@ func (x *AMP) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AMP.ProtoReflect.Descriptor instead.
 func (*AMP) Descriptor() ([]byte, []int) {
-	return file_lightning_proto_rawDescGZIP(), []int{140}
+	return file_lightning_proto_rawDescGZIP(), []int{142}
 }
 
 func (x *AMP) GetRootShare() []byte {
@@ -13247,7 +13379,7 @@ type AddInvoiceResponse struct {
 
 func (x *AddInvoiceResponse) Reset() {
 	*x = AddInvoiceResponse{}
-	mi := &file_lightning_proto_msgTypes[141]
+	mi := &file_lightning_proto_msgTypes[143]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -13259,7 +13391,7 @@ func (x *AddInvoiceResponse) String() string {
 func (*AddInvoiceResponse) ProtoMessage() {}
 
 func (x *AddInvoiceResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_lightning_proto_msgTypes[141]
+	mi := &file_lightning_proto_msgTypes[143]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -13272,7 +13404,7 @@ func (x *AddInvoiceResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AddInvoiceResponse.ProtoReflect.Descriptor instead.
 func (*AddInvoiceResponse) Descriptor() ([]byte, []int) {
-	return file_lightning_proto_rawDescGZIP(), []int{141}
+	return file_lightning_proto_rawDescGZIP(), []int{143}
 }
 
 func (x *AddInvoiceResponse) GetRHash() []byte {
@@ -13321,7 +13453,7 @@ type PaymentHash struct {
 
 func (x *PaymentHash) Reset() {
 	*x = PaymentHash{}
-	mi := &file_lightning_proto_msgTypes[142]
+	mi := &file_lightning_proto_msgTypes[144]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -13333,7 +13465,7 @@ func (x *PaymentHash) String() string {
 func (*PaymentHash) ProtoMessage() {}
 
 func (x *PaymentHash) ProtoReflect() protoreflect.Message {
-	mi := &file_lightning_proto_msgTypes[142]
+	mi := &file_lightning_proto_msgTypes[144]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -13346,7 +13478,7 @@ func (x *PaymentHash) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PaymentHash.ProtoReflect.Descriptor instead.
 func (*PaymentHash) Descriptor() ([]byte, []int) {
-	return file_lightning_proto_rawDescGZIP(), []int{142}
+	return file_lightning_proto_rawDescGZIP(), []int{144}
 }
 
 // Deprecated: Marked as deprecated in lightning.proto.
@@ -13389,7 +13521,7 @@ type ListInvoiceRequest struct {
 
 func (x *ListInvoiceRequest) Reset() {
 	*x = ListInvoiceRequest{}
-	mi := &file_lightning_proto_msgTypes[143]
+	mi := &file_lightning_proto_msgTypes[145]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -13401,7 +13533,7 @@ func (x *ListInvoiceRequest) String() string {
 func (*ListInvoiceRequest) ProtoMessage() {}
 
 func (x *ListInvoiceRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_lightning_proto_msgTypes[143]
+	mi := &file_lightning_proto_msgTypes[145]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -13414,7 +13546,7 @@ func (x *ListInvoiceRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListInvoiceRequest.ProtoReflect.Descriptor instead.
 func (*ListInvoiceRequest) Descriptor() ([]byte, []int) {
-	return file_lightning_proto_rawDescGZIP(), []int{143}
+	return file_lightning_proto_rawDescGZIP(), []int{145}
 }
 
 func (x *ListInvoiceRequest) GetPendingOnly() bool {
@@ -13476,7 +13608,7 @@ type ListInvoiceResponse struct {
 
 func (x *ListInvoiceResponse) Reset() {
 	*x = ListInvoiceResponse{}
-	mi := &file_lightning_proto_msgTypes[144]
+	mi := &file_lightning_proto_msgTypes[146]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -13488,7 +13620,7 @@ func (x *ListInvoiceResponse) String() string {
 func (*ListInvoiceResponse) ProtoMessage() {}
 
 func (x *ListInvoiceResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_lightning_proto_msgTypes[144]
+	mi := &file_lightning_proto_msgTypes[146]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -13501,7 +13633,7 @@ func (x *ListInvoiceResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListInvoiceResponse.ProtoReflect.Descriptor instead.
 func (*ListInvoiceResponse) Descriptor() ([]byte, []int) {
-	return file_lightning_proto_rawDescGZIP(), []int{144}
+	return file_lightning_proto_rawDescGZIP(), []int{146}
 }
 
 func (x *ListInvoiceResponse) GetInvoices() []*Invoice {
@@ -13543,7 +13675,7 @@ type InvoiceSubscription struct {
 
 func (x *InvoiceSubscription) Reset() {
 	*x = InvoiceSubscription{}
-	mi := &file_lightning_proto_msgTypes[145]
+	mi := &file_lightning_proto_msgTypes[147]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -13555,7 +13687,7 @@ func (x *InvoiceSubscription) String() string {
 func (*InvoiceSubscription) ProtoMessage() {}
 
 func (x *InvoiceSubscription) ProtoReflect() protoreflect.Message {
-	mi := &file_lightning_proto_msgTypes[145]
+	mi := &file_lightning_proto_msgTypes[147]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -13568,7 +13700,7 @@ func (x *InvoiceSubscription) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use InvoiceSubscription.ProtoReflect.Descriptor instead.
 func (*InvoiceSubscription) Descriptor() ([]byte, []int) {
-	return file_lightning_proto_rawDescGZIP(), []int{145}
+	return file_lightning_proto_rawDescGZIP(), []int{147}
 }
 
 func (x *InvoiceSubscription) GetAddIndex() uint64 {
@@ -13595,7 +13727,7 @@ type DelCanceledInvoiceReq struct {
 
 func (x *DelCanceledInvoiceReq) Reset() {
 	*x = DelCanceledInvoiceReq{}
-	mi := &file_lightning_proto_msgTypes[146]
+	mi := &file_lightning_proto_msgTypes[148]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -13607,7 +13739,7 @@ func (x *DelCanceledInvoiceReq) String() string {
 func (*DelCanceledInvoiceReq) ProtoMessage() {}
 
 func (x *DelCanceledInvoiceReq) ProtoReflect() protoreflect.Message {
-	mi := &file_lightning_proto_msgTypes[146]
+	mi := &file_lightning_proto_msgTypes[148]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -13620,7 +13752,7 @@ func (x *DelCanceledInvoiceReq) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DelCanceledInvoiceReq.ProtoReflect.Descriptor instead.
 func (*DelCanceledInvoiceReq) Descriptor() ([]byte, []int) {
-	return file_lightning_proto_rawDescGZIP(), []int{146}
+	return file_lightning_proto_rawDescGZIP(), []int{148}
 }
 
 func (x *DelCanceledInvoiceReq) GetInvoiceHash() string {
@@ -13640,7 +13772,7 @@ type DelCanceledInvoiceResp struct {
 
 func (x *DelCanceledInvoiceResp) Reset() {
 	*x = DelCanceledInvoiceResp{}
-	mi := &file_lightning_proto_msgTypes[147]
+	mi := &file_lightning_proto_msgTypes[149]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -13652,7 +13784,7 @@ func (x *DelCanceledInvoiceResp) String() string {
 func (*DelCanceledInvoiceResp) ProtoMessage() {}
 
 func (x *DelCanceledInvoiceResp) ProtoReflect() protoreflect.Message {
-	mi := &file_lightning_proto_msgTypes[147]
+	mi := &file_lightning_proto_msgTypes[149]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -13665,7 +13797,7 @@ func (x *DelCanceledInvoiceResp) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DelCanceledInvoiceResp.ProtoReflect.Descriptor instead.
 func (*DelCanceledInvoiceResp) Descriptor() ([]byte, []int) {
-	return file_lightning_proto_rawDescGZIP(), []int{147}
+	return file_lightning_proto_rawDescGZIP(), []int{149}
 }
 
 func (x *DelCanceledInvoiceResp) GetStatus() string {
@@ -13723,7 +13855,7 @@ type Payment struct {
 
 func (x *Payment) Reset() {
 	*x = Payment{}
-	mi := &file_lightning_proto_msgTypes[148]
+	mi := &file_lightning_proto_msgTypes[150]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -13735,7 +13867,7 @@ func (x *Payment) String() string {
 func (*Payment) ProtoMessage() {}
 
 func (x *Payment) ProtoReflect() protoreflect.Message {
-	mi := &file_lightning_proto_msgTypes[148]
+	mi := &file_lightning_proto_msgTypes[150]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -13748,7 +13880,7 @@ func (x *Payment) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Payment.ProtoReflect.Descriptor instead.
 func (*Payment) Descriptor() ([]byte, []int) {
-	return file_lightning_proto_rawDescGZIP(), []int{148}
+	return file_lightning_proto_rawDescGZIP(), []int{150}
 }
 
 func (x *Payment) GetPaymentHash() string {
@@ -13889,7 +14021,7 @@ type HTLCAttempt struct {
 
 func (x *HTLCAttempt) Reset() {
 	*x = HTLCAttempt{}
-	mi := &file_lightning_proto_msgTypes[149]
+	mi := &file_lightning_proto_msgTypes[151]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -13901,7 +14033,7 @@ func (x *HTLCAttempt) String() string {
 func (*HTLCAttempt) ProtoMessage() {}
 
 func (x *HTLCAttempt) ProtoReflect() protoreflect.Message {
-	mi := &file_lightning_proto_msgTypes[149]
+	mi := &file_lightning_proto_msgTypes[151]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -13914,7 +14046,7 @@ func (x *HTLCAttempt) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use HTLCAttempt.ProtoReflect.Descriptor instead.
 func (*HTLCAttempt) Descriptor() ([]byte, []int) {
-	return file_lightning_proto_rawDescGZIP(), []int{149}
+	return file_lightning_proto_rawDescGZIP(), []int{151}
 }
 
 func (x *HTLCAttempt) GetAttemptId() uint64 {
@@ -14005,7 +14137,7 @@ type ListPaymentsRequest struct {
 
 func (x *ListPaymentsRequest) Reset() {
 	*x = ListPaymentsRequest{}
-	mi := &file_lightning_proto_msgTypes[150]
+	mi := &file_lightning_proto_msgTypes[152]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -14017,7 +14149,7 @@ func (x *ListPaymentsRequest) String() string {
 func (*ListPaymentsRequest) ProtoMessage() {}
 
 func (x *ListPaymentsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_lightning_proto_msgTypes[150]
+	mi := &file_lightning_proto_msgTypes[152]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -14030,7 +14162,7 @@ func (x *ListPaymentsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListPaymentsRequest.ProtoReflect.Descriptor instead.
 func (*ListPaymentsRequest) Descriptor() ([]byte, []int) {
-	return file_lightning_proto_rawDescGZIP(), []int{150}
+	return file_lightning_proto_rawDescGZIP(), []int{152}
 }
 
 func (x *ListPaymentsRequest) GetIncludeIncomplete() bool {
@@ -14110,7 +14242,7 @@ type ListPaymentsResponse struct {
 
 func (x *ListPaymentsResponse) Reset() {
 	*x = ListPaymentsResponse{}
-	mi := &file_lightning_proto_msgTypes[151]
+	mi := &file_lightning_proto_msgTypes[153]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -14122,7 +14254,7 @@ func (x *ListPaymentsResponse) String() string {
 func (*ListPaymentsResponse) ProtoMessage() {}
 
 func (x *ListPaymentsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_lightning_proto_msgTypes[151]
+	mi := &file_lightning_proto_msgTypes[153]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -14135,7 +14267,7 @@ func (x *ListPaymentsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListPaymentsResponse.ProtoReflect.Descriptor instead.
 func (*ListPaymentsResponse) Descriptor() ([]byte, []int) {
-	return file_lightning_proto_rawDescGZIP(), []int{151}
+	return file_lightning_proto_rawDescGZIP(), []int{153}
 }
 
 func (x *ListPaymentsResponse) GetPayments() []*Payment {
@@ -14178,7 +14310,7 @@ type DeletePaymentRequest struct {
 
 func (x *DeletePaymentRequest) Reset() {
 	*x = DeletePaymentRequest{}
-	mi := &file_lightning_proto_msgTypes[152]
+	mi := &file_lightning_proto_msgTypes[154]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -14190,7 +14322,7 @@ func (x *DeletePaymentRequest) String() string {
 func (*DeletePaymentRequest) ProtoMessage() {}
 
 func (x *DeletePaymentRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_lightning_proto_msgTypes[152]
+	mi := &file_lightning_proto_msgTypes[154]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -14203,7 +14335,7 @@ func (x *DeletePaymentRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeletePaymentRequest.ProtoReflect.Descriptor instead.
 func (*DeletePaymentRequest) Descriptor() ([]byte, []int) {
-	return file_lightning_proto_rawDescGZIP(), []int{152}
+	return file_lightning_proto_rawDescGZIP(), []int{154}
 }
 
 func (x *DeletePaymentRequest) GetPaymentHash() []byte {
@@ -14235,7 +14367,7 @@ type DeleteAllPaymentsRequest struct {
 
 func (x *DeleteAllPaymentsRequest) Reset() {
 	*x = DeleteAllPaymentsRequest{}
-	mi := &file_lightning_proto_msgTypes[153]
+	mi := &file_lightning_proto_msgTypes[155]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -14247,7 +14379,7 @@ func (x *DeleteAllPaymentsRequest) String() string {
 func (*DeleteAllPaymentsRequest) ProtoMessage() {}
 
 func (x *DeleteAllPaymentsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_lightning_proto_msgTypes[153]
+	mi := &file_lightning_proto_msgTypes[155]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -14260,7 +14392,7 @@ func (x *DeleteAllPaymentsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteAllPaymentsRequest.ProtoReflect.Descriptor instead.
 func (*DeleteAllPaymentsRequest) Descriptor() ([]byte, []int) {
-	return file_lightning_proto_rawDescGZIP(), []int{153}
+	return file_lightning_proto_rawDescGZIP(), []int{155}
 }
 
 func (x *DeleteAllPaymentsRequest) GetFailedPaymentsOnly() bool {
@@ -14294,7 +14426,7 @@ type DeletePaymentResponse struct {
 
 func (x *DeletePaymentResponse) Reset() {
 	*x = DeletePaymentResponse{}
-	mi := &file_lightning_proto_msgTypes[154]
+	mi := &file_lightning_proto_msgTypes[156]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -14306,7 +14438,7 @@ func (x *DeletePaymentResponse) String() string {
 func (*DeletePaymentResponse) ProtoMessage() {}
 
 func (x *DeletePaymentResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_lightning_proto_msgTypes[154]
+	mi := &file_lightning_proto_msgTypes[156]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -14319,7 +14451,7 @@ func (x *DeletePaymentResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeletePaymentResponse.ProtoReflect.Descriptor instead.
 func (*DeletePaymentResponse) Descriptor() ([]byte, []int) {
-	return file_lightning_proto_rawDescGZIP(), []int{154}
+	return file_lightning_proto_rawDescGZIP(), []int{156}
 }
 
 func (x *DeletePaymentResponse) GetStatus() string {
@@ -14339,7 +14471,7 @@ type DeleteAllPaymentsResponse struct {
 
 func (x *DeleteAllPaymentsResponse) Reset() {
 	*x = DeleteAllPaymentsResponse{}
-	mi := &file_lightning_proto_msgTypes[155]
+	mi := &file_lightning_proto_msgTypes[157]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -14351,7 +14483,7 @@ func (x *DeleteAllPaymentsResponse) String() string {
 func (*DeleteAllPaymentsResponse) ProtoMessage() {}
 
 func (x *DeleteAllPaymentsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_lightning_proto_msgTypes[155]
+	mi := &file_lightning_proto_msgTypes[157]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -14364,7 +14496,7 @@ func (x *DeleteAllPaymentsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteAllPaymentsResponse.ProtoReflect.Descriptor instead.
 func (*DeleteAllPaymentsResponse) Descriptor() ([]byte, []int) {
-	return file_lightning_proto_rawDescGZIP(), []int{155}
+	return file_lightning_proto_rawDescGZIP(), []int{157}
 }
 
 func (x *DeleteAllPaymentsResponse) GetStatus() string {
@@ -14388,7 +14520,7 @@ type AbandonChannelRequest struct {
 
 func (x *AbandonChannelRequest) Reset() {
 	*x = AbandonChannelRequest{}
-	mi := &file_lightning_proto_msgTypes[156]
+	mi := &file_lightning_proto_msgTypes[158]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -14400,7 +14532,7 @@ func (x *AbandonChannelRequest) String() string {
 func (*AbandonChannelRequest) ProtoMessage() {}
 
 func (x *AbandonChannelRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_lightning_proto_msgTypes[156]
+	mi := &file_lightning_proto_msgTypes[158]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -14413,7 +14545,7 @@ func (x *AbandonChannelRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AbandonChannelRequest.ProtoReflect.Descriptor instead.
 func (*AbandonChannelRequest) Descriptor() ([]byte, []int) {
-	return file_lightning_proto_rawDescGZIP(), []int{156}
+	return file_lightning_proto_rawDescGZIP(), []int{158}
 }
 
 func (x *AbandonChannelRequest) GetChannelPoint() *ChannelPoint {
@@ -14447,7 +14579,7 @@ type AbandonChannelResponse struct {
 
 func (x *AbandonChannelResponse) Reset() {
 	*x = AbandonChannelResponse{}
-	mi := &file_lightning_proto_msgTypes[157]
+	mi := &file_lightning_proto_msgTypes[159]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -14459,7 +14591,7 @@ func (x *AbandonChannelResponse) String() string {
 func (*AbandonChannelResponse) ProtoMessage() {}
 
 func (x *AbandonChannelResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_lightning_proto_msgTypes[157]
+	mi := &file_lightning_proto_msgTypes[159]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -14472,7 +14604,7 @@ func (x *AbandonChannelResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AbandonChannelResponse.ProtoReflect.Descriptor instead.
 func (*AbandonChannelResponse) Descriptor() ([]byte, []int) {
-	return file_lightning_proto_rawDescGZIP(), []int{157}
+	return file_lightning_proto_rawDescGZIP(), []int{159}
 }
 
 func (x *AbandonChannelResponse) GetStatus() string {
@@ -14492,7 +14624,7 @@ type DebugLevelRequest struct {
 
 func (x *DebugLevelRequest) Reset() {
 	*x = DebugLevelRequest{}
-	mi := &file_lightning_proto_msgTypes[158]
+	mi := &file_lightning_proto_msgTypes[160]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -14504,7 +14636,7 @@ func (x *DebugLevelRequest) String() string {
 func (*DebugLevelRequest) ProtoMessage() {}
 
 func (x *DebugLevelRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_lightning_proto_msgTypes[158]
+	mi := &file_lightning_proto_msgTypes[160]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -14517,7 +14649,7 @@ func (x *DebugLevelRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DebugLevelRequest.ProtoReflect.Descriptor instead.
 func (*DebugLevelRequest) Descriptor() ([]byte, []int) {
-	return file_lightning_proto_rawDescGZIP(), []int{158}
+	return file_lightning_proto_rawDescGZIP(), []int{160}
 }
 
 func (x *DebugLevelRequest) GetShow() bool {
@@ -14543,7 +14675,7 @@ type DebugLevelResponse struct {
 
 func (x *DebugLevelResponse) Reset() {
 	*x = DebugLevelResponse{}
-	mi := &file_lightning_proto_msgTypes[159]
+	mi := &file_lightning_proto_msgTypes[161]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -14555,7 +14687,7 @@ func (x *DebugLevelResponse) String() string {
 func (*DebugLevelResponse) ProtoMessage() {}
 
 func (x *DebugLevelResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_lightning_proto_msgTypes[159]
+	mi := &file_lightning_proto_msgTypes[161]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -14568,7 +14700,7 @@ func (x *DebugLevelResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DebugLevelResponse.ProtoReflect.Descriptor instead.
 func (*DebugLevelResponse) Descriptor() ([]byte, []int) {
-	return file_lightning_proto_rawDescGZIP(), []int{159}
+	return file_lightning_proto_rawDescGZIP(), []int{161}
 }
 
 func (x *DebugLevelResponse) GetSubSystems() string {
@@ -14588,7 +14720,7 @@ type PayReqString struct {
 
 func (x *PayReqString) Reset() {
 	*x = PayReqString{}
-	mi := &file_lightning_proto_msgTypes[160]
+	mi := &file_lightning_proto_msgTypes[162]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -14600,7 +14732,7 @@ func (x *PayReqString) String() string {
 func (*PayReqString) ProtoMessage() {}
 
 func (x *PayReqString) ProtoReflect() protoreflect.Message {
-	mi := &file_lightning_proto_msgTypes[160]
+	mi := &file_lightning_proto_msgTypes[162]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -14613,7 +14745,7 @@ func (x *PayReqString) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PayReqString.ProtoReflect.Descriptor instead.
 func (*PayReqString) Descriptor() ([]byte, []int) {
-	return file_lightning_proto_rawDescGZIP(), []int{160}
+	return file_lightning_proto_rawDescGZIP(), []int{162}
 }
 
 func (x *PayReqString) GetPayReq() string {
@@ -14645,7 +14777,7 @@ type PayReq struct {
 
 func (x *PayReq) Reset() {
 	*x = PayReq{}
-	mi := &file_lightning_proto_msgTypes[161]
+	mi := &file_lightning_proto_msgTypes[163]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -14657,7 +14789,7 @@ func (x *PayReq) String() string {
 func (*PayReq) ProtoMessage() {}
 
 func (x *PayReq) ProtoReflect() protoreflect.Message {
-	mi := &file_lightning_proto_msgTypes[161]
+	mi := &file_lightning_proto_msgTypes[163]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -14670,7 +14802,7 @@ func (x *PayReq) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PayReq.ProtoReflect.Descriptor instead.
 func (*PayReq) Descriptor() ([]byte, []int) {
-	return file_lightning_proto_rawDescGZIP(), []int{161}
+	return file_lightning_proto_rawDescGZIP(), []int{163}
 }
 
 func (x *PayReq) GetDestination() string {
@@ -14782,7 +14914,7 @@ type Feature struct {
 
 func (x *Feature) Reset() {
 	*x = Feature{}
-	mi := &file_lightning_proto_msgTypes[162]
+	mi := &file_lightning_proto_msgTypes[164]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -14794,7 +14926,7 @@ func (x *Feature) String() string {
 func (*Feature) ProtoMessage() {}
 
 func (x *Feature) ProtoReflect() protoreflect.Message {
-	mi := &file_lightning_proto_msgTypes[162]
+	mi := &file_lightning_proto_msgTypes[164]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -14807,7 +14939,7 @@ func (x *Feature) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Feature.ProtoReflect.Descriptor instead.
 func (*Feature) Descriptor() ([]byte, []int) {
-	return file_lightning_proto_rawDescGZIP(), []int{162}
+	return file_lightning_proto_rawDescGZIP(), []int{164}
 }
 
 func (x *Feature) GetName() string {
@@ -14839,7 +14971,7 @@ type FeeReportRequest struct {
 
 func (x *FeeReportRequest) Reset() {
 	*x = FeeReportRequest{}
-	mi := &file_lightning_proto_msgTypes[163]
+	mi := &file_lightning_proto_msgTypes[165]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -14851,7 +14983,7 @@ func (x *FeeReportRequest) String() string {
 func (*FeeReportRequest) ProtoMessage() {}
 
 func (x *FeeReportRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_lightning_proto_msgTypes[163]
+	mi := &file_lightning_proto_msgTypes[165]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -14864,7 +14996,7 @@ func (x *FeeReportRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use FeeReportRequest.ProtoReflect.Descriptor instead.
 func (*FeeReportRequest) Descriptor() ([]byte, []int) {
-	return file_lightning_proto_rawDescGZIP(), []int{163}
+	return file_lightning_proto_rawDescGZIP(), []int{165}
 }
 
 type ChannelFeeReport struct {
@@ -14892,7 +15024,7 @@ type ChannelFeeReport struct {
 
 func (x *ChannelFeeReport) Reset() {
 	*x = ChannelFeeReport{}
-	mi := &file_lightning_proto_msgTypes[164]
+	mi := &file_lightning_proto_msgTypes[166]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -14904,7 +15036,7 @@ func (x *ChannelFeeReport) String() string {
 func (*ChannelFeeReport) ProtoMessage() {}
 
 func (x *ChannelFeeReport) ProtoReflect() protoreflect.Message {
-	mi := &file_lightning_proto_msgTypes[164]
+	mi := &file_lightning_proto_msgTypes[166]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -14917,7 +15049,7 @@ func (x *ChannelFeeReport) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ChannelFeeReport.ProtoReflect.Descriptor instead.
 func (*ChannelFeeReport) Descriptor() ([]byte, []int) {
-	return file_lightning_proto_rawDescGZIP(), []int{164}
+	return file_lightning_proto_rawDescGZIP(), []int{166}
 }
 
 func (x *ChannelFeeReport) GetChanId() uint64 {
@@ -14989,7 +15121,7 @@ type FeeReportResponse struct {
 
 func (x *FeeReportResponse) Reset() {
 	*x = FeeReportResponse{}
-	mi := &file_lightning_proto_msgTypes[165]
+	mi := &file_lightning_proto_msgTypes[167]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -15001,7 +15133,7 @@ func (x *FeeReportResponse) String() string {
 func (*FeeReportResponse) ProtoMessage() {}
 
 func (x *FeeReportResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_lightning_proto_msgTypes[165]
+	mi := &file_lightning_proto_msgTypes[167]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -15014,7 +15146,7 @@ func (x *FeeReportResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use FeeReportResponse.ProtoReflect.Descriptor instead.
 func (*FeeReportResponse) Descriptor() ([]byte, []int) {
-	return file_lightning_proto_rawDescGZIP(), []int{165}
+	return file_lightning_proto_rawDescGZIP(), []int{167}
 }
 
 func (x *FeeReportResponse) GetChannelFees() []*ChannelFeeReport {
@@ -15059,7 +15191,7 @@ type InboundFee struct {
 
 func (x *InboundFee) Reset() {
 	*x = InboundFee{}
-	mi := &file_lightning_proto_msgTypes[166]
+	mi := &file_lightning_proto_msgTypes[168]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -15071,7 +15203,7 @@ func (x *InboundFee) String() string {
 func (*InboundFee) ProtoMessage() {}
 
 func (x *InboundFee) ProtoReflect() protoreflect.Message {
-	mi := &file_lightning_proto_msgTypes[166]
+	mi := &file_lightning_proto_msgTypes[168]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -15084,7 +15216,7 @@ func (x *InboundFee) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use InboundFee.ProtoReflect.Descriptor instead.
 func (*InboundFee) Descriptor() ([]byte, []int) {
-	return file_lightning_proto_rawDescGZIP(), []int{166}
+	return file_lightning_proto_rawDescGZIP(), []int{168}
 }
 
 func (x *InboundFee) GetBaseFeeMsat() int32 {
@@ -15142,7 +15274,7 @@ type PolicyUpdateRequest struct {
 
 func (x *PolicyUpdateRequest) Reset() {
 	*x = PolicyUpdateRequest{}
-	mi := &file_lightning_proto_msgTypes[167]
+	mi := &file_lightning_proto_msgTypes[169]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -15154,7 +15286,7 @@ func (x *PolicyUpdateRequest) String() string {
 func (*PolicyUpdateRequest) ProtoMessage() {}
 
 func (x *PolicyUpdateRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_lightning_proto_msgTypes[167]
+	mi := &file_lightning_proto_msgTypes[169]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -15167,7 +15299,7 @@ func (x *PolicyUpdateRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PolicyUpdateRequest.ProtoReflect.Descriptor instead.
 func (*PolicyUpdateRequest) Descriptor() ([]byte, []int) {
-	return file_lightning_proto_rawDescGZIP(), []int{167}
+	return file_lightning_proto_rawDescGZIP(), []int{169}
 }
 
 func (x *PolicyUpdateRequest) GetScope() isPolicyUpdateRequest_Scope {
@@ -15290,7 +15422,7 @@ type FailedUpdate struct {
 
 func (x *FailedUpdate) Reset() {
 	*x = FailedUpdate{}
-	mi := &file_lightning_proto_msgTypes[168]
+	mi := &file_lightning_proto_msgTypes[170]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -15302,7 +15434,7 @@ func (x *FailedUpdate) String() string {
 func (*FailedUpdate) ProtoMessage() {}
 
 func (x *FailedUpdate) ProtoReflect() protoreflect.Message {
-	mi := &file_lightning_proto_msgTypes[168]
+	mi := &file_lightning_proto_msgTypes[170]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -15315,7 +15447,7 @@ func (x *FailedUpdate) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use FailedUpdate.ProtoReflect.Descriptor instead.
 func (*FailedUpdate) Descriptor() ([]byte, []int) {
-	return file_lightning_proto_rawDescGZIP(), []int{168}
+	return file_lightning_proto_rawDescGZIP(), []int{170}
 }
 
 func (x *FailedUpdate) GetOutpoint() *OutPoint {
@@ -15349,7 +15481,7 @@ type PolicyUpdateResponse struct {
 
 func (x *PolicyUpdateResponse) Reset() {
 	*x = PolicyUpdateResponse{}
-	mi := &file_lightning_proto_msgTypes[169]
+	mi := &file_lightning_proto_msgTypes[171]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -15361,7 +15493,7 @@ func (x *PolicyUpdateResponse) String() string {
 func (*PolicyUpdateResponse) ProtoMessage() {}
 
 func (x *PolicyUpdateResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_lightning_proto_msgTypes[169]
+	mi := &file_lightning_proto_msgTypes[171]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -15374,7 +15506,7 @@ func (x *PolicyUpdateResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PolicyUpdateResponse.ProtoReflect.Descriptor instead.
 func (*PolicyUpdateResponse) Descriptor() ([]byte, []int) {
-	return file_lightning_proto_rawDescGZIP(), []int{169}
+	return file_lightning_proto_rawDescGZIP(), []int{171}
 }
 
 func (x *PolicyUpdateResponse) GetFailedUpdates() []*FailedUpdate {
@@ -15415,7 +15547,7 @@ type ForwardingHistoryRequest struct {
 
 func (x *ForwardingHistoryRequest) Reset() {
 	*x = ForwardingHistoryRequest{}
-	mi := &file_lightning_proto_msgTypes[170]
+	mi := &file_lightning_proto_msgTypes[172]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -15427,7 +15559,7 @@ func (x *ForwardingHistoryRequest) String() string {
 func (*ForwardingHistoryRequest) ProtoMessage() {}
 
 func (x *ForwardingHistoryRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_lightning_proto_msgTypes[170]
+	mi := &file_lightning_proto_msgTypes[172]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -15440,7 +15572,7 @@ func (x *ForwardingHistoryRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ForwardingHistoryRequest.ProtoReflect.Descriptor instead.
 func (*ForwardingHistoryRequest) Descriptor() ([]byte, []int) {
-	return file_lightning_proto_rawDescGZIP(), []int{170}
+	return file_lightning_proto_rawDescGZIP(), []int{172}
 }
 
 func (x *ForwardingHistoryRequest) GetStartTime() uint64 {
@@ -15539,7 +15671,7 @@ type ForwardingEvent struct {
 
 func (x *ForwardingEvent) Reset() {
 	*x = ForwardingEvent{}
-	mi := &file_lightning_proto_msgTypes[171]
+	mi := &file_lightning_proto_msgTypes[173]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -15551,7 +15683,7 @@ func (x *ForwardingEvent) String() string {
 func (*ForwardingEvent) ProtoMessage() {}
 
 func (x *ForwardingEvent) ProtoReflect() protoreflect.Message {
-	mi := &file_lightning_proto_msgTypes[171]
+	mi := &file_lightning_proto_msgTypes[173]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -15564,7 +15696,7 @@ func (x *ForwardingEvent) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ForwardingEvent.ProtoReflect.Descriptor instead.
 func (*ForwardingEvent) Descriptor() ([]byte, []int) {
-	return file_lightning_proto_rawDescGZIP(), []int{171}
+	return file_lightning_proto_rawDescGZIP(), []int{173}
 }
 
 // Deprecated: Marked as deprecated in lightning.proto.
@@ -15680,7 +15812,7 @@ type ForwardingHistoryResponse struct {
 
 func (x *ForwardingHistoryResponse) Reset() {
 	*x = ForwardingHistoryResponse{}
-	mi := &file_lightning_proto_msgTypes[172]
+	mi := &file_lightning_proto_msgTypes[174]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -15692,7 +15824,7 @@ func (x *ForwardingHistoryResponse) String() string {
 func (*ForwardingHistoryResponse) ProtoMessage() {}
 
 func (x *ForwardingHistoryResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_lightning_proto_msgTypes[172]
+	mi := &file_lightning_proto_msgTypes[174]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -15705,7 +15837,7 @@ func (x *ForwardingHistoryResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ForwardingHistoryResponse.ProtoReflect.Descriptor instead.
 func (*ForwardingHistoryResponse) Descriptor() ([]byte, []int) {
-	return file_lightning_proto_rawDescGZIP(), []int{172}
+	return file_lightning_proto_rawDescGZIP(), []int{174}
 }
 
 func (x *ForwardingHistoryResponse) GetForwardingEvents() []*ForwardingEvent {
@@ -15732,7 +15864,7 @@ type ExportChannelBackupRequest struct {
 
 func (x *ExportChannelBackupRequest) Reset() {
 	*x = ExportChannelBackupRequest{}
-	mi := &file_lightning_proto_msgTypes[173]
+	mi := &file_lightning_proto_msgTypes[175]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -15744,7 +15876,7 @@ func (x *ExportChannelBackupRequest) String() string {
 func (*ExportChannelBackupRequest) ProtoMessage() {}
 
 func (x *ExportChannelBackupRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_lightning_proto_msgTypes[173]
+	mi := &file_lightning_proto_msgTypes[175]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -15757,7 +15889,7 @@ func (x *ExportChannelBackupRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ExportChannelBackupRequest.ProtoReflect.Descriptor instead.
 func (*ExportChannelBackupRequest) Descriptor() ([]byte, []int) {
-	return file_lightning_proto_rawDescGZIP(), []int{173}
+	return file_lightning_proto_rawDescGZIP(), []int{175}
 }
 
 func (x *ExportChannelBackupRequest) GetChanPoint() *ChannelPoint {
@@ -15782,7 +15914,7 @@ type ChannelBackup struct {
 
 func (x *ChannelBackup) Reset() {
 	*x = ChannelBackup{}
-	mi := &file_lightning_proto_msgTypes[174]
+	mi := &file_lightning_proto_msgTypes[176]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -15794,7 +15926,7 @@ func (x *ChannelBackup) String() string {
 func (*ChannelBackup) ProtoMessage() {}
 
 func (x *ChannelBackup) ProtoReflect() protoreflect.Message {
-	mi := &file_lightning_proto_msgTypes[174]
+	mi := &file_lightning_proto_msgTypes[176]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -15807,7 +15939,7 @@ func (x *ChannelBackup) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ChannelBackup.ProtoReflect.Descriptor instead.
 func (*ChannelBackup) Descriptor() ([]byte, []int) {
-	return file_lightning_proto_rawDescGZIP(), []int{174}
+	return file_lightning_proto_rawDescGZIP(), []int{176}
 }
 
 func (x *ChannelBackup) GetChanPoint() *ChannelPoint {
@@ -15839,7 +15971,7 @@ type MultiChanBackup struct {
 
 func (x *MultiChanBackup) Reset() {
 	*x = MultiChanBackup{}
-	mi := &file_lightning_proto_msgTypes[175]
+	mi := &file_lightning_proto_msgTypes[177]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -15851,7 +15983,7 @@ func (x *MultiChanBackup) String() string {
 func (*MultiChanBackup) ProtoMessage() {}
 
 func (x *MultiChanBackup) ProtoReflect() protoreflect.Message {
-	mi := &file_lightning_proto_msgTypes[175]
+	mi := &file_lightning_proto_msgTypes[177]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -15864,7 +15996,7 @@ func (x *MultiChanBackup) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use MultiChanBackup.ProtoReflect.Descriptor instead.
 func (*MultiChanBackup) Descriptor() ([]byte, []int) {
-	return file_lightning_proto_rawDescGZIP(), []int{175}
+	return file_lightning_proto_rawDescGZIP(), []int{177}
 }
 
 func (x *MultiChanBackup) GetChanPoints() []*ChannelPoint {
@@ -15889,7 +16021,7 @@ type ChanBackupExportRequest struct {
 
 func (x *ChanBackupExportRequest) Reset() {
 	*x = ChanBackupExportRequest{}
-	mi := &file_lightning_proto_msgTypes[176]
+	mi := &file_lightning_proto_msgTypes[178]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -15901,7 +16033,7 @@ func (x *ChanBackupExportRequest) String() string {
 func (*ChanBackupExportRequest) ProtoMessage() {}
 
 func (x *ChanBackupExportRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_lightning_proto_msgTypes[176]
+	mi := &file_lightning_proto_msgTypes[178]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -15914,7 +16046,7 @@ func (x *ChanBackupExportRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ChanBackupExportRequest.ProtoReflect.Descriptor instead.
 func (*ChanBackupExportRequest) Descriptor() ([]byte, []int) {
-	return file_lightning_proto_rawDescGZIP(), []int{176}
+	return file_lightning_proto_rawDescGZIP(), []int{178}
 }
 
 type ChanBackupSnapshot struct {
@@ -15931,7 +16063,7 @@ type ChanBackupSnapshot struct {
 
 func (x *ChanBackupSnapshot) Reset() {
 	*x = ChanBackupSnapshot{}
-	mi := &file_lightning_proto_msgTypes[177]
+	mi := &file_lightning_proto_msgTypes[179]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -15943,7 +16075,7 @@ func (x *ChanBackupSnapshot) String() string {
 func (*ChanBackupSnapshot) ProtoMessage() {}
 
 func (x *ChanBackupSnapshot) ProtoReflect() protoreflect.Message {
-	mi := &file_lightning_proto_msgTypes[177]
+	mi := &file_lightning_proto_msgTypes[179]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -15956,7 +16088,7 @@ func (x *ChanBackupSnapshot) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ChanBackupSnapshot.ProtoReflect.Descriptor instead.
 func (*ChanBackupSnapshot) Descriptor() ([]byte, []int) {
-	return file_lightning_proto_rawDescGZIP(), []int{177}
+	return file_lightning_proto_rawDescGZIP(), []int{179}
 }
 
 func (x *ChanBackupSnapshot) GetSingleChanBackups() *ChannelBackups {
@@ -15983,7 +16115,7 @@ type ChannelBackups struct {
 
 func (x *ChannelBackups) Reset() {
 	*x = ChannelBackups{}
-	mi := &file_lightning_proto_msgTypes[178]
+	mi := &file_lightning_proto_msgTypes[180]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -15995,7 +16127,7 @@ func (x *ChannelBackups) String() string {
 func (*ChannelBackups) ProtoMessage() {}
 
 func (x *ChannelBackups) ProtoReflect() protoreflect.Message {
-	mi := &file_lightning_proto_msgTypes[178]
+	mi := &file_lightning_proto_msgTypes[180]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -16008,7 +16140,7 @@ func (x *ChannelBackups) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ChannelBackups.ProtoReflect.Descriptor instead.
 func (*ChannelBackups) Descriptor() ([]byte, []int) {
-	return file_lightning_proto_rawDescGZIP(), []int{178}
+	return file_lightning_proto_rawDescGZIP(), []int{180}
 }
 
 func (x *ChannelBackups) GetChanBackups() []*ChannelBackup {
@@ -16031,7 +16163,7 @@ type RestoreChanBackupRequest struct {
 
 func (x *RestoreChanBackupRequest) Reset() {
 	*x = RestoreChanBackupRequest{}
-	mi := &file_lightning_proto_msgTypes[179]
+	mi := &file_lightning_proto_msgTypes[181]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -16043,7 +16175,7 @@ func (x *RestoreChanBackupRequest) String() string {
 func (*RestoreChanBackupRequest) ProtoMessage() {}
 
 func (x *RestoreChanBackupRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_lightning_proto_msgTypes[179]
+	mi := &file_lightning_proto_msgTypes[181]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -16056,7 +16188,7 @@ func (x *RestoreChanBackupRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RestoreChanBackupRequest.ProtoReflect.Descriptor instead.
 func (*RestoreChanBackupRequest) Descriptor() ([]byte, []int) {
-	return file_lightning_proto_rawDescGZIP(), []int{179}
+	return file_lightning_proto_rawDescGZIP(), []int{181}
 }
 
 func (x *RestoreChanBackupRequest) GetBackup() isRestoreChanBackupRequest_Backup {
@@ -16113,7 +16245,7 @@ type RestoreBackupResponse struct {
 
 func (x *RestoreBackupResponse) Reset() {
 	*x = RestoreBackupResponse{}
-	mi := &file_lightning_proto_msgTypes[180]
+	mi := &file_lightning_proto_msgTypes[182]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -16125,7 +16257,7 @@ func (x *RestoreBackupResponse) String() string {
 func (*RestoreBackupResponse) ProtoMessage() {}
 
 func (x *RestoreBackupResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_lightning_proto_msgTypes[180]
+	mi := &file_lightning_proto_msgTypes[182]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -16138,7 +16270,7 @@ func (x *RestoreBackupResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RestoreBackupResponse.ProtoReflect.Descriptor instead.
 func (*RestoreBackupResponse) Descriptor() ([]byte, []int) {
-	return file_lightning_proto_rawDescGZIP(), []int{180}
+	return file_lightning_proto_rawDescGZIP(), []int{182}
 }
 
 func (x *RestoreBackupResponse) GetNumRestored() uint32 {
@@ -16156,7 +16288,7 @@ type ChannelBackupSubscription struct {
 
 func (x *ChannelBackupSubscription) Reset() {
 	*x = ChannelBackupSubscription{}
-	mi := &file_lightning_proto_msgTypes[181]
+	mi := &file_lightning_proto_msgTypes[183]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -16168,7 +16300,7 @@ func (x *ChannelBackupSubscription) String() string {
 func (*ChannelBackupSubscription) ProtoMessage() {}
 
 func (x *ChannelBackupSubscription) ProtoReflect() protoreflect.Message {
-	mi := &file_lightning_proto_msgTypes[181]
+	mi := &file_lightning_proto_msgTypes[183]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -16181,7 +16313,7 @@ func (x *ChannelBackupSubscription) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ChannelBackupSubscription.ProtoReflect.Descriptor instead.
 func (*ChannelBackupSubscription) Descriptor() ([]byte, []int) {
-	return file_lightning_proto_rawDescGZIP(), []int{181}
+	return file_lightning_proto_rawDescGZIP(), []int{183}
 }
 
 type VerifyChanBackupResponse struct {
@@ -16193,7 +16325,7 @@ type VerifyChanBackupResponse struct {
 
 func (x *VerifyChanBackupResponse) Reset() {
 	*x = VerifyChanBackupResponse{}
-	mi := &file_lightning_proto_msgTypes[182]
+	mi := &file_lightning_proto_msgTypes[184]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -16205,7 +16337,7 @@ func (x *VerifyChanBackupResponse) String() string {
 func (*VerifyChanBackupResponse) ProtoMessage() {}
 
 func (x *VerifyChanBackupResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_lightning_proto_msgTypes[182]
+	mi := &file_lightning_proto_msgTypes[184]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -16218,7 +16350,7 @@ func (x *VerifyChanBackupResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use VerifyChanBackupResponse.ProtoReflect.Descriptor instead.
 func (*VerifyChanBackupResponse) Descriptor() ([]byte, []int) {
-	return file_lightning_proto_rawDescGZIP(), []int{182}
+	return file_lightning_proto_rawDescGZIP(), []int{184}
 }
 
 func (x *VerifyChanBackupResponse) GetChanPoints() []string {
@@ -16240,7 +16372,7 @@ type MacaroonPermission struct {
 
 func (x *MacaroonPermission) Reset() {
 	*x = MacaroonPermission{}
-	mi := &file_lightning_proto_msgTypes[183]
+	mi := &file_lightning_proto_msgTypes[185]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -16252,7 +16384,7 @@ func (x *MacaroonPermission) String() string {
 func (*MacaroonPermission) ProtoMessage() {}
 
 func (x *MacaroonPermission) ProtoReflect() protoreflect.Message {
-	mi := &file_lightning_proto_msgTypes[183]
+	mi := &file_lightning_proto_msgTypes[185]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -16265,7 +16397,7 @@ func (x *MacaroonPermission) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use MacaroonPermission.ProtoReflect.Descriptor instead.
 func (*MacaroonPermission) Descriptor() ([]byte, []int) {
-	return file_lightning_proto_rawDescGZIP(), []int{183}
+	return file_lightning_proto_rawDescGZIP(), []int{185}
 }
 
 func (x *MacaroonPermission) GetEntity() string {
@@ -16297,7 +16429,7 @@ type BakeMacaroonRequest struct {
 
 func (x *BakeMacaroonRequest) Reset() {
 	*x = BakeMacaroonRequest{}
-	mi := &file_lightning_proto_msgTypes[184]
+	mi := &file_lightning_proto_msgTypes[186]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -16309,7 +16441,7 @@ func (x *BakeMacaroonRequest) String() string {
 func (*BakeMacaroonRequest) ProtoMessage() {}
 
 func (x *BakeMacaroonRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_lightning_proto_msgTypes[184]
+	mi := &file_lightning_proto_msgTypes[186]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -16322,7 +16454,7 @@ func (x *BakeMacaroonRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use BakeMacaroonRequest.ProtoReflect.Descriptor instead.
 func (*BakeMacaroonRequest) Descriptor() ([]byte, []int) {
-	return file_lightning_proto_rawDescGZIP(), []int{184}
+	return file_lightning_proto_rawDescGZIP(), []int{186}
 }
 
 func (x *BakeMacaroonRequest) GetPermissions() []*MacaroonPermission {
@@ -16356,7 +16488,7 @@ type BakeMacaroonResponse struct {
 
 func (x *BakeMacaroonResponse) Reset() {
 	*x = BakeMacaroonResponse{}
-	mi := &file_lightning_proto_msgTypes[185]
+	mi := &file_lightning_proto_msgTypes[187]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -16368,7 +16500,7 @@ func (x *BakeMacaroonResponse) String() string {
 func (*BakeMacaroonResponse) ProtoMessage() {}
 
 func (x *BakeMacaroonResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_lightning_proto_msgTypes[185]
+	mi := &file_lightning_proto_msgTypes[187]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -16381,7 +16513,7 @@ func (x *BakeMacaroonResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use BakeMacaroonResponse.ProtoReflect.Descriptor instead.
 func (*BakeMacaroonResponse) Descriptor() ([]byte, []int) {
-	return file_lightning_proto_rawDescGZIP(), []int{185}
+	return file_lightning_proto_rawDescGZIP(), []int{187}
 }
 
 func (x *BakeMacaroonResponse) GetMacaroon() string {
@@ -16399,7 +16531,7 @@ type ListMacaroonIDsRequest struct {
 
 func (x *ListMacaroonIDsRequest) Reset() {
 	*x = ListMacaroonIDsRequest{}
-	mi := &file_lightning_proto_msgTypes[186]
+	mi := &file_lightning_proto_msgTypes[188]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -16411,7 +16543,7 @@ func (x *ListMacaroonIDsRequest) String() string {
 func (*ListMacaroonIDsRequest) ProtoMessage() {}
 
 func (x *ListMacaroonIDsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_lightning_proto_msgTypes[186]
+	mi := &file_lightning_proto_msgTypes[188]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -16424,7 +16556,7 @@ func (x *ListMacaroonIDsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListMacaroonIDsRequest.ProtoReflect.Descriptor instead.
 func (*ListMacaroonIDsRequest) Descriptor() ([]byte, []int) {
-	return file_lightning_proto_rawDescGZIP(), []int{186}
+	return file_lightning_proto_rawDescGZIP(), []int{188}
 }
 
 type ListMacaroonIDsResponse struct {
@@ -16437,7 +16569,7 @@ type ListMacaroonIDsResponse struct {
 
 func (x *ListMacaroonIDsResponse) Reset() {
 	*x = ListMacaroonIDsResponse{}
-	mi := &file_lightning_proto_msgTypes[187]
+	mi := &file_lightning_proto_msgTypes[189]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -16449,7 +16581,7 @@ func (x *ListMacaroonIDsResponse) String() string {
 func (*ListMacaroonIDsResponse) ProtoMessage() {}
 
 func (x *ListMacaroonIDsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_lightning_proto_msgTypes[187]
+	mi := &file_lightning_proto_msgTypes[189]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -16462,7 +16594,7 @@ func (x *ListMacaroonIDsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListMacaroonIDsResponse.ProtoReflect.Descriptor instead.
 func (*ListMacaroonIDsResponse) Descriptor() ([]byte, []int) {
-	return file_lightning_proto_rawDescGZIP(), []int{187}
+	return file_lightning_proto_rawDescGZIP(), []int{189}
 }
 
 func (x *ListMacaroonIDsResponse) GetRootKeyIds() []uint64 {
@@ -16482,7 +16614,7 @@ type DeleteMacaroonIDRequest struct {
 
 func (x *DeleteMacaroonIDRequest) Reset() {
 	*x = DeleteMacaroonIDRequest{}
-	mi := &file_lightning_proto_msgTypes[188]
+	mi := &file_lightning_proto_msgTypes[190]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -16494,7 +16626,7 @@ func (x *DeleteMacaroonIDRequest) String() string {
 func (*DeleteMacaroonIDRequest) ProtoMessage() {}
 
 func (x *DeleteMacaroonIDRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_lightning_proto_msgTypes[188]
+	mi := &file_lightning_proto_msgTypes[190]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -16507,7 +16639,7 @@ func (x *DeleteMacaroonIDRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteMacaroonIDRequest.ProtoReflect.Descriptor instead.
 func (*DeleteMacaroonIDRequest) Descriptor() ([]byte, []int) {
-	return file_lightning_proto_rawDescGZIP(), []int{188}
+	return file_lightning_proto_rawDescGZIP(), []int{190}
 }
 
 func (x *DeleteMacaroonIDRequest) GetRootKeyId() uint64 {
@@ -16527,7 +16659,7 @@ type DeleteMacaroonIDResponse struct {
 
 func (x *DeleteMacaroonIDResponse) Reset() {
 	*x = DeleteMacaroonIDResponse{}
-	mi := &file_lightning_proto_msgTypes[189]
+	mi := &file_lightning_proto_msgTypes[191]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -16539,7 +16671,7 @@ func (x *DeleteMacaroonIDResponse) String() string {
 func (*DeleteMacaroonIDResponse) ProtoMessage() {}
 
 func (x *DeleteMacaroonIDResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_lightning_proto_msgTypes[189]
+	mi := &file_lightning_proto_msgTypes[191]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -16552,7 +16684,7 @@ func (x *DeleteMacaroonIDResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteMacaroonIDResponse.ProtoReflect.Descriptor instead.
 func (*DeleteMacaroonIDResponse) Descriptor() ([]byte, []int) {
-	return file_lightning_proto_rawDescGZIP(), []int{189}
+	return file_lightning_proto_rawDescGZIP(), []int{191}
 }
 
 func (x *DeleteMacaroonIDResponse) GetDeleted() bool {
@@ -16572,7 +16704,7 @@ type MacaroonPermissionList struct {
 
 func (x *MacaroonPermissionList) Reset() {
 	*x = MacaroonPermissionList{}
-	mi := &file_lightning_proto_msgTypes[190]
+	mi := &file_lightning_proto_msgTypes[192]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -16584,7 +16716,7 @@ func (x *MacaroonPermissionList) String() string {
 func (*MacaroonPermissionList) ProtoMessage() {}
 
 func (x *MacaroonPermissionList) ProtoReflect() protoreflect.Message {
-	mi := &file_lightning_proto_msgTypes[190]
+	mi := &file_lightning_proto_msgTypes[192]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -16597,7 +16729,7 @@ func (x *MacaroonPermissionList) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use MacaroonPermissionList.ProtoReflect.Descriptor instead.
 func (*MacaroonPermissionList) Descriptor() ([]byte, []int) {
-	return file_lightning_proto_rawDescGZIP(), []int{190}
+	return file_lightning_proto_rawDescGZIP(), []int{192}
 }
 
 func (x *MacaroonPermissionList) GetPermissions() []*MacaroonPermission {
@@ -16615,7 +16747,7 @@ type ListPermissionsRequest struct {
 
 func (x *ListPermissionsRequest) Reset() {
 	*x = ListPermissionsRequest{}
-	mi := &file_lightning_proto_msgTypes[191]
+	mi := &file_lightning_proto_msgTypes[193]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -16627,7 +16759,7 @@ func (x *ListPermissionsRequest) String() string {
 func (*ListPermissionsRequest) ProtoMessage() {}
 
 func (x *ListPermissionsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_lightning_proto_msgTypes[191]
+	mi := &file_lightning_proto_msgTypes[193]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -16640,7 +16772,7 @@ func (x *ListPermissionsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListPermissionsRequest.ProtoReflect.Descriptor instead.
 func (*ListPermissionsRequest) Descriptor() ([]byte, []int) {
-	return file_lightning_proto_rawDescGZIP(), []int{191}
+	return file_lightning_proto_rawDescGZIP(), []int{193}
 }
 
 type ListPermissionsResponse struct {
@@ -16654,7 +16786,7 @@ type ListPermissionsResponse struct {
 
 func (x *ListPermissionsResponse) Reset() {
 	*x = ListPermissionsResponse{}
-	mi := &file_lightning_proto_msgTypes[192]
+	mi := &file_lightning_proto_msgTypes[194]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -16666,7 +16798,7 @@ func (x *ListPermissionsResponse) String() string {
 func (*ListPermissionsResponse) ProtoMessage() {}
 
 func (x *ListPermissionsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_lightning_proto_msgTypes[192]
+	mi := &file_lightning_proto_msgTypes[194]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -16679,7 +16811,7 @@ func (x *ListPermissionsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListPermissionsResponse.ProtoReflect.Descriptor instead.
 func (*ListPermissionsResponse) Descriptor() ([]byte, []int) {
-	return file_lightning_proto_rawDescGZIP(), []int{192}
+	return file_lightning_proto_rawDescGZIP(), []int{194}
 }
 
 func (x *ListPermissionsResponse) GetMethodPermissions() map[string]*MacaroonPermissionList {
@@ -16714,7 +16846,7 @@ type Failure struct {
 
 func (x *Failure) Reset() {
 	*x = Failure{}
-	mi := &file_lightning_proto_msgTypes[193]
+	mi := &file_lightning_proto_msgTypes[195]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -16726,7 +16858,7 @@ func (x *Failure) String() string {
 func (*Failure) ProtoMessage() {}
 
 func (x *Failure) ProtoReflect() protoreflect.Message {
-	mi := &file_lightning_proto_msgTypes[193]
+	mi := &file_lightning_proto_msgTypes[195]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -16739,7 +16871,7 @@ func (x *Failure) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Failure.ProtoReflect.Descriptor instead.
 func (*Failure) Descriptor() ([]byte, []int) {
-	return file_lightning_proto_rawDescGZIP(), []int{193}
+	return file_lightning_proto_rawDescGZIP(), []int{195}
 }
 
 func (x *Failure) GetCode() Failure_FailureCode {
@@ -16851,7 +16983,7 @@ type ChannelUpdate struct {
 
 func (x *ChannelUpdate) Reset() {
 	*x = ChannelUpdate{}
-	mi := &file_lightning_proto_msgTypes[194]
+	mi := &file_lightning_proto_msgTypes[196]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -16863,7 +16995,7 @@ func (x *ChannelUpdate) String() string {
 func (*ChannelUpdate) ProtoMessage() {}
 
 func (x *ChannelUpdate) ProtoReflect() protoreflect.Message {
-	mi := &file_lightning_proto_msgTypes[194]
+	mi := &file_lightning_proto_msgTypes[196]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -16876,7 +17008,7 @@ func (x *ChannelUpdate) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ChannelUpdate.ProtoReflect.Descriptor instead.
 func (*ChannelUpdate) Descriptor() ([]byte, []int) {
-	return file_lightning_proto_rawDescGZIP(), []int{194}
+	return file_lightning_proto_rawDescGZIP(), []int{196}
 }
 
 func (x *ChannelUpdate) GetSignature() []byte {
@@ -16974,7 +17106,7 @@ type MacaroonId struct {
 
 func (x *MacaroonId) Reset() {
 	*x = MacaroonId{}
-	mi := &file_lightning_proto_msgTypes[195]
+	mi := &file_lightning_proto_msgTypes[197]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -16986,7 +17118,7 @@ func (x *MacaroonId) String() string {
 func (*MacaroonId) ProtoMessage() {}
 
 func (x *MacaroonId) ProtoReflect() protoreflect.Message {
-	mi := &file_lightning_proto_msgTypes[195]
+	mi := &file_lightning_proto_msgTypes[197]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -16999,7 +17131,7 @@ func (x *MacaroonId) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use MacaroonId.ProtoReflect.Descriptor instead.
 func (*MacaroonId) Descriptor() ([]byte, []int) {
-	return file_lightning_proto_rawDescGZIP(), []int{195}
+	return file_lightning_proto_rawDescGZIP(), []int{197}
 }
 
 func (x *MacaroonId) GetNonce() []byte {
@@ -17033,7 +17165,7 @@ type Op struct {
 
 func (x *Op) Reset() {
 	*x = Op{}
-	mi := &file_lightning_proto_msgTypes[196]
+	mi := &file_lightning_proto_msgTypes[198]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -17045,7 +17177,7 @@ func (x *Op) String() string {
 func (*Op) ProtoMessage() {}
 
 func (x *Op) ProtoReflect() protoreflect.Message {
-	mi := &file_lightning_proto_msgTypes[196]
+	mi := &file_lightning_proto_msgTypes[198]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -17058,7 +17190,7 @@ func (x *Op) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Op.ProtoReflect.Descriptor instead.
 func (*Op) Descriptor() ([]byte, []int) {
-	return file_lightning_proto_rawDescGZIP(), []int{196}
+	return file_lightning_proto_rawDescGZIP(), []int{198}
 }
 
 func (x *Op) GetEntity() string {
@@ -17111,7 +17243,7 @@ type CheckMacPermRequest struct {
 
 func (x *CheckMacPermRequest) Reset() {
 	*x = CheckMacPermRequest{}
-	mi := &file_lightning_proto_msgTypes[197]
+	mi := &file_lightning_proto_msgTypes[199]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -17123,7 +17255,7 @@ func (x *CheckMacPermRequest) String() string {
 func (*CheckMacPermRequest) ProtoMessage() {}
 
 func (x *CheckMacPermRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_lightning_proto_msgTypes[197]
+	mi := &file_lightning_proto_msgTypes[199]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -17136,7 +17268,7 @@ func (x *CheckMacPermRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CheckMacPermRequest.ProtoReflect.Descriptor instead.
 func (*CheckMacPermRequest) Descriptor() ([]byte, []int) {
-	return file_lightning_proto_rawDescGZIP(), []int{197}
+	return file_lightning_proto_rawDescGZIP(), []int{199}
 }
 
 func (x *CheckMacPermRequest) GetMacaroon() []byte {
@@ -17176,7 +17308,7 @@ type CheckMacPermResponse struct {
 
 func (x *CheckMacPermResponse) Reset() {
 	*x = CheckMacPermResponse{}
-	mi := &file_lightning_proto_msgTypes[198]
+	mi := &file_lightning_proto_msgTypes[200]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -17188,7 +17320,7 @@ func (x *CheckMacPermResponse) String() string {
 func (*CheckMacPermResponse) ProtoMessage() {}
 
 func (x *CheckMacPermResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_lightning_proto_msgTypes[198]
+	mi := &file_lightning_proto_msgTypes[200]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -17201,7 +17333,7 @@ func (x *CheckMacPermResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CheckMacPermResponse.ProtoReflect.Descriptor instead.
 func (*CheckMacPermResponse) Descriptor() ([]byte, []int) {
-	return file_lightning_proto_rawDescGZIP(), []int{198}
+	return file_lightning_proto_rawDescGZIP(), []int{200}
 }
 
 func (x *CheckMacPermResponse) GetValid() bool {
@@ -17259,7 +17391,7 @@ type RPCMiddlewareRequest struct {
 
 func (x *RPCMiddlewareRequest) Reset() {
 	*x = RPCMiddlewareRequest{}
-	mi := &file_lightning_proto_msgTypes[199]
+	mi := &file_lightning_proto_msgTypes[201]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -17271,7 +17403,7 @@ func (x *RPCMiddlewareRequest) String() string {
 func (*RPCMiddlewareRequest) ProtoMessage() {}
 
 func (x *RPCMiddlewareRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_lightning_proto_msgTypes[199]
+	mi := &file_lightning_proto_msgTypes[201]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -17284,7 +17416,7 @@ func (x *RPCMiddlewareRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RPCMiddlewareRequest.ProtoReflect.Descriptor instead.
 func (*RPCMiddlewareRequest) Descriptor() ([]byte, []int) {
-	return file_lightning_proto_rawDescGZIP(), []int{199}
+	return file_lightning_proto_rawDescGZIP(), []int{201}
 }
 
 func (x *RPCMiddlewareRequest) GetRequestId() uint64 {
@@ -17423,7 +17555,7 @@ type MetadataValues struct {
 
 func (x *MetadataValues) Reset() {
 	*x = MetadataValues{}
-	mi := &file_lightning_proto_msgTypes[200]
+	mi := &file_lightning_proto_msgTypes[202]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -17435,7 +17567,7 @@ func (x *MetadataValues) String() string {
 func (*MetadataValues) ProtoMessage() {}
 
 func (x *MetadataValues) ProtoReflect() protoreflect.Message {
-	mi := &file_lightning_proto_msgTypes[200]
+	mi := &file_lightning_proto_msgTypes[202]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -17448,7 +17580,7 @@ func (x *MetadataValues) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use MetadataValues.ProtoReflect.Descriptor instead.
 func (*MetadataValues) Descriptor() ([]byte, []int) {
-	return file_lightning_proto_rawDescGZIP(), []int{200}
+	return file_lightning_proto_rawDescGZIP(), []int{202}
 }
 
 func (x *MetadataValues) GetValues() []string {
@@ -17470,7 +17602,7 @@ type StreamAuth struct {
 
 func (x *StreamAuth) Reset() {
 	*x = StreamAuth{}
-	mi := &file_lightning_proto_msgTypes[201]
+	mi := &file_lightning_proto_msgTypes[203]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -17482,7 +17614,7 @@ func (x *StreamAuth) String() string {
 func (*StreamAuth) ProtoMessage() {}
 
 func (x *StreamAuth) ProtoReflect() protoreflect.Message {
-	mi := &file_lightning_proto_msgTypes[201]
+	mi := &file_lightning_proto_msgTypes[203]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -17495,7 +17627,7 @@ func (x *StreamAuth) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use StreamAuth.ProtoReflect.Descriptor instead.
 func (*StreamAuth) Descriptor() ([]byte, []int) {
-	return file_lightning_proto_rawDescGZIP(), []int{201}
+	return file_lightning_proto_rawDescGZIP(), []int{203}
 }
 
 func (x *StreamAuth) GetMethodFullUri() string {
@@ -17530,7 +17662,7 @@ type RPCMessage struct {
 
 func (x *RPCMessage) Reset() {
 	*x = RPCMessage{}
-	mi := &file_lightning_proto_msgTypes[202]
+	mi := &file_lightning_proto_msgTypes[204]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -17542,7 +17674,7 @@ func (x *RPCMessage) String() string {
 func (*RPCMessage) ProtoMessage() {}
 
 func (x *RPCMessage) ProtoReflect() protoreflect.Message {
-	mi := &file_lightning_proto_msgTypes[202]
+	mi := &file_lightning_proto_msgTypes[204]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -17555,7 +17687,7 @@ func (x *RPCMessage) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RPCMessage.ProtoReflect.Descriptor instead.
 func (*RPCMessage) Descriptor() ([]byte, []int) {
-	return file_lightning_proto_rawDescGZIP(), []int{202}
+	return file_lightning_proto_rawDescGZIP(), []int{204}
 }
 
 func (x *RPCMessage) GetMethodFullUri() string {
@@ -17614,7 +17746,7 @@ type RPCMiddlewareResponse struct {
 
 func (x *RPCMiddlewareResponse) Reset() {
 	*x = RPCMiddlewareResponse{}
-	mi := &file_lightning_proto_msgTypes[203]
+	mi := &file_lightning_proto_msgTypes[205]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -17626,7 +17758,7 @@ func (x *RPCMiddlewareResponse) String() string {
 func (*RPCMiddlewareResponse) ProtoMessage() {}
 
 func (x *RPCMiddlewareResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_lightning_proto_msgTypes[203]
+	mi := &file_lightning_proto_msgTypes[205]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -17639,7 +17771,7 @@ func (x *RPCMiddlewareResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RPCMiddlewareResponse.ProtoReflect.Descriptor instead.
 func (*RPCMiddlewareResponse) Descriptor() ([]byte, []int) {
-	return file_lightning_proto_rawDescGZIP(), []int{203}
+	return file_lightning_proto_rawDescGZIP(), []int{205}
 }
 
 func (x *RPCMiddlewareResponse) GetRefMsgId() uint64 {
@@ -17727,7 +17859,7 @@ type MiddlewareRegistration struct {
 
 func (x *MiddlewareRegistration) Reset() {
 	*x = MiddlewareRegistration{}
-	mi := &file_lightning_proto_msgTypes[204]
+	mi := &file_lightning_proto_msgTypes[206]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -17739,7 +17871,7 @@ func (x *MiddlewareRegistration) String() string {
 func (*MiddlewareRegistration) ProtoMessage() {}
 
 func (x *MiddlewareRegistration) ProtoReflect() protoreflect.Message {
-	mi := &file_lightning_proto_msgTypes[204]
+	mi := &file_lightning_proto_msgTypes[206]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -17752,7 +17884,7 @@ func (x *MiddlewareRegistration) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use MiddlewareRegistration.ProtoReflect.Descriptor instead.
 func (*MiddlewareRegistration) Descriptor() ([]byte, []int) {
-	return file_lightning_proto_rawDescGZIP(), []int{204}
+	return file_lightning_proto_rawDescGZIP(), []int{206}
 }
 
 func (x *MiddlewareRegistration) GetMiddlewareName() string {
@@ -17797,7 +17929,7 @@ type InterceptFeedback struct {
 
 func (x *InterceptFeedback) Reset() {
 	*x = InterceptFeedback{}
-	mi := &file_lightning_proto_msgTypes[205]
+	mi := &file_lightning_proto_msgTypes[207]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -17809,7 +17941,7 @@ func (x *InterceptFeedback) String() string {
 func (*InterceptFeedback) ProtoMessage() {}
 
 func (x *InterceptFeedback) ProtoReflect() protoreflect.Message {
-	mi := &file_lightning_proto_msgTypes[205]
+	mi := &file_lightning_proto_msgTypes[207]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -17822,7 +17954,7 @@ func (x *InterceptFeedback) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use InterceptFeedback.ProtoReflect.Descriptor instead.
 func (*InterceptFeedback) Descriptor() ([]byte, []int) {
-	return file_lightning_proto_rawDescGZIP(), []int{205}
+	return file_lightning_proto_rawDescGZIP(), []int{207}
 }
 
 func (x *InterceptFeedback) GetError() string {
@@ -17881,7 +18013,7 @@ type PendingChannelsResponse_PendingChannel struct {
 
 func (x *PendingChannelsResponse_PendingChannel) Reset() {
 	*x = PendingChannelsResponse_PendingChannel{}
-	mi := &file_lightning_proto_msgTypes[212]
+	mi := &file_lightning_proto_msgTypes[214]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -17893,7 +18025,7 @@ func (x *PendingChannelsResponse_PendingChannel) String() string {
 func (*PendingChannelsResponse_PendingChannel) ProtoMessage() {}
 
 func (x *PendingChannelsResponse_PendingChannel) ProtoReflect() protoreflect.Message {
-	mi := &file_lightning_proto_msgTypes[212]
+	mi := &file_lightning_proto_msgTypes[214]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -17906,7 +18038,7 @@ func (x *PendingChannelsResponse_PendingChannel) ProtoReflect() protoreflect.Mes
 
 // Deprecated: Use PendingChannelsResponse_PendingChannel.ProtoReflect.Descriptor instead.
 func (*PendingChannelsResponse_PendingChannel) Descriptor() ([]byte, []int) {
-	return file_lightning_proto_rawDescGZIP(), []int{90, 0}
+	return file_lightning_proto_rawDescGZIP(), []int{92, 0}
 }
 
 func (x *PendingChannelsResponse_PendingChannel) GetRemoteNodePub() string {
@@ -18056,7 +18188,7 @@ type PendingChannelsResponse_PendingOpenChannel struct {
 
 func (x *PendingChannelsResponse_PendingOpenChannel) Reset() {
 	*x = PendingChannelsResponse_PendingOpenChannel{}
-	mi := &file_lightning_proto_msgTypes[213]
+	mi := &file_lightning_proto_msgTypes[215]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -18068,7 +18200,7 @@ func (x *PendingChannelsResponse_PendingOpenChannel) String() string {
 func (*PendingChannelsResponse_PendingOpenChannel) ProtoMessage() {}
 
 func (x *PendingChannelsResponse_PendingOpenChannel) ProtoReflect() protoreflect.Message {
-	mi := &file_lightning_proto_msgTypes[213]
+	mi := &file_lightning_proto_msgTypes[215]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -18081,7 +18213,7 @@ func (x *PendingChannelsResponse_PendingOpenChannel) ProtoReflect() protoreflect
 
 // Deprecated: Use PendingChannelsResponse_PendingOpenChannel.ProtoReflect.Descriptor instead.
 func (*PendingChannelsResponse_PendingOpenChannel) Descriptor() ([]byte, []int) {
-	return file_lightning_proto_rawDescGZIP(), []int{90, 1}
+	return file_lightning_proto_rawDescGZIP(), []int{92, 1}
 }
 
 func (x *PendingChannelsResponse_PendingOpenChannel) GetChannel() *PendingChannelsResponse_PendingChannel {
@@ -18165,7 +18297,7 @@ type PendingChannelsResponse_WaitingCloseChannel struct {
 
 func (x *PendingChannelsResponse_WaitingCloseChannel) Reset() {
 	*x = PendingChannelsResponse_WaitingCloseChannel{}
-	mi := &file_lightning_proto_msgTypes[214]
+	mi := &file_lightning_proto_msgTypes[216]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -18177,7 +18309,7 @@ func (x *PendingChannelsResponse_WaitingCloseChannel) String() string {
 func (*PendingChannelsResponse_WaitingCloseChannel) ProtoMessage() {}
 
 func (x *PendingChannelsResponse_WaitingCloseChannel) ProtoReflect() protoreflect.Message {
-	mi := &file_lightning_proto_msgTypes[214]
+	mi := &file_lightning_proto_msgTypes[216]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -18190,7 +18322,7 @@ func (x *PendingChannelsResponse_WaitingCloseChannel) ProtoReflect() protoreflec
 
 // Deprecated: Use PendingChannelsResponse_WaitingCloseChannel.ProtoReflect.Descriptor instead.
 func (*PendingChannelsResponse_WaitingCloseChannel) Descriptor() ([]byte, []int) {
-	return file_lightning_proto_rawDescGZIP(), []int{90, 2}
+	return file_lightning_proto_rawDescGZIP(), []int{92, 2}
 }
 
 func (x *PendingChannelsResponse_WaitingCloseChannel) GetChannel() *PendingChannelsResponse_PendingChannel {
@@ -18265,7 +18397,7 @@ type PendingChannelsResponse_Commitments struct {
 
 func (x *PendingChannelsResponse_Commitments) Reset() {
 	*x = PendingChannelsResponse_Commitments{}
-	mi := &file_lightning_proto_msgTypes[215]
+	mi := &file_lightning_proto_msgTypes[217]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -18277,7 +18409,7 @@ func (x *PendingChannelsResponse_Commitments) String() string {
 func (*PendingChannelsResponse_Commitments) ProtoMessage() {}
 
 func (x *PendingChannelsResponse_Commitments) ProtoReflect() protoreflect.Message {
-	mi := &file_lightning_proto_msgTypes[215]
+	mi := &file_lightning_proto_msgTypes[217]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -18290,7 +18422,7 @@ func (x *PendingChannelsResponse_Commitments) ProtoReflect() protoreflect.Messag
 
 // Deprecated: Use PendingChannelsResponse_Commitments.ProtoReflect.Descriptor instead.
 func (*PendingChannelsResponse_Commitments) Descriptor() ([]byte, []int) {
-	return file_lightning_proto_rawDescGZIP(), []int{90, 3}
+	return file_lightning_proto_rawDescGZIP(), []int{92, 3}
 }
 
 func (x *PendingChannelsResponse_Commitments) GetLocalTxid() string {
@@ -18347,7 +18479,7 @@ type PendingChannelsResponse_ClosedChannel struct {
 
 func (x *PendingChannelsResponse_ClosedChannel) Reset() {
 	*x = PendingChannelsResponse_ClosedChannel{}
-	mi := &file_lightning_proto_msgTypes[216]
+	mi := &file_lightning_proto_msgTypes[218]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -18359,7 +18491,7 @@ func (x *PendingChannelsResponse_ClosedChannel) String() string {
 func (*PendingChannelsResponse_ClosedChannel) ProtoMessage() {}
 
 func (x *PendingChannelsResponse_ClosedChannel) ProtoReflect() protoreflect.Message {
-	mi := &file_lightning_proto_msgTypes[216]
+	mi := &file_lightning_proto_msgTypes[218]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -18372,7 +18504,7 @@ func (x *PendingChannelsResponse_ClosedChannel) ProtoReflect() protoreflect.Mess
 
 // Deprecated: Use PendingChannelsResponse_ClosedChannel.ProtoReflect.Descriptor instead.
 func (*PendingChannelsResponse_ClosedChannel) Descriptor() ([]byte, []int) {
-	return file_lightning_proto_rawDescGZIP(), []int{90, 4}
+	return file_lightning_proto_rawDescGZIP(), []int{92, 4}
 }
 
 func (x *PendingChannelsResponse_ClosedChannel) GetChannel() *PendingChannelsResponse_PendingChannel {
@@ -18413,7 +18545,7 @@ type PendingChannelsResponse_ForceClosedChannel struct {
 
 func (x *PendingChannelsResponse_ForceClosedChannel) Reset() {
 	*x = PendingChannelsResponse_ForceClosedChannel{}
-	mi := &file_lightning_proto_msgTypes[217]
+	mi := &file_lightning_proto_msgTypes[219]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -18425,7 +18557,7 @@ func (x *PendingChannelsResponse_ForceClosedChannel) String() string {
 func (*PendingChannelsResponse_ForceClosedChannel) ProtoMessage() {}
 
 func (x *PendingChannelsResponse_ForceClosedChannel) ProtoReflect() protoreflect.Message {
-	mi := &file_lightning_proto_msgTypes[217]
+	mi := &file_lightning_proto_msgTypes[219]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -18438,7 +18570,7 @@ func (x *PendingChannelsResponse_ForceClosedChannel) ProtoReflect() protoreflect
 
 // Deprecated: Use PendingChannelsResponse_ForceClosedChannel.ProtoReflect.Descriptor instead.
 func (*PendingChannelsResponse_ForceClosedChannel) Descriptor() ([]byte, []int) {
-	return file_lightning_proto_rawDescGZIP(), []int{90, 5}
+	return file_lightning_proto_rawDescGZIP(), []int{92, 5}
 }
 
 func (x *PendingChannelsResponse_ForceClosedChannel) GetChannel() *PendingChannelsResponse_PendingChannel {
@@ -18537,7 +18669,17 @@ const file_lightning_proto_rawDesc = "" +
 	"\bpath_key\x18\x02 \x01(\fR\apathKey\x12\x14\n" +
 	"\x05onion\x18\x03 \x01(\fR\x05onion\"2\n" +
 	"\x18SendOnionMessageResponse\x12\x16\n" +
-	"\x06status\x18\x01 \x01(\tR\x06status\"\xe6\x01\n" +
+	"\x06status\x18\x01 \x01(\tR\x06status\"\xb9\x01\n" +
+	"\x12CreateOfferRequest\x12 \n" +
+	"\vdescription\x18\x01 \x01(\tR\vdescription\x12\x1f\n" +
+	"\vamount_msat\x18\x02 \x01(\x04R\n" +
+	"amountMsat\x12'\n" +
+	"\x0fabsolute_expiry\x18\x03 \x01(\x04R\x0eabsoluteExpiry\x12&\n" +
+	"\fquantity_max\x18\x04 \x01(\x04H\x00R\vquantityMax\x88\x01\x01B\x0f\n" +
+	"\r_quantity_max\"F\n" +
+	"\x13CreateOfferResponse\x12\x14\n" +
+	"\x05offer\x18\x01 \x01(\tR\x05offer\x12\x19\n" +
+	"\boffer_id\x18\x02 \x01(\fR\aofferId\"\xe6\x01\n" +
 	"\x04Utxo\x125\n" +
 	"\faddress_type\x18\x01 \x01(\x0e2\x12.lnrpc.AddressTypeR\vaddressType\x12\x18\n" +
 	"\aaddress\x18\x02 \x01(\tR\aaddress\x12\x1d\n" +
@@ -20068,7 +20210,7 @@ const file_lightning_proto_rawDesc = "" +
 	"\x16UPDATE_FAILURE_PENDING\x10\x01\x12\x1c\n" +
 	"\x18UPDATE_FAILURE_NOT_FOUND\x10\x02\x12\x1f\n" +
 	"\x1bUPDATE_FAILURE_INTERNAL_ERR\x10\x03\x12$\n" +
-	" UPDATE_FAILURE_INVALID_PARAMETER\x10\x042\xb9'\n" +
+	" UPDATE_FAILURE_INVALID_PARAMETER\x10\x042\xff'\n" +
 	"\tLightning\x12J\n" +
 	"\rWalletBalance\x12\x1b.lnrpc.WalletBalanceRequest\x1a\x1c.lnrpc.WalletBalanceResponse\x12M\n" +
 	"\x0eChannelBalance\x12\x1c.lnrpc.ChannelBalanceRequest\x1a\x1d.lnrpc.ChannelBalanceResponse\x12K\n" +
@@ -20139,6 +20281,7 @@ const file_lightning_proto_rawDesc = "" +
 	"\x17SubscribeCustomMessages\x12%.lnrpc.SubscribeCustomMessagesRequest\x1a\x14.lnrpc.CustomMessage0\x01\x12S\n" +
 	"\x10SendOnionMessage\x12\x1e.lnrpc.SendOnionMessageRequest\x1a\x1f.lnrpc.SendOnionMessageResponse\x12[\n" +
 	"\x16SubscribeOnionMessages\x12$.lnrpc.SubscribeOnionMessagesRequest\x1a\x19.lnrpc.OnionMessageUpdate0\x01\x12D\n" +
+	"\vCreateOffer\x12\x19.lnrpc.CreateOfferRequest\x1a\x1a.lnrpc.CreateOfferResponse\x12D\n" +
 	"\vListAliases\x12\x19.lnrpc.ListAliasesRequest\x1a\x1a.lnrpc.ListAliasesResponse\x12_\n" +
 	"\x14LookupHtlcResolution\x12\".lnrpc.LookupHtlcResolutionRequest\x1a#.lnrpc.LookupHtlcResolutionResponseB'Z%github.com/lightningnetwork/lnd/lnrpcb\x06proto3"
 
@@ -20155,7 +20298,7 @@ func file_lightning_proto_rawDescGZIP() []byte {
 }
 
 var file_lightning_proto_enumTypes = make([]protoimpl.EnumInfo, 22)
-var file_lightning_proto_msgTypes = make([]protoimpl.MessageInfo, 234)
+var file_lightning_proto_msgTypes = make([]protoimpl.MessageInfo, 236)
 var file_lightning_proto_goTypes = []any{
 	(OutputScriptType)(0),                // 0: lnrpc.OutputScriptType
 	(CoinSelectionStrategy)(0),           // 1: lnrpc.CoinSelectionStrategy
@@ -20189,567 +20332,571 @@ var file_lightning_proto_goTypes = []any{
 	(*OnionMessageUpdate)(nil),                                  // 29: lnrpc.OnionMessageUpdate
 	(*SendOnionMessageRequest)(nil),                             // 30: lnrpc.SendOnionMessageRequest
 	(*SendOnionMessageResponse)(nil),                            // 31: lnrpc.SendOnionMessageResponse
-	(*Utxo)(nil),                                                // 32: lnrpc.Utxo
-	(*OutputDetail)(nil),                                        // 33: lnrpc.OutputDetail
-	(*Transaction)(nil),                                         // 34: lnrpc.Transaction
-	(*GetTransactionsRequest)(nil),                              // 35: lnrpc.GetTransactionsRequest
-	(*TransactionDetails)(nil),                                  // 36: lnrpc.TransactionDetails
-	(*FeeLimit)(nil),                                            // 37: lnrpc.FeeLimit
-	(*ChannelAcceptRequest)(nil),                                // 38: lnrpc.ChannelAcceptRequest
-	(*ChannelAcceptResponse)(nil),                               // 39: lnrpc.ChannelAcceptResponse
-	(*ChannelPoint)(nil),                                        // 40: lnrpc.ChannelPoint
-	(*OutPoint)(nil),                                            // 41: lnrpc.OutPoint
-	(*PreviousOutPoint)(nil),                                    // 42: lnrpc.PreviousOutPoint
-	(*LightningAddress)(nil),                                    // 43: lnrpc.LightningAddress
-	(*EstimateFeeRequest)(nil),                                  // 44: lnrpc.EstimateFeeRequest
-	(*EstimateFeeResponse)(nil),                                 // 45: lnrpc.EstimateFeeResponse
-	(*SendManyRequest)(nil),                                     // 46: lnrpc.SendManyRequest
-	(*SendManyResponse)(nil),                                    // 47: lnrpc.SendManyResponse
-	(*SendCoinsRequest)(nil),                                    // 48: lnrpc.SendCoinsRequest
-	(*SendCoinsResponse)(nil),                                   // 49: lnrpc.SendCoinsResponse
-	(*ListUnspentRequest)(nil),                                  // 50: lnrpc.ListUnspentRequest
-	(*ListUnspentResponse)(nil),                                 // 51: lnrpc.ListUnspentResponse
-	(*NewAddressRequest)(nil),                                   // 52: lnrpc.NewAddressRequest
-	(*NewAddressResponse)(nil),                                  // 53: lnrpc.NewAddressResponse
-	(*SignMessageRequest)(nil),                                  // 54: lnrpc.SignMessageRequest
-	(*SignMessageResponse)(nil),                                 // 55: lnrpc.SignMessageResponse
-	(*VerifyMessageRequest)(nil),                                // 56: lnrpc.VerifyMessageRequest
-	(*VerifyMessageResponse)(nil),                               // 57: lnrpc.VerifyMessageResponse
-	(*ConnectPeerRequest)(nil),                                  // 58: lnrpc.ConnectPeerRequest
-	(*ConnectPeerResponse)(nil),                                 // 59: lnrpc.ConnectPeerResponse
-	(*DisconnectPeerRequest)(nil),                               // 60: lnrpc.DisconnectPeerRequest
-	(*DisconnectPeerResponse)(nil),                              // 61: lnrpc.DisconnectPeerResponse
-	(*HTLC)(nil),                                                // 62: lnrpc.HTLC
-	(*ChannelConstraints)(nil),                                  // 63: lnrpc.ChannelConstraints
-	(*Channel)(nil),                                             // 64: lnrpc.Channel
-	(*ListChannelsRequest)(nil),                                 // 65: lnrpc.ListChannelsRequest
-	(*ListChannelsResponse)(nil),                                // 66: lnrpc.ListChannelsResponse
-	(*AliasMap)(nil),                                            // 67: lnrpc.AliasMap
-	(*ListAliasesRequest)(nil),                                  // 68: lnrpc.ListAliasesRequest
-	(*ListAliasesResponse)(nil),                                 // 69: lnrpc.ListAliasesResponse
-	(*ChannelCloseSummary)(nil),                                 // 70: lnrpc.ChannelCloseSummary
-	(*Resolution)(nil),                                          // 71: lnrpc.Resolution
-	(*ClosedChannelsRequest)(nil),                               // 72: lnrpc.ClosedChannelsRequest
-	(*ClosedChannelsResponse)(nil),                              // 73: lnrpc.ClosedChannelsResponse
-	(*Peer)(nil),                                                // 74: lnrpc.Peer
-	(*TimestampedError)(nil),                                    // 75: lnrpc.TimestampedError
-	(*ListPeersRequest)(nil),                                    // 76: lnrpc.ListPeersRequest
-	(*ListPeersResponse)(nil),                                   // 77: lnrpc.ListPeersResponse
-	(*PeerEventSubscription)(nil),                               // 78: lnrpc.PeerEventSubscription
-	(*PeerEvent)(nil),                                           // 79: lnrpc.PeerEvent
-	(*GetInfoRequest)(nil),                                      // 80: lnrpc.GetInfoRequest
-	(*GetInfoResponse)(nil),                                     // 81: lnrpc.GetInfoResponse
-	(*GetDebugInfoRequest)(nil),                                 // 82: lnrpc.GetDebugInfoRequest
-	(*GetDebugInfoResponse)(nil),                                // 83: lnrpc.GetDebugInfoResponse
-	(*GetRecoveryInfoRequest)(nil),                              // 84: lnrpc.GetRecoveryInfoRequest
-	(*GetRecoveryInfoResponse)(nil),                             // 85: lnrpc.GetRecoveryInfoResponse
-	(*Chain)(nil),                                               // 86: lnrpc.Chain
-	(*ChannelOpenUpdate)(nil),                                   // 87: lnrpc.ChannelOpenUpdate
-	(*CloseOutput)(nil),                                         // 88: lnrpc.CloseOutput
-	(*ChannelCloseUpdate)(nil),                                  // 89: lnrpc.ChannelCloseUpdate
-	(*CloseChannelRequest)(nil),                                 // 90: lnrpc.CloseChannelRequest
-	(*CloseStatusUpdate)(nil),                                   // 91: lnrpc.CloseStatusUpdate
-	(*PendingUpdate)(nil),                                       // 92: lnrpc.PendingUpdate
-	(*InstantUpdate)(nil),                                       // 93: lnrpc.InstantUpdate
-	(*ReadyForPsbtFunding)(nil),                                 // 94: lnrpc.ReadyForPsbtFunding
-	(*BatchOpenChannelRequest)(nil),                             // 95: lnrpc.BatchOpenChannelRequest
-	(*BatchOpenChannel)(nil),                                    // 96: lnrpc.BatchOpenChannel
-	(*BatchOpenChannelResponse)(nil),                            // 97: lnrpc.BatchOpenChannelResponse
-	(*OpenChannelRequest)(nil),                                  // 98: lnrpc.OpenChannelRequest
-	(*OpenStatusUpdate)(nil),                                    // 99: lnrpc.OpenStatusUpdate
-	(*KeyLocator)(nil),                                          // 100: lnrpc.KeyLocator
-	(*KeyDescriptor)(nil),                                       // 101: lnrpc.KeyDescriptor
-	(*ChanPointShim)(nil),                                       // 102: lnrpc.ChanPointShim
-	(*PsbtShim)(nil),                                            // 103: lnrpc.PsbtShim
-	(*FundingShim)(nil),                                         // 104: lnrpc.FundingShim
-	(*FundingShimCancel)(nil),                                   // 105: lnrpc.FundingShimCancel
-	(*FundingPsbtVerify)(nil),                                   // 106: lnrpc.FundingPsbtVerify
-	(*FundingPsbtFinalize)(nil),                                 // 107: lnrpc.FundingPsbtFinalize
-	(*FundingTransitionMsg)(nil),                                // 108: lnrpc.FundingTransitionMsg
-	(*FundingStateStepResp)(nil),                                // 109: lnrpc.FundingStateStepResp
-	(*PendingHTLC)(nil),                                         // 110: lnrpc.PendingHTLC
-	(*PendingChannelsRequest)(nil),                              // 111: lnrpc.PendingChannelsRequest
-	(*PendingChannelsResponse)(nil),                             // 112: lnrpc.PendingChannelsResponse
-	(*ChannelEventSubscription)(nil),                            // 113: lnrpc.ChannelEventSubscription
-	(*ChannelCommitUpdate)(nil),                                 // 114: lnrpc.ChannelCommitUpdate
-	(*ChannelEventUpdate)(nil),                                  // 115: lnrpc.ChannelEventUpdate
-	(*WalletAccountBalance)(nil),                                // 116: lnrpc.WalletAccountBalance
-	(*WalletBalanceRequest)(nil),                                // 117: lnrpc.WalletBalanceRequest
-	(*WalletBalanceResponse)(nil),                               // 118: lnrpc.WalletBalanceResponse
-	(*Amount)(nil),                                              // 119: lnrpc.Amount
-	(*ChannelBalanceRequest)(nil),                               // 120: lnrpc.ChannelBalanceRequest
-	(*ChannelBalanceResponse)(nil),                              // 121: lnrpc.ChannelBalanceResponse
-	(*QueryRoutesRequest)(nil),                                  // 122: lnrpc.QueryRoutesRequest
-	(*NodePair)(nil),                                            // 123: lnrpc.NodePair
-	(*EdgeLocator)(nil),                                         // 124: lnrpc.EdgeLocator
-	(*QueryRoutesResponse)(nil),                                 // 125: lnrpc.QueryRoutesResponse
-	(*Hop)(nil),                                                 // 126: lnrpc.Hop
-	(*MPPRecord)(nil),                                           // 127: lnrpc.MPPRecord
-	(*AMPRecord)(nil),                                           // 128: lnrpc.AMPRecord
-	(*Route)(nil),                                               // 129: lnrpc.Route
-	(*NodeInfoRequest)(nil),                                     // 130: lnrpc.NodeInfoRequest
-	(*NodeInfo)(nil),                                            // 131: lnrpc.NodeInfo
-	(*LightningNode)(nil),                                       // 132: lnrpc.LightningNode
-	(*NodeAddress)(nil),                                         // 133: lnrpc.NodeAddress
-	(*RoutingPolicy)(nil),                                       // 134: lnrpc.RoutingPolicy
-	(*ChannelAuthProof)(nil),                                    // 135: lnrpc.ChannelAuthProof
-	(*ChannelEdge)(nil),                                         // 136: lnrpc.ChannelEdge
-	(*ChannelGraphRequest)(nil),                                 // 137: lnrpc.ChannelGraphRequest
-	(*ChannelGraph)(nil),                                        // 138: lnrpc.ChannelGraph
-	(*NodeMetricsRequest)(nil),                                  // 139: lnrpc.NodeMetricsRequest
-	(*NodeMetricsResponse)(nil),                                 // 140: lnrpc.NodeMetricsResponse
-	(*FloatMetric)(nil),                                         // 141: lnrpc.FloatMetric
-	(*ChanInfoRequest)(nil),                                     // 142: lnrpc.ChanInfoRequest
-	(*NetworkInfoRequest)(nil),                                  // 143: lnrpc.NetworkInfoRequest
-	(*NetworkInfo)(nil),                                         // 144: lnrpc.NetworkInfo
-	(*StopRequest)(nil),                                         // 145: lnrpc.StopRequest
-	(*StopResponse)(nil),                                        // 146: lnrpc.StopResponse
-	(*GraphTopologySubscription)(nil),                           // 147: lnrpc.GraphTopologySubscription
-	(*GraphTopologyUpdate)(nil),                                 // 148: lnrpc.GraphTopologyUpdate
-	(*NodeUpdate)(nil),                                          // 149: lnrpc.NodeUpdate
-	(*ChannelEdgeUpdate)(nil),                                   // 150: lnrpc.ChannelEdgeUpdate
-	(*ClosedChannelUpdate)(nil),                                 // 151: lnrpc.ClosedChannelUpdate
-	(*HopHint)(nil),                                             // 152: lnrpc.HopHint
-	(*SetID)(nil),                                               // 153: lnrpc.SetID
-	(*RouteHint)(nil),                                           // 154: lnrpc.RouteHint
-	(*BlindedPaymentPath)(nil),                                  // 155: lnrpc.BlindedPaymentPath
-	(*BlindedPath)(nil),                                         // 156: lnrpc.BlindedPath
-	(*BlindedHop)(nil),                                          // 157: lnrpc.BlindedHop
-	(*AMPInvoiceState)(nil),                                     // 158: lnrpc.AMPInvoiceState
-	(*Invoice)(nil),                                             // 159: lnrpc.Invoice
-	(*BlindedPathConfig)(nil),                                   // 160: lnrpc.BlindedPathConfig
-	(*InvoiceHTLC)(nil),                                         // 161: lnrpc.InvoiceHTLC
-	(*AMP)(nil),                                                 // 162: lnrpc.AMP
-	(*AddInvoiceResponse)(nil),                                  // 163: lnrpc.AddInvoiceResponse
-	(*PaymentHash)(nil),                                         // 164: lnrpc.PaymentHash
-	(*ListInvoiceRequest)(nil),                                  // 165: lnrpc.ListInvoiceRequest
-	(*ListInvoiceResponse)(nil),                                 // 166: lnrpc.ListInvoiceResponse
-	(*InvoiceSubscription)(nil),                                 // 167: lnrpc.InvoiceSubscription
-	(*DelCanceledInvoiceReq)(nil),                               // 168: lnrpc.DelCanceledInvoiceReq
-	(*DelCanceledInvoiceResp)(nil),                              // 169: lnrpc.DelCanceledInvoiceResp
-	(*Payment)(nil),                                             // 170: lnrpc.Payment
-	(*HTLCAttempt)(nil),                                         // 171: lnrpc.HTLCAttempt
-	(*ListPaymentsRequest)(nil),                                 // 172: lnrpc.ListPaymentsRequest
-	(*ListPaymentsResponse)(nil),                                // 173: lnrpc.ListPaymentsResponse
-	(*DeletePaymentRequest)(nil),                                // 174: lnrpc.DeletePaymentRequest
-	(*DeleteAllPaymentsRequest)(nil),                            // 175: lnrpc.DeleteAllPaymentsRequest
-	(*DeletePaymentResponse)(nil),                               // 176: lnrpc.DeletePaymentResponse
-	(*DeleteAllPaymentsResponse)(nil),                           // 177: lnrpc.DeleteAllPaymentsResponse
-	(*AbandonChannelRequest)(nil),                               // 178: lnrpc.AbandonChannelRequest
-	(*AbandonChannelResponse)(nil),                              // 179: lnrpc.AbandonChannelResponse
-	(*DebugLevelRequest)(nil),                                   // 180: lnrpc.DebugLevelRequest
-	(*DebugLevelResponse)(nil),                                  // 181: lnrpc.DebugLevelResponse
-	(*PayReqString)(nil),                                        // 182: lnrpc.PayReqString
-	(*PayReq)(nil),                                              // 183: lnrpc.PayReq
-	(*Feature)(nil),                                             // 184: lnrpc.Feature
-	(*FeeReportRequest)(nil),                                    // 185: lnrpc.FeeReportRequest
-	(*ChannelFeeReport)(nil),                                    // 186: lnrpc.ChannelFeeReport
-	(*FeeReportResponse)(nil),                                   // 187: lnrpc.FeeReportResponse
-	(*InboundFee)(nil),                                          // 188: lnrpc.InboundFee
-	(*PolicyUpdateRequest)(nil),                                 // 189: lnrpc.PolicyUpdateRequest
-	(*FailedUpdate)(nil),                                        // 190: lnrpc.FailedUpdate
-	(*PolicyUpdateResponse)(nil),                                // 191: lnrpc.PolicyUpdateResponse
-	(*ForwardingHistoryRequest)(nil),                            // 192: lnrpc.ForwardingHistoryRequest
-	(*ForwardingEvent)(nil),                                     // 193: lnrpc.ForwardingEvent
-	(*ForwardingHistoryResponse)(nil),                           // 194: lnrpc.ForwardingHistoryResponse
-	(*ExportChannelBackupRequest)(nil),                          // 195: lnrpc.ExportChannelBackupRequest
-	(*ChannelBackup)(nil),                                       // 196: lnrpc.ChannelBackup
-	(*MultiChanBackup)(nil),                                     // 197: lnrpc.MultiChanBackup
-	(*ChanBackupExportRequest)(nil),                             // 198: lnrpc.ChanBackupExportRequest
-	(*ChanBackupSnapshot)(nil),                                  // 199: lnrpc.ChanBackupSnapshot
-	(*ChannelBackups)(nil),                                      // 200: lnrpc.ChannelBackups
-	(*RestoreChanBackupRequest)(nil),                            // 201: lnrpc.RestoreChanBackupRequest
-	(*RestoreBackupResponse)(nil),                               // 202: lnrpc.RestoreBackupResponse
-	(*ChannelBackupSubscription)(nil),                           // 203: lnrpc.ChannelBackupSubscription
-	(*VerifyChanBackupResponse)(nil),                            // 204: lnrpc.VerifyChanBackupResponse
-	(*MacaroonPermission)(nil),                                  // 205: lnrpc.MacaroonPermission
-	(*BakeMacaroonRequest)(nil),                                 // 206: lnrpc.BakeMacaroonRequest
-	(*BakeMacaroonResponse)(nil),                                // 207: lnrpc.BakeMacaroonResponse
-	(*ListMacaroonIDsRequest)(nil),                              // 208: lnrpc.ListMacaroonIDsRequest
-	(*ListMacaroonIDsResponse)(nil),                             // 209: lnrpc.ListMacaroonIDsResponse
-	(*DeleteMacaroonIDRequest)(nil),                             // 210: lnrpc.DeleteMacaroonIDRequest
-	(*DeleteMacaroonIDResponse)(nil),                            // 211: lnrpc.DeleteMacaroonIDResponse
-	(*MacaroonPermissionList)(nil),                              // 212: lnrpc.MacaroonPermissionList
-	(*ListPermissionsRequest)(nil),                              // 213: lnrpc.ListPermissionsRequest
-	(*ListPermissionsResponse)(nil),                             // 214: lnrpc.ListPermissionsResponse
-	(*Failure)(nil),                                             // 215: lnrpc.Failure
-	(*ChannelUpdate)(nil),                                       // 216: lnrpc.ChannelUpdate
-	(*MacaroonId)(nil),                                          // 217: lnrpc.MacaroonId
-	(*Op)(nil),                                                  // 218: lnrpc.Op
-	(*CheckMacPermRequest)(nil),                                 // 219: lnrpc.CheckMacPermRequest
-	(*CheckMacPermResponse)(nil),                                // 220: lnrpc.CheckMacPermResponse
-	(*RPCMiddlewareRequest)(nil),                                // 221: lnrpc.RPCMiddlewareRequest
-	(*MetadataValues)(nil),                                      // 222: lnrpc.MetadataValues
-	(*StreamAuth)(nil),                                          // 223: lnrpc.StreamAuth
-	(*RPCMessage)(nil),                                          // 224: lnrpc.RPCMessage
-	(*RPCMiddlewareResponse)(nil),                               // 225: lnrpc.RPCMiddlewareResponse
-	(*MiddlewareRegistration)(nil),                              // 226: lnrpc.MiddlewareRegistration
-	(*InterceptFeedback)(nil),                                   // 227: lnrpc.InterceptFeedback
-	nil,                                                         // 228: lnrpc.OnionMessageUpdate.CustomRecordsEntry
-	nil,                                                         // 229: lnrpc.EstimateFeeRequest.AddrToAmountEntry
-	nil,                                                         // 230: lnrpc.SendManyRequest.AddrToAmountEntry
-	nil,                                                         // 231: lnrpc.Peer.FeaturesEntry
-	nil,                                                         // 232: lnrpc.GetInfoResponse.FeaturesEntry
-	nil,                                                         // 233: lnrpc.GetDebugInfoResponse.ConfigEntry
-	(*PendingChannelsResponse_PendingChannel)(nil),              // 234: lnrpc.PendingChannelsResponse.PendingChannel
-	(*PendingChannelsResponse_PendingOpenChannel)(nil),          // 235: lnrpc.PendingChannelsResponse.PendingOpenChannel
-	(*PendingChannelsResponse_WaitingCloseChannel)(nil),         // 236: lnrpc.PendingChannelsResponse.WaitingCloseChannel
-	(*PendingChannelsResponse_Commitments)(nil),                 // 237: lnrpc.PendingChannelsResponse.Commitments
-	(*PendingChannelsResponse_ClosedChannel)(nil),               // 238: lnrpc.PendingChannelsResponse.ClosedChannel
-	(*PendingChannelsResponse_ForceClosedChannel)(nil),          // 239: lnrpc.PendingChannelsResponse.ForceClosedChannel
-	nil, // 240: lnrpc.WalletBalanceResponse.AccountBalanceEntry
-	nil, // 241: lnrpc.QueryRoutesRequest.DestCustomRecordsEntry
-	nil, // 242: lnrpc.Hop.CustomRecordsEntry
-	nil, // 243: lnrpc.LightningNode.FeaturesEntry
-	nil, // 244: lnrpc.LightningNode.CustomRecordsEntry
-	nil, // 245: lnrpc.RoutingPolicy.CustomRecordsEntry
-	nil, // 246: lnrpc.ChannelEdge.CustomRecordsEntry
-	nil, // 247: lnrpc.NodeMetricsResponse.BetweennessCentralityEntry
-	nil, // 248: lnrpc.NodeUpdate.FeaturesEntry
-	nil, // 249: lnrpc.Invoice.FeaturesEntry
-	nil, // 250: lnrpc.Invoice.AmpInvoiceStateEntry
-	nil, // 251: lnrpc.InvoiceHTLC.CustomRecordsEntry
-	nil, // 252: lnrpc.Payment.FirstHopCustomRecordsEntry
-	nil, // 253: lnrpc.PayReq.FeaturesEntry
-	nil, // 254: lnrpc.ListPermissionsResponse.MethodPermissionsEntry
-	nil, // 255: lnrpc.RPCMiddlewareRequest.MetadataPairsEntry
+	(*CreateOfferRequest)(nil),                                  // 32: lnrpc.CreateOfferRequest
+	(*CreateOfferResponse)(nil),                                 // 33: lnrpc.CreateOfferResponse
+	(*Utxo)(nil),                                                // 34: lnrpc.Utxo
+	(*OutputDetail)(nil),                                        // 35: lnrpc.OutputDetail
+	(*Transaction)(nil),                                         // 36: lnrpc.Transaction
+	(*GetTransactionsRequest)(nil),                              // 37: lnrpc.GetTransactionsRequest
+	(*TransactionDetails)(nil),                                  // 38: lnrpc.TransactionDetails
+	(*FeeLimit)(nil),                                            // 39: lnrpc.FeeLimit
+	(*ChannelAcceptRequest)(nil),                                // 40: lnrpc.ChannelAcceptRequest
+	(*ChannelAcceptResponse)(nil),                               // 41: lnrpc.ChannelAcceptResponse
+	(*ChannelPoint)(nil),                                        // 42: lnrpc.ChannelPoint
+	(*OutPoint)(nil),                                            // 43: lnrpc.OutPoint
+	(*PreviousOutPoint)(nil),                                    // 44: lnrpc.PreviousOutPoint
+	(*LightningAddress)(nil),                                    // 45: lnrpc.LightningAddress
+	(*EstimateFeeRequest)(nil),                                  // 46: lnrpc.EstimateFeeRequest
+	(*EstimateFeeResponse)(nil),                                 // 47: lnrpc.EstimateFeeResponse
+	(*SendManyRequest)(nil),                                     // 48: lnrpc.SendManyRequest
+	(*SendManyResponse)(nil),                                    // 49: lnrpc.SendManyResponse
+	(*SendCoinsRequest)(nil),                                    // 50: lnrpc.SendCoinsRequest
+	(*SendCoinsResponse)(nil),                                   // 51: lnrpc.SendCoinsResponse
+	(*ListUnspentRequest)(nil),                                  // 52: lnrpc.ListUnspentRequest
+	(*ListUnspentResponse)(nil),                                 // 53: lnrpc.ListUnspentResponse
+	(*NewAddressRequest)(nil),                                   // 54: lnrpc.NewAddressRequest
+	(*NewAddressResponse)(nil),                                  // 55: lnrpc.NewAddressResponse
+	(*SignMessageRequest)(nil),                                  // 56: lnrpc.SignMessageRequest
+	(*SignMessageResponse)(nil),                                 // 57: lnrpc.SignMessageResponse
+	(*VerifyMessageRequest)(nil),                                // 58: lnrpc.VerifyMessageRequest
+	(*VerifyMessageResponse)(nil),                               // 59: lnrpc.VerifyMessageResponse
+	(*ConnectPeerRequest)(nil),                                  // 60: lnrpc.ConnectPeerRequest
+	(*ConnectPeerResponse)(nil),                                 // 61: lnrpc.ConnectPeerResponse
+	(*DisconnectPeerRequest)(nil),                               // 62: lnrpc.DisconnectPeerRequest
+	(*DisconnectPeerResponse)(nil),                              // 63: lnrpc.DisconnectPeerResponse
+	(*HTLC)(nil),                                                // 64: lnrpc.HTLC
+	(*ChannelConstraints)(nil),                                  // 65: lnrpc.ChannelConstraints
+	(*Channel)(nil),                                             // 66: lnrpc.Channel
+	(*ListChannelsRequest)(nil),                                 // 67: lnrpc.ListChannelsRequest
+	(*ListChannelsResponse)(nil),                                // 68: lnrpc.ListChannelsResponse
+	(*AliasMap)(nil),                                            // 69: lnrpc.AliasMap
+	(*ListAliasesRequest)(nil),                                  // 70: lnrpc.ListAliasesRequest
+	(*ListAliasesResponse)(nil),                                 // 71: lnrpc.ListAliasesResponse
+	(*ChannelCloseSummary)(nil),                                 // 72: lnrpc.ChannelCloseSummary
+	(*Resolution)(nil),                                          // 73: lnrpc.Resolution
+	(*ClosedChannelsRequest)(nil),                               // 74: lnrpc.ClosedChannelsRequest
+	(*ClosedChannelsResponse)(nil),                              // 75: lnrpc.ClosedChannelsResponse
+	(*Peer)(nil),                                                // 76: lnrpc.Peer
+	(*TimestampedError)(nil),                                    // 77: lnrpc.TimestampedError
+	(*ListPeersRequest)(nil),                                    // 78: lnrpc.ListPeersRequest
+	(*ListPeersResponse)(nil),                                   // 79: lnrpc.ListPeersResponse
+	(*PeerEventSubscription)(nil),                               // 80: lnrpc.PeerEventSubscription
+	(*PeerEvent)(nil),                                           // 81: lnrpc.PeerEvent
+	(*GetInfoRequest)(nil),                                      // 82: lnrpc.GetInfoRequest
+	(*GetInfoResponse)(nil),                                     // 83: lnrpc.GetInfoResponse
+	(*GetDebugInfoRequest)(nil),                                 // 84: lnrpc.GetDebugInfoRequest
+	(*GetDebugInfoResponse)(nil),                                // 85: lnrpc.GetDebugInfoResponse
+	(*GetRecoveryInfoRequest)(nil),                              // 86: lnrpc.GetRecoveryInfoRequest
+	(*GetRecoveryInfoResponse)(nil),                             // 87: lnrpc.GetRecoveryInfoResponse
+	(*Chain)(nil),                                               // 88: lnrpc.Chain
+	(*ChannelOpenUpdate)(nil),                                   // 89: lnrpc.ChannelOpenUpdate
+	(*CloseOutput)(nil),                                         // 90: lnrpc.CloseOutput
+	(*ChannelCloseUpdate)(nil),                                  // 91: lnrpc.ChannelCloseUpdate
+	(*CloseChannelRequest)(nil),                                 // 92: lnrpc.CloseChannelRequest
+	(*CloseStatusUpdate)(nil),                                   // 93: lnrpc.CloseStatusUpdate
+	(*PendingUpdate)(nil),                                       // 94: lnrpc.PendingUpdate
+	(*InstantUpdate)(nil),                                       // 95: lnrpc.InstantUpdate
+	(*ReadyForPsbtFunding)(nil),                                 // 96: lnrpc.ReadyForPsbtFunding
+	(*BatchOpenChannelRequest)(nil),                             // 97: lnrpc.BatchOpenChannelRequest
+	(*BatchOpenChannel)(nil),                                    // 98: lnrpc.BatchOpenChannel
+	(*BatchOpenChannelResponse)(nil),                            // 99: lnrpc.BatchOpenChannelResponse
+	(*OpenChannelRequest)(nil),                                  // 100: lnrpc.OpenChannelRequest
+	(*OpenStatusUpdate)(nil),                                    // 101: lnrpc.OpenStatusUpdate
+	(*KeyLocator)(nil),                                          // 102: lnrpc.KeyLocator
+	(*KeyDescriptor)(nil),                                       // 103: lnrpc.KeyDescriptor
+	(*ChanPointShim)(nil),                                       // 104: lnrpc.ChanPointShim
+	(*PsbtShim)(nil),                                            // 105: lnrpc.PsbtShim
+	(*FundingShim)(nil),                                         // 106: lnrpc.FundingShim
+	(*FundingShimCancel)(nil),                                   // 107: lnrpc.FundingShimCancel
+	(*FundingPsbtVerify)(nil),                                   // 108: lnrpc.FundingPsbtVerify
+	(*FundingPsbtFinalize)(nil),                                 // 109: lnrpc.FundingPsbtFinalize
+	(*FundingTransitionMsg)(nil),                                // 110: lnrpc.FundingTransitionMsg
+	(*FundingStateStepResp)(nil),                                // 111: lnrpc.FundingStateStepResp
+	(*PendingHTLC)(nil),                                         // 112: lnrpc.PendingHTLC
+	(*PendingChannelsRequest)(nil),                              // 113: lnrpc.PendingChannelsRequest
+	(*PendingChannelsResponse)(nil),                             // 114: lnrpc.PendingChannelsResponse
+	(*ChannelEventSubscription)(nil),                            // 115: lnrpc.ChannelEventSubscription
+	(*ChannelCommitUpdate)(nil),                                 // 116: lnrpc.ChannelCommitUpdate
+	(*ChannelEventUpdate)(nil),                                  // 117: lnrpc.ChannelEventUpdate
+	(*WalletAccountBalance)(nil),                                // 118: lnrpc.WalletAccountBalance
+	(*WalletBalanceRequest)(nil),                                // 119: lnrpc.WalletBalanceRequest
+	(*WalletBalanceResponse)(nil),                               // 120: lnrpc.WalletBalanceResponse
+	(*Amount)(nil),                                              // 121: lnrpc.Amount
+	(*ChannelBalanceRequest)(nil),                               // 122: lnrpc.ChannelBalanceRequest
+	(*ChannelBalanceResponse)(nil),                              // 123: lnrpc.ChannelBalanceResponse
+	(*QueryRoutesRequest)(nil),                                  // 124: lnrpc.QueryRoutesRequest
+	(*NodePair)(nil),                                            // 125: lnrpc.NodePair
+	(*EdgeLocator)(nil),                                         // 126: lnrpc.EdgeLocator
+	(*QueryRoutesResponse)(nil),                                 // 127: lnrpc.QueryRoutesResponse
+	(*Hop)(nil),                                                 // 128: lnrpc.Hop
+	(*MPPRecord)(nil),                                           // 129: lnrpc.MPPRecord
+	(*AMPRecord)(nil),                                           // 130: lnrpc.AMPRecord
+	(*Route)(nil),                                               // 131: lnrpc.Route
+	(*NodeInfoRequest)(nil),                                     // 132: lnrpc.NodeInfoRequest
+	(*NodeInfo)(nil),                                            // 133: lnrpc.NodeInfo
+	(*LightningNode)(nil),                                       // 134: lnrpc.LightningNode
+	(*NodeAddress)(nil),                                         // 135: lnrpc.NodeAddress
+	(*RoutingPolicy)(nil),                                       // 136: lnrpc.RoutingPolicy
+	(*ChannelAuthProof)(nil),                                    // 137: lnrpc.ChannelAuthProof
+	(*ChannelEdge)(nil),                                         // 138: lnrpc.ChannelEdge
+	(*ChannelGraphRequest)(nil),                                 // 139: lnrpc.ChannelGraphRequest
+	(*ChannelGraph)(nil),                                        // 140: lnrpc.ChannelGraph
+	(*NodeMetricsRequest)(nil),                                  // 141: lnrpc.NodeMetricsRequest
+	(*NodeMetricsResponse)(nil),                                 // 142: lnrpc.NodeMetricsResponse
+	(*FloatMetric)(nil),                                         // 143: lnrpc.FloatMetric
+	(*ChanInfoRequest)(nil),                                     // 144: lnrpc.ChanInfoRequest
+	(*NetworkInfoRequest)(nil),                                  // 145: lnrpc.NetworkInfoRequest
+	(*NetworkInfo)(nil),                                         // 146: lnrpc.NetworkInfo
+	(*StopRequest)(nil),                                         // 147: lnrpc.StopRequest
+	(*StopResponse)(nil),                                        // 148: lnrpc.StopResponse
+	(*GraphTopologySubscription)(nil),                           // 149: lnrpc.GraphTopologySubscription
+	(*GraphTopologyUpdate)(nil),                                 // 150: lnrpc.GraphTopologyUpdate
+	(*NodeUpdate)(nil),                                          // 151: lnrpc.NodeUpdate
+	(*ChannelEdgeUpdate)(nil),                                   // 152: lnrpc.ChannelEdgeUpdate
+	(*ClosedChannelUpdate)(nil),                                 // 153: lnrpc.ClosedChannelUpdate
+	(*HopHint)(nil),                                             // 154: lnrpc.HopHint
+	(*SetID)(nil),                                               // 155: lnrpc.SetID
+	(*RouteHint)(nil),                                           // 156: lnrpc.RouteHint
+	(*BlindedPaymentPath)(nil),                                  // 157: lnrpc.BlindedPaymentPath
+	(*BlindedPath)(nil),                                         // 158: lnrpc.BlindedPath
+	(*BlindedHop)(nil),                                          // 159: lnrpc.BlindedHop
+	(*AMPInvoiceState)(nil),                                     // 160: lnrpc.AMPInvoiceState
+	(*Invoice)(nil),                                             // 161: lnrpc.Invoice
+	(*BlindedPathConfig)(nil),                                   // 162: lnrpc.BlindedPathConfig
+	(*InvoiceHTLC)(nil),                                         // 163: lnrpc.InvoiceHTLC
+	(*AMP)(nil),                                                 // 164: lnrpc.AMP
+	(*AddInvoiceResponse)(nil),                                  // 165: lnrpc.AddInvoiceResponse
+	(*PaymentHash)(nil),                                         // 166: lnrpc.PaymentHash
+	(*ListInvoiceRequest)(nil),                                  // 167: lnrpc.ListInvoiceRequest
+	(*ListInvoiceResponse)(nil),                                 // 168: lnrpc.ListInvoiceResponse
+	(*InvoiceSubscription)(nil),                                 // 169: lnrpc.InvoiceSubscription
+	(*DelCanceledInvoiceReq)(nil),                               // 170: lnrpc.DelCanceledInvoiceReq
+	(*DelCanceledInvoiceResp)(nil),                              // 171: lnrpc.DelCanceledInvoiceResp
+	(*Payment)(nil),                                             // 172: lnrpc.Payment
+	(*HTLCAttempt)(nil),                                         // 173: lnrpc.HTLCAttempt
+	(*ListPaymentsRequest)(nil),                                 // 174: lnrpc.ListPaymentsRequest
+	(*ListPaymentsResponse)(nil),                                // 175: lnrpc.ListPaymentsResponse
+	(*DeletePaymentRequest)(nil),                                // 176: lnrpc.DeletePaymentRequest
+	(*DeleteAllPaymentsRequest)(nil),                            // 177: lnrpc.DeleteAllPaymentsRequest
+	(*DeletePaymentResponse)(nil),                               // 178: lnrpc.DeletePaymentResponse
+	(*DeleteAllPaymentsResponse)(nil),                           // 179: lnrpc.DeleteAllPaymentsResponse
+	(*AbandonChannelRequest)(nil),                               // 180: lnrpc.AbandonChannelRequest
+	(*AbandonChannelResponse)(nil),                              // 181: lnrpc.AbandonChannelResponse
+	(*DebugLevelRequest)(nil),                                   // 182: lnrpc.DebugLevelRequest
+	(*DebugLevelResponse)(nil),                                  // 183: lnrpc.DebugLevelResponse
+	(*PayReqString)(nil),                                        // 184: lnrpc.PayReqString
+	(*PayReq)(nil),                                              // 185: lnrpc.PayReq
+	(*Feature)(nil),                                             // 186: lnrpc.Feature
+	(*FeeReportRequest)(nil),                                    // 187: lnrpc.FeeReportRequest
+	(*ChannelFeeReport)(nil),                                    // 188: lnrpc.ChannelFeeReport
+	(*FeeReportResponse)(nil),                                   // 189: lnrpc.FeeReportResponse
+	(*InboundFee)(nil),                                          // 190: lnrpc.InboundFee
+	(*PolicyUpdateRequest)(nil),                                 // 191: lnrpc.PolicyUpdateRequest
+	(*FailedUpdate)(nil),                                        // 192: lnrpc.FailedUpdate
+	(*PolicyUpdateResponse)(nil),                                // 193: lnrpc.PolicyUpdateResponse
+	(*ForwardingHistoryRequest)(nil),                            // 194: lnrpc.ForwardingHistoryRequest
+	(*ForwardingEvent)(nil),                                     // 195: lnrpc.ForwardingEvent
+	(*ForwardingHistoryResponse)(nil),                           // 196: lnrpc.ForwardingHistoryResponse
+	(*ExportChannelBackupRequest)(nil),                          // 197: lnrpc.ExportChannelBackupRequest
+	(*ChannelBackup)(nil),                                       // 198: lnrpc.ChannelBackup
+	(*MultiChanBackup)(nil),                                     // 199: lnrpc.MultiChanBackup
+	(*ChanBackupExportRequest)(nil),                             // 200: lnrpc.ChanBackupExportRequest
+	(*ChanBackupSnapshot)(nil),                                  // 201: lnrpc.ChanBackupSnapshot
+	(*ChannelBackups)(nil),                                      // 202: lnrpc.ChannelBackups
+	(*RestoreChanBackupRequest)(nil),                            // 203: lnrpc.RestoreChanBackupRequest
+	(*RestoreBackupResponse)(nil),                               // 204: lnrpc.RestoreBackupResponse
+	(*ChannelBackupSubscription)(nil),                           // 205: lnrpc.ChannelBackupSubscription
+	(*VerifyChanBackupResponse)(nil),                            // 206: lnrpc.VerifyChanBackupResponse
+	(*MacaroonPermission)(nil),                                  // 207: lnrpc.MacaroonPermission
+	(*BakeMacaroonRequest)(nil),                                 // 208: lnrpc.BakeMacaroonRequest
+	(*BakeMacaroonResponse)(nil),                                // 209: lnrpc.BakeMacaroonResponse
+	(*ListMacaroonIDsRequest)(nil),                              // 210: lnrpc.ListMacaroonIDsRequest
+	(*ListMacaroonIDsResponse)(nil),                             // 211: lnrpc.ListMacaroonIDsResponse
+	(*DeleteMacaroonIDRequest)(nil),                             // 212: lnrpc.DeleteMacaroonIDRequest
+	(*DeleteMacaroonIDResponse)(nil),                            // 213: lnrpc.DeleteMacaroonIDResponse
+	(*MacaroonPermissionList)(nil),                              // 214: lnrpc.MacaroonPermissionList
+	(*ListPermissionsRequest)(nil),                              // 215: lnrpc.ListPermissionsRequest
+	(*ListPermissionsResponse)(nil),                             // 216: lnrpc.ListPermissionsResponse
+	(*Failure)(nil),                                             // 217: lnrpc.Failure
+	(*ChannelUpdate)(nil),                                       // 218: lnrpc.ChannelUpdate
+	(*MacaroonId)(nil),                                          // 219: lnrpc.MacaroonId
+	(*Op)(nil),                                                  // 220: lnrpc.Op
+	(*CheckMacPermRequest)(nil),                                 // 221: lnrpc.CheckMacPermRequest
+	(*CheckMacPermResponse)(nil),                                // 222: lnrpc.CheckMacPermResponse
+	(*RPCMiddlewareRequest)(nil),                                // 223: lnrpc.RPCMiddlewareRequest
+	(*MetadataValues)(nil),                                      // 224: lnrpc.MetadataValues
+	(*StreamAuth)(nil),                                          // 225: lnrpc.StreamAuth
+	(*RPCMessage)(nil),                                          // 226: lnrpc.RPCMessage
+	(*RPCMiddlewareResponse)(nil),                               // 227: lnrpc.RPCMiddlewareResponse
+	(*MiddlewareRegistration)(nil),                              // 228: lnrpc.MiddlewareRegistration
+	(*InterceptFeedback)(nil),                                   // 229: lnrpc.InterceptFeedback
+	nil,                                                         // 230: lnrpc.OnionMessageUpdate.CustomRecordsEntry
+	nil,                                                         // 231: lnrpc.EstimateFeeRequest.AddrToAmountEntry
+	nil,                                                         // 232: lnrpc.SendManyRequest.AddrToAmountEntry
+	nil,                                                         // 233: lnrpc.Peer.FeaturesEntry
+	nil,                                                         // 234: lnrpc.GetInfoResponse.FeaturesEntry
+	nil,                                                         // 235: lnrpc.GetDebugInfoResponse.ConfigEntry
+	(*PendingChannelsResponse_PendingChannel)(nil),              // 236: lnrpc.PendingChannelsResponse.PendingChannel
+	(*PendingChannelsResponse_PendingOpenChannel)(nil),          // 237: lnrpc.PendingChannelsResponse.PendingOpenChannel
+	(*PendingChannelsResponse_WaitingCloseChannel)(nil),         // 238: lnrpc.PendingChannelsResponse.WaitingCloseChannel
+	(*PendingChannelsResponse_Commitments)(nil),                 // 239: lnrpc.PendingChannelsResponse.Commitments
+	(*PendingChannelsResponse_ClosedChannel)(nil),               // 240: lnrpc.PendingChannelsResponse.ClosedChannel
+	(*PendingChannelsResponse_ForceClosedChannel)(nil),          // 241: lnrpc.PendingChannelsResponse.ForceClosedChannel
+	nil, // 242: lnrpc.WalletBalanceResponse.AccountBalanceEntry
+	nil, // 243: lnrpc.QueryRoutesRequest.DestCustomRecordsEntry
+	nil, // 244: lnrpc.Hop.CustomRecordsEntry
+	nil, // 245: lnrpc.LightningNode.FeaturesEntry
+	nil, // 246: lnrpc.LightningNode.CustomRecordsEntry
+	nil, // 247: lnrpc.RoutingPolicy.CustomRecordsEntry
+	nil, // 248: lnrpc.ChannelEdge.CustomRecordsEntry
+	nil, // 249: lnrpc.NodeMetricsResponse.BetweennessCentralityEntry
+	nil, // 250: lnrpc.NodeUpdate.FeaturesEntry
+	nil, // 251: lnrpc.Invoice.FeaturesEntry
+	nil, // 252: lnrpc.Invoice.AmpInvoiceStateEntry
+	nil, // 253: lnrpc.InvoiceHTLC.CustomRecordsEntry
+	nil, // 254: lnrpc.Payment.FirstHopCustomRecordsEntry
+	nil, // 255: lnrpc.PayReq.FeaturesEntry
+	nil, // 256: lnrpc.ListPermissionsResponse.MethodPermissionsEntry
+	nil, // 257: lnrpc.RPCMiddlewareRequest.MetadataPairsEntry
 }
 var file_lightning_proto_depIdxs = []int32{
-	156, // 0: lnrpc.OnionMessageUpdate.reply_path:type_name -> lnrpc.BlindedPath
-	228, // 1: lnrpc.OnionMessageUpdate.custom_records:type_name -> lnrpc.OnionMessageUpdate.CustomRecordsEntry
+	158, // 0: lnrpc.OnionMessageUpdate.reply_path:type_name -> lnrpc.BlindedPath
+	230, // 1: lnrpc.OnionMessageUpdate.custom_records:type_name -> lnrpc.OnionMessageUpdate.CustomRecordsEntry
 	2,   // 2: lnrpc.Utxo.address_type:type_name -> lnrpc.AddressType
-	41,  // 3: lnrpc.Utxo.outpoint:type_name -> lnrpc.OutPoint
+	43,  // 3: lnrpc.Utxo.outpoint:type_name -> lnrpc.OutPoint
 	0,   // 4: lnrpc.OutputDetail.output_type:type_name -> lnrpc.OutputScriptType
-	33,  // 5: lnrpc.Transaction.output_details:type_name -> lnrpc.OutputDetail
-	42,  // 6: lnrpc.Transaction.previous_outpoints:type_name -> lnrpc.PreviousOutPoint
-	34,  // 7: lnrpc.TransactionDetails.transactions:type_name -> lnrpc.Transaction
+	35,  // 5: lnrpc.Transaction.output_details:type_name -> lnrpc.OutputDetail
+	44,  // 6: lnrpc.Transaction.previous_outpoints:type_name -> lnrpc.PreviousOutPoint
+	36,  // 7: lnrpc.TransactionDetails.transactions:type_name -> lnrpc.Transaction
 	3,   // 8: lnrpc.ChannelAcceptRequest.commitment_type:type_name -> lnrpc.CommitmentType
-	229, // 9: lnrpc.EstimateFeeRequest.AddrToAmount:type_name -> lnrpc.EstimateFeeRequest.AddrToAmountEntry
+	231, // 9: lnrpc.EstimateFeeRequest.AddrToAmount:type_name -> lnrpc.EstimateFeeRequest.AddrToAmountEntry
 	1,   // 10: lnrpc.EstimateFeeRequest.coin_selection_strategy:type_name -> lnrpc.CoinSelectionStrategy
-	41,  // 11: lnrpc.EstimateFeeRequest.inputs:type_name -> lnrpc.OutPoint
-	41,  // 12: lnrpc.EstimateFeeResponse.inputs:type_name -> lnrpc.OutPoint
-	230, // 13: lnrpc.SendManyRequest.AddrToAmount:type_name -> lnrpc.SendManyRequest.AddrToAmountEntry
+	43,  // 11: lnrpc.EstimateFeeRequest.inputs:type_name -> lnrpc.OutPoint
+	43,  // 12: lnrpc.EstimateFeeResponse.inputs:type_name -> lnrpc.OutPoint
+	232, // 13: lnrpc.SendManyRequest.AddrToAmount:type_name -> lnrpc.SendManyRequest.AddrToAmountEntry
 	1,   // 14: lnrpc.SendManyRequest.coin_selection_strategy:type_name -> lnrpc.CoinSelectionStrategy
 	1,   // 15: lnrpc.SendCoinsRequest.coin_selection_strategy:type_name -> lnrpc.CoinSelectionStrategy
-	41,  // 16: lnrpc.SendCoinsRequest.outpoints:type_name -> lnrpc.OutPoint
-	32,  // 17: lnrpc.ListUnspentResponse.utxos:type_name -> lnrpc.Utxo
+	43,  // 16: lnrpc.SendCoinsRequest.outpoints:type_name -> lnrpc.OutPoint
+	34,  // 17: lnrpc.ListUnspentResponse.utxos:type_name -> lnrpc.Utxo
 	2,   // 18: lnrpc.NewAddressRequest.type:type_name -> lnrpc.AddressType
-	43,  // 19: lnrpc.ConnectPeerRequest.addr:type_name -> lnrpc.LightningAddress
-	62,  // 20: lnrpc.Channel.pending_htlcs:type_name -> lnrpc.HTLC
+	45,  // 19: lnrpc.ConnectPeerRequest.addr:type_name -> lnrpc.LightningAddress
+	64,  // 20: lnrpc.Channel.pending_htlcs:type_name -> lnrpc.HTLC
 	3,   // 21: lnrpc.Channel.commitment_type:type_name -> lnrpc.CommitmentType
-	63,  // 22: lnrpc.Channel.local_constraints:type_name -> lnrpc.ChannelConstraints
-	63,  // 23: lnrpc.Channel.remote_constraints:type_name -> lnrpc.ChannelConstraints
-	64,  // 24: lnrpc.ListChannelsResponse.channels:type_name -> lnrpc.Channel
-	67,  // 25: lnrpc.ListAliasesResponse.alias_maps:type_name -> lnrpc.AliasMap
+	65,  // 22: lnrpc.Channel.local_constraints:type_name -> lnrpc.ChannelConstraints
+	65,  // 23: lnrpc.Channel.remote_constraints:type_name -> lnrpc.ChannelConstraints
+	66,  // 24: lnrpc.ListChannelsResponse.channels:type_name -> lnrpc.Channel
+	69,  // 25: lnrpc.ListAliasesResponse.alias_maps:type_name -> lnrpc.AliasMap
 	13,  // 26: lnrpc.ChannelCloseSummary.close_type:type_name -> lnrpc.ChannelCloseSummary.ClosureType
 	4,   // 27: lnrpc.ChannelCloseSummary.open_initiator:type_name -> lnrpc.Initiator
 	4,   // 28: lnrpc.ChannelCloseSummary.close_initiator:type_name -> lnrpc.Initiator
-	71,  // 29: lnrpc.ChannelCloseSummary.resolutions:type_name -> lnrpc.Resolution
+	73,  // 29: lnrpc.ChannelCloseSummary.resolutions:type_name -> lnrpc.Resolution
 	5,   // 30: lnrpc.Resolution.resolution_type:type_name -> lnrpc.ResolutionType
 	6,   // 31: lnrpc.Resolution.outcome:type_name -> lnrpc.ResolutionOutcome
-	41,  // 32: lnrpc.Resolution.outpoint:type_name -> lnrpc.OutPoint
-	70,  // 33: lnrpc.ClosedChannelsResponse.channels:type_name -> lnrpc.ChannelCloseSummary
+	43,  // 32: lnrpc.Resolution.outpoint:type_name -> lnrpc.OutPoint
+	72,  // 33: lnrpc.ClosedChannelsResponse.channels:type_name -> lnrpc.ChannelCloseSummary
 	14,  // 34: lnrpc.Peer.sync_type:type_name -> lnrpc.Peer.SyncType
-	231, // 35: lnrpc.Peer.features:type_name -> lnrpc.Peer.FeaturesEntry
-	75,  // 36: lnrpc.Peer.errors:type_name -> lnrpc.TimestampedError
-	74,  // 37: lnrpc.ListPeersResponse.peers:type_name -> lnrpc.Peer
+	233, // 35: lnrpc.Peer.features:type_name -> lnrpc.Peer.FeaturesEntry
+	77,  // 36: lnrpc.Peer.errors:type_name -> lnrpc.TimestampedError
+	76,  // 37: lnrpc.ListPeersResponse.peers:type_name -> lnrpc.Peer
 	15,  // 38: lnrpc.PeerEvent.type:type_name -> lnrpc.PeerEvent.EventType
-	86,  // 39: lnrpc.GetInfoResponse.chains:type_name -> lnrpc.Chain
-	232, // 40: lnrpc.GetInfoResponse.features:type_name -> lnrpc.GetInfoResponse.FeaturesEntry
+	88,  // 39: lnrpc.GetInfoResponse.chains:type_name -> lnrpc.Chain
+	234, // 40: lnrpc.GetInfoResponse.features:type_name -> lnrpc.GetInfoResponse.FeaturesEntry
 	7,   // 41: lnrpc.GetInfoResponse.graph_cache_status:type_name -> lnrpc.GraphCacheStatus
-	233, // 42: lnrpc.GetDebugInfoResponse.config:type_name -> lnrpc.GetDebugInfoResponse.ConfigEntry
-	40,  // 43: lnrpc.ChannelOpenUpdate.channel_point:type_name -> lnrpc.ChannelPoint
-	88,  // 44: lnrpc.ChannelCloseUpdate.local_close_output:type_name -> lnrpc.CloseOutput
-	88,  // 45: lnrpc.ChannelCloseUpdate.remote_close_output:type_name -> lnrpc.CloseOutput
-	88,  // 46: lnrpc.ChannelCloseUpdate.additional_outputs:type_name -> lnrpc.CloseOutput
-	40,  // 47: lnrpc.CloseChannelRequest.channel_point:type_name -> lnrpc.ChannelPoint
-	92,  // 48: lnrpc.CloseStatusUpdate.close_pending:type_name -> lnrpc.PendingUpdate
-	89,  // 49: lnrpc.CloseStatusUpdate.chan_close:type_name -> lnrpc.ChannelCloseUpdate
-	93,  // 50: lnrpc.CloseStatusUpdate.close_instant:type_name -> lnrpc.InstantUpdate
-	96,  // 51: lnrpc.BatchOpenChannelRequest.channels:type_name -> lnrpc.BatchOpenChannel
+	235, // 42: lnrpc.GetDebugInfoResponse.config:type_name -> lnrpc.GetDebugInfoResponse.ConfigEntry
+	42,  // 43: lnrpc.ChannelOpenUpdate.channel_point:type_name -> lnrpc.ChannelPoint
+	90,  // 44: lnrpc.ChannelCloseUpdate.local_close_output:type_name -> lnrpc.CloseOutput
+	90,  // 45: lnrpc.ChannelCloseUpdate.remote_close_output:type_name -> lnrpc.CloseOutput
+	90,  // 46: lnrpc.ChannelCloseUpdate.additional_outputs:type_name -> lnrpc.CloseOutput
+	42,  // 47: lnrpc.CloseChannelRequest.channel_point:type_name -> lnrpc.ChannelPoint
+	94,  // 48: lnrpc.CloseStatusUpdate.close_pending:type_name -> lnrpc.PendingUpdate
+	91,  // 49: lnrpc.CloseStatusUpdate.chan_close:type_name -> lnrpc.ChannelCloseUpdate
+	95,  // 50: lnrpc.CloseStatusUpdate.close_instant:type_name -> lnrpc.InstantUpdate
+	98,  // 51: lnrpc.BatchOpenChannelRequest.channels:type_name -> lnrpc.BatchOpenChannel
 	1,   // 52: lnrpc.BatchOpenChannelRequest.coin_selection_strategy:type_name -> lnrpc.CoinSelectionStrategy
 	3,   // 53: lnrpc.BatchOpenChannel.commitment_type:type_name -> lnrpc.CommitmentType
-	92,  // 54: lnrpc.BatchOpenChannelResponse.pending_channels:type_name -> lnrpc.PendingUpdate
-	104, // 55: lnrpc.OpenChannelRequest.funding_shim:type_name -> lnrpc.FundingShim
+	94,  // 54: lnrpc.BatchOpenChannelResponse.pending_channels:type_name -> lnrpc.PendingUpdate
+	106, // 55: lnrpc.OpenChannelRequest.funding_shim:type_name -> lnrpc.FundingShim
 	3,   // 56: lnrpc.OpenChannelRequest.commitment_type:type_name -> lnrpc.CommitmentType
-	41,  // 57: lnrpc.OpenChannelRequest.outpoints:type_name -> lnrpc.OutPoint
-	92,  // 58: lnrpc.OpenStatusUpdate.chan_pending:type_name -> lnrpc.PendingUpdate
-	87,  // 59: lnrpc.OpenStatusUpdate.chan_open:type_name -> lnrpc.ChannelOpenUpdate
-	94,  // 60: lnrpc.OpenStatusUpdate.psbt_fund:type_name -> lnrpc.ReadyForPsbtFunding
-	100, // 61: lnrpc.KeyDescriptor.key_loc:type_name -> lnrpc.KeyLocator
-	40,  // 62: lnrpc.ChanPointShim.chan_point:type_name -> lnrpc.ChannelPoint
-	101, // 63: lnrpc.ChanPointShim.local_key:type_name -> lnrpc.KeyDescriptor
-	102, // 64: lnrpc.FundingShim.chan_point_shim:type_name -> lnrpc.ChanPointShim
-	103, // 65: lnrpc.FundingShim.psbt_shim:type_name -> lnrpc.PsbtShim
-	104, // 66: lnrpc.FundingTransitionMsg.shim_register:type_name -> lnrpc.FundingShim
-	105, // 67: lnrpc.FundingTransitionMsg.shim_cancel:type_name -> lnrpc.FundingShimCancel
-	106, // 68: lnrpc.FundingTransitionMsg.psbt_verify:type_name -> lnrpc.FundingPsbtVerify
-	107, // 69: lnrpc.FundingTransitionMsg.psbt_finalize:type_name -> lnrpc.FundingPsbtFinalize
-	235, // 70: lnrpc.PendingChannelsResponse.pending_open_channels:type_name -> lnrpc.PendingChannelsResponse.PendingOpenChannel
-	238, // 71: lnrpc.PendingChannelsResponse.pending_closing_channels:type_name -> lnrpc.PendingChannelsResponse.ClosedChannel
-	239, // 72: lnrpc.PendingChannelsResponse.pending_force_closing_channels:type_name -> lnrpc.PendingChannelsResponse.ForceClosedChannel
-	236, // 73: lnrpc.PendingChannelsResponse.waiting_close_channels:type_name -> lnrpc.PendingChannelsResponse.WaitingCloseChannel
-	64,  // 74: lnrpc.ChannelCommitUpdate.channel:type_name -> lnrpc.Channel
-	64,  // 75: lnrpc.ChannelEventUpdate.open_channel:type_name -> lnrpc.Channel
-	70,  // 76: lnrpc.ChannelEventUpdate.closed_channel:type_name -> lnrpc.ChannelCloseSummary
-	40,  // 77: lnrpc.ChannelEventUpdate.active_channel:type_name -> lnrpc.ChannelPoint
-	40,  // 78: lnrpc.ChannelEventUpdate.inactive_channel:type_name -> lnrpc.ChannelPoint
-	92,  // 79: lnrpc.ChannelEventUpdate.pending_open_channel:type_name -> lnrpc.PendingUpdate
-	40,  // 80: lnrpc.ChannelEventUpdate.fully_resolved_channel:type_name -> lnrpc.ChannelPoint
-	40,  // 81: lnrpc.ChannelEventUpdate.channel_funding_timeout:type_name -> lnrpc.ChannelPoint
-	114, // 82: lnrpc.ChannelEventUpdate.updated_channel:type_name -> lnrpc.ChannelCommitUpdate
+	43,  // 57: lnrpc.OpenChannelRequest.outpoints:type_name -> lnrpc.OutPoint
+	94,  // 58: lnrpc.OpenStatusUpdate.chan_pending:type_name -> lnrpc.PendingUpdate
+	89,  // 59: lnrpc.OpenStatusUpdate.chan_open:type_name -> lnrpc.ChannelOpenUpdate
+	96,  // 60: lnrpc.OpenStatusUpdate.psbt_fund:type_name -> lnrpc.ReadyForPsbtFunding
+	102, // 61: lnrpc.KeyDescriptor.key_loc:type_name -> lnrpc.KeyLocator
+	42,  // 62: lnrpc.ChanPointShim.chan_point:type_name -> lnrpc.ChannelPoint
+	103, // 63: lnrpc.ChanPointShim.local_key:type_name -> lnrpc.KeyDescriptor
+	104, // 64: lnrpc.FundingShim.chan_point_shim:type_name -> lnrpc.ChanPointShim
+	105, // 65: lnrpc.FundingShim.psbt_shim:type_name -> lnrpc.PsbtShim
+	106, // 66: lnrpc.FundingTransitionMsg.shim_register:type_name -> lnrpc.FundingShim
+	107, // 67: lnrpc.FundingTransitionMsg.shim_cancel:type_name -> lnrpc.FundingShimCancel
+	108, // 68: lnrpc.FundingTransitionMsg.psbt_verify:type_name -> lnrpc.FundingPsbtVerify
+	109, // 69: lnrpc.FundingTransitionMsg.psbt_finalize:type_name -> lnrpc.FundingPsbtFinalize
+	237, // 70: lnrpc.PendingChannelsResponse.pending_open_channels:type_name -> lnrpc.PendingChannelsResponse.PendingOpenChannel
+	240, // 71: lnrpc.PendingChannelsResponse.pending_closing_channels:type_name -> lnrpc.PendingChannelsResponse.ClosedChannel
+	241, // 72: lnrpc.PendingChannelsResponse.pending_force_closing_channels:type_name -> lnrpc.PendingChannelsResponse.ForceClosedChannel
+	238, // 73: lnrpc.PendingChannelsResponse.waiting_close_channels:type_name -> lnrpc.PendingChannelsResponse.WaitingCloseChannel
+	66,  // 74: lnrpc.ChannelCommitUpdate.channel:type_name -> lnrpc.Channel
+	66,  // 75: lnrpc.ChannelEventUpdate.open_channel:type_name -> lnrpc.Channel
+	72,  // 76: lnrpc.ChannelEventUpdate.closed_channel:type_name -> lnrpc.ChannelCloseSummary
+	42,  // 77: lnrpc.ChannelEventUpdate.active_channel:type_name -> lnrpc.ChannelPoint
+	42,  // 78: lnrpc.ChannelEventUpdate.inactive_channel:type_name -> lnrpc.ChannelPoint
+	94,  // 79: lnrpc.ChannelEventUpdate.pending_open_channel:type_name -> lnrpc.PendingUpdate
+	42,  // 80: lnrpc.ChannelEventUpdate.fully_resolved_channel:type_name -> lnrpc.ChannelPoint
+	42,  // 81: lnrpc.ChannelEventUpdate.channel_funding_timeout:type_name -> lnrpc.ChannelPoint
+	116, // 82: lnrpc.ChannelEventUpdate.updated_channel:type_name -> lnrpc.ChannelCommitUpdate
 	17,  // 83: lnrpc.ChannelEventUpdate.type:type_name -> lnrpc.ChannelEventUpdate.UpdateType
-	240, // 84: lnrpc.WalletBalanceResponse.account_balance:type_name -> lnrpc.WalletBalanceResponse.AccountBalanceEntry
-	119, // 85: lnrpc.ChannelBalanceResponse.local_balance:type_name -> lnrpc.Amount
-	119, // 86: lnrpc.ChannelBalanceResponse.remote_balance:type_name -> lnrpc.Amount
-	119, // 87: lnrpc.ChannelBalanceResponse.unsettled_local_balance:type_name -> lnrpc.Amount
-	119, // 88: lnrpc.ChannelBalanceResponse.unsettled_remote_balance:type_name -> lnrpc.Amount
-	119, // 89: lnrpc.ChannelBalanceResponse.pending_open_local_balance:type_name -> lnrpc.Amount
-	119, // 90: lnrpc.ChannelBalanceResponse.pending_open_remote_balance:type_name -> lnrpc.Amount
-	37,  // 91: lnrpc.QueryRoutesRequest.fee_limit:type_name -> lnrpc.FeeLimit
-	124, // 92: lnrpc.QueryRoutesRequest.ignored_edges:type_name -> lnrpc.EdgeLocator
-	123, // 93: lnrpc.QueryRoutesRequest.ignored_pairs:type_name -> lnrpc.NodePair
-	241, // 94: lnrpc.QueryRoutesRequest.dest_custom_records:type_name -> lnrpc.QueryRoutesRequest.DestCustomRecordsEntry
-	154, // 95: lnrpc.QueryRoutesRequest.route_hints:type_name -> lnrpc.RouteHint
-	155, // 96: lnrpc.QueryRoutesRequest.blinded_payment_paths:type_name -> lnrpc.BlindedPaymentPath
+	242, // 84: lnrpc.WalletBalanceResponse.account_balance:type_name -> lnrpc.WalletBalanceResponse.AccountBalanceEntry
+	121, // 85: lnrpc.ChannelBalanceResponse.local_balance:type_name -> lnrpc.Amount
+	121, // 86: lnrpc.ChannelBalanceResponse.remote_balance:type_name -> lnrpc.Amount
+	121, // 87: lnrpc.ChannelBalanceResponse.unsettled_local_balance:type_name -> lnrpc.Amount
+	121, // 88: lnrpc.ChannelBalanceResponse.unsettled_remote_balance:type_name -> lnrpc.Amount
+	121, // 89: lnrpc.ChannelBalanceResponse.pending_open_local_balance:type_name -> lnrpc.Amount
+	121, // 90: lnrpc.ChannelBalanceResponse.pending_open_remote_balance:type_name -> lnrpc.Amount
+	39,  // 91: lnrpc.QueryRoutesRequest.fee_limit:type_name -> lnrpc.FeeLimit
+	126, // 92: lnrpc.QueryRoutesRequest.ignored_edges:type_name -> lnrpc.EdgeLocator
+	125, // 93: lnrpc.QueryRoutesRequest.ignored_pairs:type_name -> lnrpc.NodePair
+	243, // 94: lnrpc.QueryRoutesRequest.dest_custom_records:type_name -> lnrpc.QueryRoutesRequest.DestCustomRecordsEntry
+	156, // 95: lnrpc.QueryRoutesRequest.route_hints:type_name -> lnrpc.RouteHint
+	157, // 96: lnrpc.QueryRoutesRequest.blinded_payment_paths:type_name -> lnrpc.BlindedPaymentPath
 	11,  // 97: lnrpc.QueryRoutesRequest.dest_features:type_name -> lnrpc.FeatureBit
-	129, // 98: lnrpc.QueryRoutesResponse.routes:type_name -> lnrpc.Route
-	127, // 99: lnrpc.Hop.mpp_record:type_name -> lnrpc.MPPRecord
-	128, // 100: lnrpc.Hop.amp_record:type_name -> lnrpc.AMPRecord
-	242, // 101: lnrpc.Hop.custom_records:type_name -> lnrpc.Hop.CustomRecordsEntry
-	126, // 102: lnrpc.Route.hops:type_name -> lnrpc.Hop
-	132, // 103: lnrpc.NodeInfo.node:type_name -> lnrpc.LightningNode
-	136, // 104: lnrpc.NodeInfo.channels:type_name -> lnrpc.ChannelEdge
-	133, // 105: lnrpc.LightningNode.addresses:type_name -> lnrpc.NodeAddress
-	243, // 106: lnrpc.LightningNode.features:type_name -> lnrpc.LightningNode.FeaturesEntry
-	244, // 107: lnrpc.LightningNode.custom_records:type_name -> lnrpc.LightningNode.CustomRecordsEntry
-	245, // 108: lnrpc.RoutingPolicy.custom_records:type_name -> lnrpc.RoutingPolicy.CustomRecordsEntry
-	134, // 109: lnrpc.ChannelEdge.node1_policy:type_name -> lnrpc.RoutingPolicy
-	134, // 110: lnrpc.ChannelEdge.node2_policy:type_name -> lnrpc.RoutingPolicy
-	246, // 111: lnrpc.ChannelEdge.custom_records:type_name -> lnrpc.ChannelEdge.CustomRecordsEntry
-	135, // 112: lnrpc.ChannelEdge.auth_proof:type_name -> lnrpc.ChannelAuthProof
-	132, // 113: lnrpc.ChannelGraph.nodes:type_name -> lnrpc.LightningNode
-	136, // 114: lnrpc.ChannelGraph.edges:type_name -> lnrpc.ChannelEdge
+	131, // 98: lnrpc.QueryRoutesResponse.routes:type_name -> lnrpc.Route
+	129, // 99: lnrpc.Hop.mpp_record:type_name -> lnrpc.MPPRecord
+	130, // 100: lnrpc.Hop.amp_record:type_name -> lnrpc.AMPRecord
+	244, // 101: lnrpc.Hop.custom_records:type_name -> lnrpc.Hop.CustomRecordsEntry
+	128, // 102: lnrpc.Route.hops:type_name -> lnrpc.Hop
+	134, // 103: lnrpc.NodeInfo.node:type_name -> lnrpc.LightningNode
+	138, // 104: lnrpc.NodeInfo.channels:type_name -> lnrpc.ChannelEdge
+	135, // 105: lnrpc.LightningNode.addresses:type_name -> lnrpc.NodeAddress
+	245, // 106: lnrpc.LightningNode.features:type_name -> lnrpc.LightningNode.FeaturesEntry
+	246, // 107: lnrpc.LightningNode.custom_records:type_name -> lnrpc.LightningNode.CustomRecordsEntry
+	247, // 108: lnrpc.RoutingPolicy.custom_records:type_name -> lnrpc.RoutingPolicy.CustomRecordsEntry
+	136, // 109: lnrpc.ChannelEdge.node1_policy:type_name -> lnrpc.RoutingPolicy
+	136, // 110: lnrpc.ChannelEdge.node2_policy:type_name -> lnrpc.RoutingPolicy
+	248, // 111: lnrpc.ChannelEdge.custom_records:type_name -> lnrpc.ChannelEdge.CustomRecordsEntry
+	137, // 112: lnrpc.ChannelEdge.auth_proof:type_name -> lnrpc.ChannelAuthProof
+	134, // 113: lnrpc.ChannelGraph.nodes:type_name -> lnrpc.LightningNode
+	138, // 114: lnrpc.ChannelGraph.edges:type_name -> lnrpc.ChannelEdge
 	8,   // 115: lnrpc.NodeMetricsRequest.types:type_name -> lnrpc.NodeMetricType
-	247, // 116: lnrpc.NodeMetricsResponse.betweenness_centrality:type_name -> lnrpc.NodeMetricsResponse.BetweennessCentralityEntry
-	149, // 117: lnrpc.GraphTopologyUpdate.node_updates:type_name -> lnrpc.NodeUpdate
-	150, // 118: lnrpc.GraphTopologyUpdate.channel_updates:type_name -> lnrpc.ChannelEdgeUpdate
-	151, // 119: lnrpc.GraphTopologyUpdate.closed_chans:type_name -> lnrpc.ClosedChannelUpdate
-	133, // 120: lnrpc.NodeUpdate.node_addresses:type_name -> lnrpc.NodeAddress
-	248, // 121: lnrpc.NodeUpdate.features:type_name -> lnrpc.NodeUpdate.FeaturesEntry
-	40,  // 122: lnrpc.ChannelEdgeUpdate.chan_point:type_name -> lnrpc.ChannelPoint
-	134, // 123: lnrpc.ChannelEdgeUpdate.routing_policy:type_name -> lnrpc.RoutingPolicy
-	40,  // 124: lnrpc.ClosedChannelUpdate.chan_point:type_name -> lnrpc.ChannelPoint
-	152, // 125: lnrpc.RouteHint.hop_hints:type_name -> lnrpc.HopHint
-	156, // 126: lnrpc.BlindedPaymentPath.blinded_path:type_name -> lnrpc.BlindedPath
+	249, // 116: lnrpc.NodeMetricsResponse.betweenness_centrality:type_name -> lnrpc.NodeMetricsResponse.BetweennessCentralityEntry
+	151, // 117: lnrpc.GraphTopologyUpdate.node_updates:type_name -> lnrpc.NodeUpdate
+	152, // 118: lnrpc.GraphTopologyUpdate.channel_updates:type_name -> lnrpc.ChannelEdgeUpdate
+	153, // 119: lnrpc.GraphTopologyUpdate.closed_chans:type_name -> lnrpc.ClosedChannelUpdate
+	135, // 120: lnrpc.NodeUpdate.node_addresses:type_name -> lnrpc.NodeAddress
+	250, // 121: lnrpc.NodeUpdate.features:type_name -> lnrpc.NodeUpdate.FeaturesEntry
+	42,  // 122: lnrpc.ChannelEdgeUpdate.chan_point:type_name -> lnrpc.ChannelPoint
+	136, // 123: lnrpc.ChannelEdgeUpdate.routing_policy:type_name -> lnrpc.RoutingPolicy
+	42,  // 124: lnrpc.ClosedChannelUpdate.chan_point:type_name -> lnrpc.ChannelPoint
+	154, // 125: lnrpc.RouteHint.hop_hints:type_name -> lnrpc.HopHint
+	158, // 126: lnrpc.BlindedPaymentPath.blinded_path:type_name -> lnrpc.BlindedPath
 	11,  // 127: lnrpc.BlindedPaymentPath.features:type_name -> lnrpc.FeatureBit
-	157, // 128: lnrpc.BlindedPath.blinded_hops:type_name -> lnrpc.BlindedHop
+	159, // 128: lnrpc.BlindedPath.blinded_hops:type_name -> lnrpc.BlindedHop
 	9,   // 129: lnrpc.AMPInvoiceState.state:type_name -> lnrpc.InvoiceHTLCState
-	154, // 130: lnrpc.Invoice.route_hints:type_name -> lnrpc.RouteHint
+	156, // 130: lnrpc.Invoice.route_hints:type_name -> lnrpc.RouteHint
 	18,  // 131: lnrpc.Invoice.state:type_name -> lnrpc.Invoice.InvoiceState
-	161, // 132: lnrpc.Invoice.htlcs:type_name -> lnrpc.InvoiceHTLC
-	249, // 133: lnrpc.Invoice.features:type_name -> lnrpc.Invoice.FeaturesEntry
-	250, // 134: lnrpc.Invoice.amp_invoice_state:type_name -> lnrpc.Invoice.AmpInvoiceStateEntry
-	160, // 135: lnrpc.Invoice.blinded_path_config:type_name -> lnrpc.BlindedPathConfig
+	163, // 132: lnrpc.Invoice.htlcs:type_name -> lnrpc.InvoiceHTLC
+	251, // 133: lnrpc.Invoice.features:type_name -> lnrpc.Invoice.FeaturesEntry
+	252, // 134: lnrpc.Invoice.amp_invoice_state:type_name -> lnrpc.Invoice.AmpInvoiceStateEntry
+	162, // 135: lnrpc.Invoice.blinded_path_config:type_name -> lnrpc.BlindedPathConfig
 	9,   // 136: lnrpc.InvoiceHTLC.state:type_name -> lnrpc.InvoiceHTLCState
-	251, // 137: lnrpc.InvoiceHTLC.custom_records:type_name -> lnrpc.InvoiceHTLC.CustomRecordsEntry
-	162, // 138: lnrpc.InvoiceHTLC.amp:type_name -> lnrpc.AMP
-	159, // 139: lnrpc.ListInvoiceResponse.invoices:type_name -> lnrpc.Invoice
+	253, // 137: lnrpc.InvoiceHTLC.custom_records:type_name -> lnrpc.InvoiceHTLC.CustomRecordsEntry
+	164, // 138: lnrpc.InvoiceHTLC.amp:type_name -> lnrpc.AMP
+	161, // 139: lnrpc.ListInvoiceResponse.invoices:type_name -> lnrpc.Invoice
 	19,  // 140: lnrpc.Payment.status:type_name -> lnrpc.Payment.PaymentStatus
-	171, // 141: lnrpc.Payment.htlcs:type_name -> lnrpc.HTLCAttempt
+	173, // 141: lnrpc.Payment.htlcs:type_name -> lnrpc.HTLCAttempt
 	10,  // 142: lnrpc.Payment.failure_reason:type_name -> lnrpc.PaymentFailureReason
-	252, // 143: lnrpc.Payment.first_hop_custom_records:type_name -> lnrpc.Payment.FirstHopCustomRecordsEntry
+	254, // 143: lnrpc.Payment.first_hop_custom_records:type_name -> lnrpc.Payment.FirstHopCustomRecordsEntry
 	20,  // 144: lnrpc.HTLCAttempt.status:type_name -> lnrpc.HTLCAttempt.HTLCStatus
-	129, // 145: lnrpc.HTLCAttempt.route:type_name -> lnrpc.Route
-	215, // 146: lnrpc.HTLCAttempt.failure:type_name -> lnrpc.Failure
-	170, // 147: lnrpc.ListPaymentsResponse.payments:type_name -> lnrpc.Payment
-	40,  // 148: lnrpc.AbandonChannelRequest.channel_point:type_name -> lnrpc.ChannelPoint
-	154, // 149: lnrpc.PayReq.route_hints:type_name -> lnrpc.RouteHint
-	253, // 150: lnrpc.PayReq.features:type_name -> lnrpc.PayReq.FeaturesEntry
-	155, // 151: lnrpc.PayReq.blinded_paths:type_name -> lnrpc.BlindedPaymentPath
-	186, // 152: lnrpc.FeeReportResponse.channel_fees:type_name -> lnrpc.ChannelFeeReport
-	40,  // 153: lnrpc.PolicyUpdateRequest.chan_point:type_name -> lnrpc.ChannelPoint
-	188, // 154: lnrpc.PolicyUpdateRequest.inbound_fee:type_name -> lnrpc.InboundFee
-	41,  // 155: lnrpc.FailedUpdate.outpoint:type_name -> lnrpc.OutPoint
+	131, // 145: lnrpc.HTLCAttempt.route:type_name -> lnrpc.Route
+	217, // 146: lnrpc.HTLCAttempt.failure:type_name -> lnrpc.Failure
+	172, // 147: lnrpc.ListPaymentsResponse.payments:type_name -> lnrpc.Payment
+	42,  // 148: lnrpc.AbandonChannelRequest.channel_point:type_name -> lnrpc.ChannelPoint
+	156, // 149: lnrpc.PayReq.route_hints:type_name -> lnrpc.RouteHint
+	255, // 150: lnrpc.PayReq.features:type_name -> lnrpc.PayReq.FeaturesEntry
+	157, // 151: lnrpc.PayReq.blinded_paths:type_name -> lnrpc.BlindedPaymentPath
+	188, // 152: lnrpc.FeeReportResponse.channel_fees:type_name -> lnrpc.ChannelFeeReport
+	42,  // 153: lnrpc.PolicyUpdateRequest.chan_point:type_name -> lnrpc.ChannelPoint
+	190, // 154: lnrpc.PolicyUpdateRequest.inbound_fee:type_name -> lnrpc.InboundFee
+	43,  // 155: lnrpc.FailedUpdate.outpoint:type_name -> lnrpc.OutPoint
 	12,  // 156: lnrpc.FailedUpdate.reason:type_name -> lnrpc.UpdateFailure
-	190, // 157: lnrpc.PolicyUpdateResponse.failed_updates:type_name -> lnrpc.FailedUpdate
-	193, // 158: lnrpc.ForwardingHistoryResponse.forwarding_events:type_name -> lnrpc.ForwardingEvent
-	40,  // 159: lnrpc.ExportChannelBackupRequest.chan_point:type_name -> lnrpc.ChannelPoint
-	40,  // 160: lnrpc.ChannelBackup.chan_point:type_name -> lnrpc.ChannelPoint
-	40,  // 161: lnrpc.MultiChanBackup.chan_points:type_name -> lnrpc.ChannelPoint
-	200, // 162: lnrpc.ChanBackupSnapshot.single_chan_backups:type_name -> lnrpc.ChannelBackups
-	197, // 163: lnrpc.ChanBackupSnapshot.multi_chan_backup:type_name -> lnrpc.MultiChanBackup
-	196, // 164: lnrpc.ChannelBackups.chan_backups:type_name -> lnrpc.ChannelBackup
-	200, // 165: lnrpc.RestoreChanBackupRequest.chan_backups:type_name -> lnrpc.ChannelBackups
-	205, // 166: lnrpc.BakeMacaroonRequest.permissions:type_name -> lnrpc.MacaroonPermission
-	205, // 167: lnrpc.MacaroonPermissionList.permissions:type_name -> lnrpc.MacaroonPermission
-	254, // 168: lnrpc.ListPermissionsResponse.method_permissions:type_name -> lnrpc.ListPermissionsResponse.MethodPermissionsEntry
+	192, // 157: lnrpc.PolicyUpdateResponse.failed_updates:type_name -> lnrpc.FailedUpdate
+	195, // 158: lnrpc.ForwardingHistoryResponse.forwarding_events:type_name -> lnrpc.ForwardingEvent
+	42,  // 159: lnrpc.ExportChannelBackupRequest.chan_point:type_name -> lnrpc.ChannelPoint
+	42,  // 160: lnrpc.ChannelBackup.chan_point:type_name -> lnrpc.ChannelPoint
+	42,  // 161: lnrpc.MultiChanBackup.chan_points:type_name -> lnrpc.ChannelPoint
+	202, // 162: lnrpc.ChanBackupSnapshot.single_chan_backups:type_name -> lnrpc.ChannelBackups
+	199, // 163: lnrpc.ChanBackupSnapshot.multi_chan_backup:type_name -> lnrpc.MultiChanBackup
+	198, // 164: lnrpc.ChannelBackups.chan_backups:type_name -> lnrpc.ChannelBackup
+	202, // 165: lnrpc.RestoreChanBackupRequest.chan_backups:type_name -> lnrpc.ChannelBackups
+	207, // 166: lnrpc.BakeMacaroonRequest.permissions:type_name -> lnrpc.MacaroonPermission
+	207, // 167: lnrpc.MacaroonPermissionList.permissions:type_name -> lnrpc.MacaroonPermission
+	256, // 168: lnrpc.ListPermissionsResponse.method_permissions:type_name -> lnrpc.ListPermissionsResponse.MethodPermissionsEntry
 	21,  // 169: lnrpc.Failure.code:type_name -> lnrpc.Failure.FailureCode
-	216, // 170: lnrpc.Failure.channel_update:type_name -> lnrpc.ChannelUpdate
-	218, // 171: lnrpc.MacaroonId.ops:type_name -> lnrpc.Op
-	205, // 172: lnrpc.CheckMacPermRequest.permissions:type_name -> lnrpc.MacaroonPermission
-	223, // 173: lnrpc.RPCMiddlewareRequest.stream_auth:type_name -> lnrpc.StreamAuth
-	224, // 174: lnrpc.RPCMiddlewareRequest.request:type_name -> lnrpc.RPCMessage
-	224, // 175: lnrpc.RPCMiddlewareRequest.response:type_name -> lnrpc.RPCMessage
-	255, // 176: lnrpc.RPCMiddlewareRequest.metadata_pairs:type_name -> lnrpc.RPCMiddlewareRequest.MetadataPairsEntry
-	226, // 177: lnrpc.RPCMiddlewareResponse.register:type_name -> lnrpc.MiddlewareRegistration
-	227, // 178: lnrpc.RPCMiddlewareResponse.feedback:type_name -> lnrpc.InterceptFeedback
-	184, // 179: lnrpc.Peer.FeaturesEntry.value:type_name -> lnrpc.Feature
-	184, // 180: lnrpc.GetInfoResponse.FeaturesEntry.value:type_name -> lnrpc.Feature
+	218, // 170: lnrpc.Failure.channel_update:type_name -> lnrpc.ChannelUpdate
+	220, // 171: lnrpc.MacaroonId.ops:type_name -> lnrpc.Op
+	207, // 172: lnrpc.CheckMacPermRequest.permissions:type_name -> lnrpc.MacaroonPermission
+	225, // 173: lnrpc.RPCMiddlewareRequest.stream_auth:type_name -> lnrpc.StreamAuth
+	226, // 174: lnrpc.RPCMiddlewareRequest.request:type_name -> lnrpc.RPCMessage
+	226, // 175: lnrpc.RPCMiddlewareRequest.response:type_name -> lnrpc.RPCMessage
+	257, // 176: lnrpc.RPCMiddlewareRequest.metadata_pairs:type_name -> lnrpc.RPCMiddlewareRequest.MetadataPairsEntry
+	228, // 177: lnrpc.RPCMiddlewareResponse.register:type_name -> lnrpc.MiddlewareRegistration
+	229, // 178: lnrpc.RPCMiddlewareResponse.feedback:type_name -> lnrpc.InterceptFeedback
+	186, // 179: lnrpc.Peer.FeaturesEntry.value:type_name -> lnrpc.Feature
+	186, // 180: lnrpc.GetInfoResponse.FeaturesEntry.value:type_name -> lnrpc.Feature
 	4,   // 181: lnrpc.PendingChannelsResponse.PendingChannel.initiator:type_name -> lnrpc.Initiator
 	3,   // 182: lnrpc.PendingChannelsResponse.PendingChannel.commitment_type:type_name -> lnrpc.CommitmentType
-	234, // 183: lnrpc.PendingChannelsResponse.PendingOpenChannel.channel:type_name -> lnrpc.PendingChannelsResponse.PendingChannel
-	234, // 184: lnrpc.PendingChannelsResponse.WaitingCloseChannel.channel:type_name -> lnrpc.PendingChannelsResponse.PendingChannel
-	237, // 185: lnrpc.PendingChannelsResponse.WaitingCloseChannel.commitments:type_name -> lnrpc.PendingChannelsResponse.Commitments
-	234, // 186: lnrpc.PendingChannelsResponse.ClosedChannel.channel:type_name -> lnrpc.PendingChannelsResponse.PendingChannel
-	234, // 187: lnrpc.PendingChannelsResponse.ForceClosedChannel.channel:type_name -> lnrpc.PendingChannelsResponse.PendingChannel
-	110, // 188: lnrpc.PendingChannelsResponse.ForceClosedChannel.pending_htlcs:type_name -> lnrpc.PendingHTLC
+	236, // 183: lnrpc.PendingChannelsResponse.PendingOpenChannel.channel:type_name -> lnrpc.PendingChannelsResponse.PendingChannel
+	236, // 184: lnrpc.PendingChannelsResponse.WaitingCloseChannel.channel:type_name -> lnrpc.PendingChannelsResponse.PendingChannel
+	239, // 185: lnrpc.PendingChannelsResponse.WaitingCloseChannel.commitments:type_name -> lnrpc.PendingChannelsResponse.Commitments
+	236, // 186: lnrpc.PendingChannelsResponse.ClosedChannel.channel:type_name -> lnrpc.PendingChannelsResponse.PendingChannel
+	236, // 187: lnrpc.PendingChannelsResponse.ForceClosedChannel.channel:type_name -> lnrpc.PendingChannelsResponse.PendingChannel
+	112, // 188: lnrpc.PendingChannelsResponse.ForceClosedChannel.pending_htlcs:type_name -> lnrpc.PendingHTLC
 	16,  // 189: lnrpc.PendingChannelsResponse.ForceClosedChannel.anchor:type_name -> lnrpc.PendingChannelsResponse.ForceClosedChannel.AnchorState
-	116, // 190: lnrpc.WalletBalanceResponse.AccountBalanceEntry.value:type_name -> lnrpc.WalletAccountBalance
-	184, // 191: lnrpc.LightningNode.FeaturesEntry.value:type_name -> lnrpc.Feature
-	141, // 192: lnrpc.NodeMetricsResponse.BetweennessCentralityEntry.value:type_name -> lnrpc.FloatMetric
-	184, // 193: lnrpc.NodeUpdate.FeaturesEntry.value:type_name -> lnrpc.Feature
-	184, // 194: lnrpc.Invoice.FeaturesEntry.value:type_name -> lnrpc.Feature
-	158, // 195: lnrpc.Invoice.AmpInvoiceStateEntry.value:type_name -> lnrpc.AMPInvoiceState
-	184, // 196: lnrpc.PayReq.FeaturesEntry.value:type_name -> lnrpc.Feature
-	212, // 197: lnrpc.ListPermissionsResponse.MethodPermissionsEntry.value:type_name -> lnrpc.MacaroonPermissionList
-	222, // 198: lnrpc.RPCMiddlewareRequest.MetadataPairsEntry.value:type_name -> lnrpc.MetadataValues
-	117, // 199: lnrpc.Lightning.WalletBalance:input_type -> lnrpc.WalletBalanceRequest
-	120, // 200: lnrpc.Lightning.ChannelBalance:input_type -> lnrpc.ChannelBalanceRequest
-	35,  // 201: lnrpc.Lightning.GetTransactions:input_type -> lnrpc.GetTransactionsRequest
-	44,  // 202: lnrpc.Lightning.EstimateFee:input_type -> lnrpc.EstimateFeeRequest
-	48,  // 203: lnrpc.Lightning.SendCoins:input_type -> lnrpc.SendCoinsRequest
-	50,  // 204: lnrpc.Lightning.ListUnspent:input_type -> lnrpc.ListUnspentRequest
-	35,  // 205: lnrpc.Lightning.SubscribeTransactions:input_type -> lnrpc.GetTransactionsRequest
-	46,  // 206: lnrpc.Lightning.SendMany:input_type -> lnrpc.SendManyRequest
-	52,  // 207: lnrpc.Lightning.NewAddress:input_type -> lnrpc.NewAddressRequest
-	54,  // 208: lnrpc.Lightning.SignMessage:input_type -> lnrpc.SignMessageRequest
-	56,  // 209: lnrpc.Lightning.VerifyMessage:input_type -> lnrpc.VerifyMessageRequest
-	58,  // 210: lnrpc.Lightning.ConnectPeer:input_type -> lnrpc.ConnectPeerRequest
-	60,  // 211: lnrpc.Lightning.DisconnectPeer:input_type -> lnrpc.DisconnectPeerRequest
-	76,  // 212: lnrpc.Lightning.ListPeers:input_type -> lnrpc.ListPeersRequest
-	78,  // 213: lnrpc.Lightning.SubscribePeerEvents:input_type -> lnrpc.PeerEventSubscription
-	80,  // 214: lnrpc.Lightning.GetInfo:input_type -> lnrpc.GetInfoRequest
-	82,  // 215: lnrpc.Lightning.GetDebugInfo:input_type -> lnrpc.GetDebugInfoRequest
-	84,  // 216: lnrpc.Lightning.GetRecoveryInfo:input_type -> lnrpc.GetRecoveryInfoRequest
-	111, // 217: lnrpc.Lightning.PendingChannels:input_type -> lnrpc.PendingChannelsRequest
-	65,  // 218: lnrpc.Lightning.ListChannels:input_type -> lnrpc.ListChannelsRequest
-	113, // 219: lnrpc.Lightning.SubscribeChannelEvents:input_type -> lnrpc.ChannelEventSubscription
-	72,  // 220: lnrpc.Lightning.ClosedChannels:input_type -> lnrpc.ClosedChannelsRequest
-	98,  // 221: lnrpc.Lightning.OpenChannelSync:input_type -> lnrpc.OpenChannelRequest
-	98,  // 222: lnrpc.Lightning.OpenChannel:input_type -> lnrpc.OpenChannelRequest
-	95,  // 223: lnrpc.Lightning.BatchOpenChannel:input_type -> lnrpc.BatchOpenChannelRequest
-	108, // 224: lnrpc.Lightning.FundingStateStep:input_type -> lnrpc.FundingTransitionMsg
-	39,  // 225: lnrpc.Lightning.ChannelAcceptor:input_type -> lnrpc.ChannelAcceptResponse
-	90,  // 226: lnrpc.Lightning.CloseChannel:input_type -> lnrpc.CloseChannelRequest
-	178, // 227: lnrpc.Lightning.AbandonChannel:input_type -> lnrpc.AbandonChannelRequest
-	159, // 228: lnrpc.Lightning.AddInvoice:input_type -> lnrpc.Invoice
-	165, // 229: lnrpc.Lightning.ListInvoices:input_type -> lnrpc.ListInvoiceRequest
-	164, // 230: lnrpc.Lightning.LookupInvoice:input_type -> lnrpc.PaymentHash
-	167, // 231: lnrpc.Lightning.SubscribeInvoices:input_type -> lnrpc.InvoiceSubscription
-	168, // 232: lnrpc.Lightning.DeleteCanceledInvoice:input_type -> lnrpc.DelCanceledInvoiceReq
-	182, // 233: lnrpc.Lightning.DecodePayReq:input_type -> lnrpc.PayReqString
-	172, // 234: lnrpc.Lightning.ListPayments:input_type -> lnrpc.ListPaymentsRequest
-	174, // 235: lnrpc.Lightning.DeletePayment:input_type -> lnrpc.DeletePaymentRequest
-	175, // 236: lnrpc.Lightning.DeleteAllPayments:input_type -> lnrpc.DeleteAllPaymentsRequest
-	137, // 237: lnrpc.Lightning.DescribeGraph:input_type -> lnrpc.ChannelGraphRequest
-	139, // 238: lnrpc.Lightning.GetNodeMetrics:input_type -> lnrpc.NodeMetricsRequest
-	142, // 239: lnrpc.Lightning.GetChanInfo:input_type -> lnrpc.ChanInfoRequest
-	130, // 240: lnrpc.Lightning.GetNodeInfo:input_type -> lnrpc.NodeInfoRequest
-	122, // 241: lnrpc.Lightning.QueryRoutes:input_type -> lnrpc.QueryRoutesRequest
-	143, // 242: lnrpc.Lightning.GetNetworkInfo:input_type -> lnrpc.NetworkInfoRequest
-	145, // 243: lnrpc.Lightning.StopDaemon:input_type -> lnrpc.StopRequest
-	147, // 244: lnrpc.Lightning.SubscribeChannelGraph:input_type -> lnrpc.GraphTopologySubscription
-	180, // 245: lnrpc.Lightning.DebugLevel:input_type -> lnrpc.DebugLevelRequest
-	185, // 246: lnrpc.Lightning.FeeReport:input_type -> lnrpc.FeeReportRequest
-	189, // 247: lnrpc.Lightning.UpdateChannelPolicy:input_type -> lnrpc.PolicyUpdateRequest
-	192, // 248: lnrpc.Lightning.ForwardingHistory:input_type -> lnrpc.ForwardingHistoryRequest
-	195, // 249: lnrpc.Lightning.ExportChannelBackup:input_type -> lnrpc.ExportChannelBackupRequest
-	198, // 250: lnrpc.Lightning.ExportAllChannelBackups:input_type -> lnrpc.ChanBackupExportRequest
-	199, // 251: lnrpc.Lightning.VerifyChanBackup:input_type -> lnrpc.ChanBackupSnapshot
-	201, // 252: lnrpc.Lightning.RestoreChannelBackups:input_type -> lnrpc.RestoreChanBackupRequest
-	203, // 253: lnrpc.Lightning.SubscribeChannelBackups:input_type -> lnrpc.ChannelBackupSubscription
-	206, // 254: lnrpc.Lightning.BakeMacaroon:input_type -> lnrpc.BakeMacaroonRequest
-	208, // 255: lnrpc.Lightning.ListMacaroonIDs:input_type -> lnrpc.ListMacaroonIDsRequest
-	210, // 256: lnrpc.Lightning.DeleteMacaroonID:input_type -> lnrpc.DeleteMacaroonIDRequest
-	213, // 257: lnrpc.Lightning.ListPermissions:input_type -> lnrpc.ListPermissionsRequest
-	219, // 258: lnrpc.Lightning.CheckMacaroonPermissions:input_type -> lnrpc.CheckMacPermRequest
-	225, // 259: lnrpc.Lightning.RegisterRPCMiddleware:input_type -> lnrpc.RPCMiddlewareResponse
+	118, // 190: lnrpc.WalletBalanceResponse.AccountBalanceEntry.value:type_name -> lnrpc.WalletAccountBalance
+	186, // 191: lnrpc.LightningNode.FeaturesEntry.value:type_name -> lnrpc.Feature
+	143, // 192: lnrpc.NodeMetricsResponse.BetweennessCentralityEntry.value:type_name -> lnrpc.FloatMetric
+	186, // 193: lnrpc.NodeUpdate.FeaturesEntry.value:type_name -> lnrpc.Feature
+	186, // 194: lnrpc.Invoice.FeaturesEntry.value:type_name -> lnrpc.Feature
+	160, // 195: lnrpc.Invoice.AmpInvoiceStateEntry.value:type_name -> lnrpc.AMPInvoiceState
+	186, // 196: lnrpc.PayReq.FeaturesEntry.value:type_name -> lnrpc.Feature
+	214, // 197: lnrpc.ListPermissionsResponse.MethodPermissionsEntry.value:type_name -> lnrpc.MacaroonPermissionList
+	224, // 198: lnrpc.RPCMiddlewareRequest.MetadataPairsEntry.value:type_name -> lnrpc.MetadataValues
+	119, // 199: lnrpc.Lightning.WalletBalance:input_type -> lnrpc.WalletBalanceRequest
+	122, // 200: lnrpc.Lightning.ChannelBalance:input_type -> lnrpc.ChannelBalanceRequest
+	37,  // 201: lnrpc.Lightning.GetTransactions:input_type -> lnrpc.GetTransactionsRequest
+	46,  // 202: lnrpc.Lightning.EstimateFee:input_type -> lnrpc.EstimateFeeRequest
+	50,  // 203: lnrpc.Lightning.SendCoins:input_type -> lnrpc.SendCoinsRequest
+	52,  // 204: lnrpc.Lightning.ListUnspent:input_type -> lnrpc.ListUnspentRequest
+	37,  // 205: lnrpc.Lightning.SubscribeTransactions:input_type -> lnrpc.GetTransactionsRequest
+	48,  // 206: lnrpc.Lightning.SendMany:input_type -> lnrpc.SendManyRequest
+	54,  // 207: lnrpc.Lightning.NewAddress:input_type -> lnrpc.NewAddressRequest
+	56,  // 208: lnrpc.Lightning.SignMessage:input_type -> lnrpc.SignMessageRequest
+	58,  // 209: lnrpc.Lightning.VerifyMessage:input_type -> lnrpc.VerifyMessageRequest
+	60,  // 210: lnrpc.Lightning.ConnectPeer:input_type -> lnrpc.ConnectPeerRequest
+	62,  // 211: lnrpc.Lightning.DisconnectPeer:input_type -> lnrpc.DisconnectPeerRequest
+	78,  // 212: lnrpc.Lightning.ListPeers:input_type -> lnrpc.ListPeersRequest
+	80,  // 213: lnrpc.Lightning.SubscribePeerEvents:input_type -> lnrpc.PeerEventSubscription
+	82,  // 214: lnrpc.Lightning.GetInfo:input_type -> lnrpc.GetInfoRequest
+	84,  // 215: lnrpc.Lightning.GetDebugInfo:input_type -> lnrpc.GetDebugInfoRequest
+	86,  // 216: lnrpc.Lightning.GetRecoveryInfo:input_type -> lnrpc.GetRecoveryInfoRequest
+	113, // 217: lnrpc.Lightning.PendingChannels:input_type -> lnrpc.PendingChannelsRequest
+	67,  // 218: lnrpc.Lightning.ListChannels:input_type -> lnrpc.ListChannelsRequest
+	115, // 219: lnrpc.Lightning.SubscribeChannelEvents:input_type -> lnrpc.ChannelEventSubscription
+	74,  // 220: lnrpc.Lightning.ClosedChannels:input_type -> lnrpc.ClosedChannelsRequest
+	100, // 221: lnrpc.Lightning.OpenChannelSync:input_type -> lnrpc.OpenChannelRequest
+	100, // 222: lnrpc.Lightning.OpenChannel:input_type -> lnrpc.OpenChannelRequest
+	97,  // 223: lnrpc.Lightning.BatchOpenChannel:input_type -> lnrpc.BatchOpenChannelRequest
+	110, // 224: lnrpc.Lightning.FundingStateStep:input_type -> lnrpc.FundingTransitionMsg
+	41,  // 225: lnrpc.Lightning.ChannelAcceptor:input_type -> lnrpc.ChannelAcceptResponse
+	92,  // 226: lnrpc.Lightning.CloseChannel:input_type -> lnrpc.CloseChannelRequest
+	180, // 227: lnrpc.Lightning.AbandonChannel:input_type -> lnrpc.AbandonChannelRequest
+	161, // 228: lnrpc.Lightning.AddInvoice:input_type -> lnrpc.Invoice
+	167, // 229: lnrpc.Lightning.ListInvoices:input_type -> lnrpc.ListInvoiceRequest
+	166, // 230: lnrpc.Lightning.LookupInvoice:input_type -> lnrpc.PaymentHash
+	169, // 231: lnrpc.Lightning.SubscribeInvoices:input_type -> lnrpc.InvoiceSubscription
+	170, // 232: lnrpc.Lightning.DeleteCanceledInvoice:input_type -> lnrpc.DelCanceledInvoiceReq
+	184, // 233: lnrpc.Lightning.DecodePayReq:input_type -> lnrpc.PayReqString
+	174, // 234: lnrpc.Lightning.ListPayments:input_type -> lnrpc.ListPaymentsRequest
+	176, // 235: lnrpc.Lightning.DeletePayment:input_type -> lnrpc.DeletePaymentRequest
+	177, // 236: lnrpc.Lightning.DeleteAllPayments:input_type -> lnrpc.DeleteAllPaymentsRequest
+	139, // 237: lnrpc.Lightning.DescribeGraph:input_type -> lnrpc.ChannelGraphRequest
+	141, // 238: lnrpc.Lightning.GetNodeMetrics:input_type -> lnrpc.NodeMetricsRequest
+	144, // 239: lnrpc.Lightning.GetChanInfo:input_type -> lnrpc.ChanInfoRequest
+	132, // 240: lnrpc.Lightning.GetNodeInfo:input_type -> lnrpc.NodeInfoRequest
+	124, // 241: lnrpc.Lightning.QueryRoutes:input_type -> lnrpc.QueryRoutesRequest
+	145, // 242: lnrpc.Lightning.GetNetworkInfo:input_type -> lnrpc.NetworkInfoRequest
+	147, // 243: lnrpc.Lightning.StopDaemon:input_type -> lnrpc.StopRequest
+	149, // 244: lnrpc.Lightning.SubscribeChannelGraph:input_type -> lnrpc.GraphTopologySubscription
+	182, // 245: lnrpc.Lightning.DebugLevel:input_type -> lnrpc.DebugLevelRequest
+	187, // 246: lnrpc.Lightning.FeeReport:input_type -> lnrpc.FeeReportRequest
+	191, // 247: lnrpc.Lightning.UpdateChannelPolicy:input_type -> lnrpc.PolicyUpdateRequest
+	194, // 248: lnrpc.Lightning.ForwardingHistory:input_type -> lnrpc.ForwardingHistoryRequest
+	197, // 249: lnrpc.Lightning.ExportChannelBackup:input_type -> lnrpc.ExportChannelBackupRequest
+	200, // 250: lnrpc.Lightning.ExportAllChannelBackups:input_type -> lnrpc.ChanBackupExportRequest
+	201, // 251: lnrpc.Lightning.VerifyChanBackup:input_type -> lnrpc.ChanBackupSnapshot
+	203, // 252: lnrpc.Lightning.RestoreChannelBackups:input_type -> lnrpc.RestoreChanBackupRequest
+	205, // 253: lnrpc.Lightning.SubscribeChannelBackups:input_type -> lnrpc.ChannelBackupSubscription
+	208, // 254: lnrpc.Lightning.BakeMacaroon:input_type -> lnrpc.BakeMacaroonRequest
+	210, // 255: lnrpc.Lightning.ListMacaroonIDs:input_type -> lnrpc.ListMacaroonIDsRequest
+	212, // 256: lnrpc.Lightning.DeleteMacaroonID:input_type -> lnrpc.DeleteMacaroonIDRequest
+	215, // 257: lnrpc.Lightning.ListPermissions:input_type -> lnrpc.ListPermissionsRequest
+	221, // 258: lnrpc.Lightning.CheckMacaroonPermissions:input_type -> lnrpc.CheckMacPermRequest
+	227, // 259: lnrpc.Lightning.RegisterRPCMiddleware:input_type -> lnrpc.RPCMiddlewareResponse
 	26,  // 260: lnrpc.Lightning.SendCustomMessage:input_type -> lnrpc.SendCustomMessageRequest
 	24,  // 261: lnrpc.Lightning.SubscribeCustomMessages:input_type -> lnrpc.SubscribeCustomMessagesRequest
 	30,  // 262: lnrpc.Lightning.SendOnionMessage:input_type -> lnrpc.SendOnionMessageRequest
 	28,  // 263: lnrpc.Lightning.SubscribeOnionMessages:input_type -> lnrpc.SubscribeOnionMessagesRequest
-	68,  // 264: lnrpc.Lightning.ListAliases:input_type -> lnrpc.ListAliasesRequest
-	22,  // 265: lnrpc.Lightning.LookupHtlcResolution:input_type -> lnrpc.LookupHtlcResolutionRequest
-	118, // 266: lnrpc.Lightning.WalletBalance:output_type -> lnrpc.WalletBalanceResponse
-	121, // 267: lnrpc.Lightning.ChannelBalance:output_type -> lnrpc.ChannelBalanceResponse
-	36,  // 268: lnrpc.Lightning.GetTransactions:output_type -> lnrpc.TransactionDetails
-	45,  // 269: lnrpc.Lightning.EstimateFee:output_type -> lnrpc.EstimateFeeResponse
-	49,  // 270: lnrpc.Lightning.SendCoins:output_type -> lnrpc.SendCoinsResponse
-	51,  // 271: lnrpc.Lightning.ListUnspent:output_type -> lnrpc.ListUnspentResponse
-	34,  // 272: lnrpc.Lightning.SubscribeTransactions:output_type -> lnrpc.Transaction
-	47,  // 273: lnrpc.Lightning.SendMany:output_type -> lnrpc.SendManyResponse
-	53,  // 274: lnrpc.Lightning.NewAddress:output_type -> lnrpc.NewAddressResponse
-	55,  // 275: lnrpc.Lightning.SignMessage:output_type -> lnrpc.SignMessageResponse
-	57,  // 276: lnrpc.Lightning.VerifyMessage:output_type -> lnrpc.VerifyMessageResponse
-	59,  // 277: lnrpc.Lightning.ConnectPeer:output_type -> lnrpc.ConnectPeerResponse
-	61,  // 278: lnrpc.Lightning.DisconnectPeer:output_type -> lnrpc.DisconnectPeerResponse
-	77,  // 279: lnrpc.Lightning.ListPeers:output_type -> lnrpc.ListPeersResponse
-	79,  // 280: lnrpc.Lightning.SubscribePeerEvents:output_type -> lnrpc.PeerEvent
-	81,  // 281: lnrpc.Lightning.GetInfo:output_type -> lnrpc.GetInfoResponse
-	83,  // 282: lnrpc.Lightning.GetDebugInfo:output_type -> lnrpc.GetDebugInfoResponse
-	85,  // 283: lnrpc.Lightning.GetRecoveryInfo:output_type -> lnrpc.GetRecoveryInfoResponse
-	112, // 284: lnrpc.Lightning.PendingChannels:output_type -> lnrpc.PendingChannelsResponse
-	66,  // 285: lnrpc.Lightning.ListChannels:output_type -> lnrpc.ListChannelsResponse
-	115, // 286: lnrpc.Lightning.SubscribeChannelEvents:output_type -> lnrpc.ChannelEventUpdate
-	73,  // 287: lnrpc.Lightning.ClosedChannels:output_type -> lnrpc.ClosedChannelsResponse
-	40,  // 288: lnrpc.Lightning.OpenChannelSync:output_type -> lnrpc.ChannelPoint
-	99,  // 289: lnrpc.Lightning.OpenChannel:output_type -> lnrpc.OpenStatusUpdate
-	97,  // 290: lnrpc.Lightning.BatchOpenChannel:output_type -> lnrpc.BatchOpenChannelResponse
-	109, // 291: lnrpc.Lightning.FundingStateStep:output_type -> lnrpc.FundingStateStepResp
-	38,  // 292: lnrpc.Lightning.ChannelAcceptor:output_type -> lnrpc.ChannelAcceptRequest
-	91,  // 293: lnrpc.Lightning.CloseChannel:output_type -> lnrpc.CloseStatusUpdate
-	179, // 294: lnrpc.Lightning.AbandonChannel:output_type -> lnrpc.AbandonChannelResponse
-	163, // 295: lnrpc.Lightning.AddInvoice:output_type -> lnrpc.AddInvoiceResponse
-	166, // 296: lnrpc.Lightning.ListInvoices:output_type -> lnrpc.ListInvoiceResponse
-	159, // 297: lnrpc.Lightning.LookupInvoice:output_type -> lnrpc.Invoice
-	159, // 298: lnrpc.Lightning.SubscribeInvoices:output_type -> lnrpc.Invoice
-	169, // 299: lnrpc.Lightning.DeleteCanceledInvoice:output_type -> lnrpc.DelCanceledInvoiceResp
-	183, // 300: lnrpc.Lightning.DecodePayReq:output_type -> lnrpc.PayReq
-	173, // 301: lnrpc.Lightning.ListPayments:output_type -> lnrpc.ListPaymentsResponse
-	176, // 302: lnrpc.Lightning.DeletePayment:output_type -> lnrpc.DeletePaymentResponse
-	177, // 303: lnrpc.Lightning.DeleteAllPayments:output_type -> lnrpc.DeleteAllPaymentsResponse
-	138, // 304: lnrpc.Lightning.DescribeGraph:output_type -> lnrpc.ChannelGraph
-	140, // 305: lnrpc.Lightning.GetNodeMetrics:output_type -> lnrpc.NodeMetricsResponse
-	136, // 306: lnrpc.Lightning.GetChanInfo:output_type -> lnrpc.ChannelEdge
-	131, // 307: lnrpc.Lightning.GetNodeInfo:output_type -> lnrpc.NodeInfo
-	125, // 308: lnrpc.Lightning.QueryRoutes:output_type -> lnrpc.QueryRoutesResponse
-	144, // 309: lnrpc.Lightning.GetNetworkInfo:output_type -> lnrpc.NetworkInfo
-	146, // 310: lnrpc.Lightning.StopDaemon:output_type -> lnrpc.StopResponse
-	148, // 311: lnrpc.Lightning.SubscribeChannelGraph:output_type -> lnrpc.GraphTopologyUpdate
-	181, // 312: lnrpc.Lightning.DebugLevel:output_type -> lnrpc.DebugLevelResponse
-	187, // 313: lnrpc.Lightning.FeeReport:output_type -> lnrpc.FeeReportResponse
-	191, // 314: lnrpc.Lightning.UpdateChannelPolicy:output_type -> lnrpc.PolicyUpdateResponse
-	194, // 315: lnrpc.Lightning.ForwardingHistory:output_type -> lnrpc.ForwardingHistoryResponse
-	196, // 316: lnrpc.Lightning.ExportChannelBackup:output_type -> lnrpc.ChannelBackup
-	199, // 317: lnrpc.Lightning.ExportAllChannelBackups:output_type -> lnrpc.ChanBackupSnapshot
-	204, // 318: lnrpc.Lightning.VerifyChanBackup:output_type -> lnrpc.VerifyChanBackupResponse
-	202, // 319: lnrpc.Lightning.RestoreChannelBackups:output_type -> lnrpc.RestoreBackupResponse
-	199, // 320: lnrpc.Lightning.SubscribeChannelBackups:output_type -> lnrpc.ChanBackupSnapshot
-	207, // 321: lnrpc.Lightning.BakeMacaroon:output_type -> lnrpc.BakeMacaroonResponse
-	209, // 322: lnrpc.Lightning.ListMacaroonIDs:output_type -> lnrpc.ListMacaroonIDsResponse
-	211, // 323: lnrpc.Lightning.DeleteMacaroonID:output_type -> lnrpc.DeleteMacaroonIDResponse
-	214, // 324: lnrpc.Lightning.ListPermissions:output_type -> lnrpc.ListPermissionsResponse
-	220, // 325: lnrpc.Lightning.CheckMacaroonPermissions:output_type -> lnrpc.CheckMacPermResponse
-	221, // 326: lnrpc.Lightning.RegisterRPCMiddleware:output_type -> lnrpc.RPCMiddlewareRequest
-	27,  // 327: lnrpc.Lightning.SendCustomMessage:output_type -> lnrpc.SendCustomMessageResponse
-	25,  // 328: lnrpc.Lightning.SubscribeCustomMessages:output_type -> lnrpc.CustomMessage
-	31,  // 329: lnrpc.Lightning.SendOnionMessage:output_type -> lnrpc.SendOnionMessageResponse
-	29,  // 330: lnrpc.Lightning.SubscribeOnionMessages:output_type -> lnrpc.OnionMessageUpdate
-	69,  // 331: lnrpc.Lightning.ListAliases:output_type -> lnrpc.ListAliasesResponse
-	23,  // 332: lnrpc.Lightning.LookupHtlcResolution:output_type -> lnrpc.LookupHtlcResolutionResponse
-	266, // [266:333] is the sub-list for method output_type
-	199, // [199:266] is the sub-list for method input_type
+	32,  // 264: lnrpc.Lightning.CreateOffer:input_type -> lnrpc.CreateOfferRequest
+	70,  // 265: lnrpc.Lightning.ListAliases:input_type -> lnrpc.ListAliasesRequest
+	22,  // 266: lnrpc.Lightning.LookupHtlcResolution:input_type -> lnrpc.LookupHtlcResolutionRequest
+	120, // 267: lnrpc.Lightning.WalletBalance:output_type -> lnrpc.WalletBalanceResponse
+	123, // 268: lnrpc.Lightning.ChannelBalance:output_type -> lnrpc.ChannelBalanceResponse
+	38,  // 269: lnrpc.Lightning.GetTransactions:output_type -> lnrpc.TransactionDetails
+	47,  // 270: lnrpc.Lightning.EstimateFee:output_type -> lnrpc.EstimateFeeResponse
+	51,  // 271: lnrpc.Lightning.SendCoins:output_type -> lnrpc.SendCoinsResponse
+	53,  // 272: lnrpc.Lightning.ListUnspent:output_type -> lnrpc.ListUnspentResponse
+	36,  // 273: lnrpc.Lightning.SubscribeTransactions:output_type -> lnrpc.Transaction
+	49,  // 274: lnrpc.Lightning.SendMany:output_type -> lnrpc.SendManyResponse
+	55,  // 275: lnrpc.Lightning.NewAddress:output_type -> lnrpc.NewAddressResponse
+	57,  // 276: lnrpc.Lightning.SignMessage:output_type -> lnrpc.SignMessageResponse
+	59,  // 277: lnrpc.Lightning.VerifyMessage:output_type -> lnrpc.VerifyMessageResponse
+	61,  // 278: lnrpc.Lightning.ConnectPeer:output_type -> lnrpc.ConnectPeerResponse
+	63,  // 279: lnrpc.Lightning.DisconnectPeer:output_type -> lnrpc.DisconnectPeerResponse
+	79,  // 280: lnrpc.Lightning.ListPeers:output_type -> lnrpc.ListPeersResponse
+	81,  // 281: lnrpc.Lightning.SubscribePeerEvents:output_type -> lnrpc.PeerEvent
+	83,  // 282: lnrpc.Lightning.GetInfo:output_type -> lnrpc.GetInfoResponse
+	85,  // 283: lnrpc.Lightning.GetDebugInfo:output_type -> lnrpc.GetDebugInfoResponse
+	87,  // 284: lnrpc.Lightning.GetRecoveryInfo:output_type -> lnrpc.GetRecoveryInfoResponse
+	114, // 285: lnrpc.Lightning.PendingChannels:output_type -> lnrpc.PendingChannelsResponse
+	68,  // 286: lnrpc.Lightning.ListChannels:output_type -> lnrpc.ListChannelsResponse
+	117, // 287: lnrpc.Lightning.SubscribeChannelEvents:output_type -> lnrpc.ChannelEventUpdate
+	75,  // 288: lnrpc.Lightning.ClosedChannels:output_type -> lnrpc.ClosedChannelsResponse
+	42,  // 289: lnrpc.Lightning.OpenChannelSync:output_type -> lnrpc.ChannelPoint
+	101, // 290: lnrpc.Lightning.OpenChannel:output_type -> lnrpc.OpenStatusUpdate
+	99,  // 291: lnrpc.Lightning.BatchOpenChannel:output_type -> lnrpc.BatchOpenChannelResponse
+	111, // 292: lnrpc.Lightning.FundingStateStep:output_type -> lnrpc.FundingStateStepResp
+	40,  // 293: lnrpc.Lightning.ChannelAcceptor:output_type -> lnrpc.ChannelAcceptRequest
+	93,  // 294: lnrpc.Lightning.CloseChannel:output_type -> lnrpc.CloseStatusUpdate
+	181, // 295: lnrpc.Lightning.AbandonChannel:output_type -> lnrpc.AbandonChannelResponse
+	165, // 296: lnrpc.Lightning.AddInvoice:output_type -> lnrpc.AddInvoiceResponse
+	168, // 297: lnrpc.Lightning.ListInvoices:output_type -> lnrpc.ListInvoiceResponse
+	161, // 298: lnrpc.Lightning.LookupInvoice:output_type -> lnrpc.Invoice
+	161, // 299: lnrpc.Lightning.SubscribeInvoices:output_type -> lnrpc.Invoice
+	171, // 300: lnrpc.Lightning.DeleteCanceledInvoice:output_type -> lnrpc.DelCanceledInvoiceResp
+	185, // 301: lnrpc.Lightning.DecodePayReq:output_type -> lnrpc.PayReq
+	175, // 302: lnrpc.Lightning.ListPayments:output_type -> lnrpc.ListPaymentsResponse
+	178, // 303: lnrpc.Lightning.DeletePayment:output_type -> lnrpc.DeletePaymentResponse
+	179, // 304: lnrpc.Lightning.DeleteAllPayments:output_type -> lnrpc.DeleteAllPaymentsResponse
+	140, // 305: lnrpc.Lightning.DescribeGraph:output_type -> lnrpc.ChannelGraph
+	142, // 306: lnrpc.Lightning.GetNodeMetrics:output_type -> lnrpc.NodeMetricsResponse
+	138, // 307: lnrpc.Lightning.GetChanInfo:output_type -> lnrpc.ChannelEdge
+	133, // 308: lnrpc.Lightning.GetNodeInfo:output_type -> lnrpc.NodeInfo
+	127, // 309: lnrpc.Lightning.QueryRoutes:output_type -> lnrpc.QueryRoutesResponse
+	146, // 310: lnrpc.Lightning.GetNetworkInfo:output_type -> lnrpc.NetworkInfo
+	148, // 311: lnrpc.Lightning.StopDaemon:output_type -> lnrpc.StopResponse
+	150, // 312: lnrpc.Lightning.SubscribeChannelGraph:output_type -> lnrpc.GraphTopologyUpdate
+	183, // 313: lnrpc.Lightning.DebugLevel:output_type -> lnrpc.DebugLevelResponse
+	189, // 314: lnrpc.Lightning.FeeReport:output_type -> lnrpc.FeeReportResponse
+	193, // 315: lnrpc.Lightning.UpdateChannelPolicy:output_type -> lnrpc.PolicyUpdateResponse
+	196, // 316: lnrpc.Lightning.ForwardingHistory:output_type -> lnrpc.ForwardingHistoryResponse
+	198, // 317: lnrpc.Lightning.ExportChannelBackup:output_type -> lnrpc.ChannelBackup
+	201, // 318: lnrpc.Lightning.ExportAllChannelBackups:output_type -> lnrpc.ChanBackupSnapshot
+	206, // 319: lnrpc.Lightning.VerifyChanBackup:output_type -> lnrpc.VerifyChanBackupResponse
+	204, // 320: lnrpc.Lightning.RestoreChannelBackups:output_type -> lnrpc.RestoreBackupResponse
+	201, // 321: lnrpc.Lightning.SubscribeChannelBackups:output_type -> lnrpc.ChanBackupSnapshot
+	209, // 322: lnrpc.Lightning.BakeMacaroon:output_type -> lnrpc.BakeMacaroonResponse
+	211, // 323: lnrpc.Lightning.ListMacaroonIDs:output_type -> lnrpc.ListMacaroonIDsResponse
+	213, // 324: lnrpc.Lightning.DeleteMacaroonID:output_type -> lnrpc.DeleteMacaroonIDResponse
+	216, // 325: lnrpc.Lightning.ListPermissions:output_type -> lnrpc.ListPermissionsResponse
+	222, // 326: lnrpc.Lightning.CheckMacaroonPermissions:output_type -> lnrpc.CheckMacPermResponse
+	223, // 327: lnrpc.Lightning.RegisterRPCMiddleware:output_type -> lnrpc.RPCMiddlewareRequest
+	27,  // 328: lnrpc.Lightning.SendCustomMessage:output_type -> lnrpc.SendCustomMessageResponse
+	25,  // 329: lnrpc.Lightning.SubscribeCustomMessages:output_type -> lnrpc.CustomMessage
+	31,  // 330: lnrpc.Lightning.SendOnionMessage:output_type -> lnrpc.SendOnionMessageResponse
+	29,  // 331: lnrpc.Lightning.SubscribeOnionMessages:output_type -> lnrpc.OnionMessageUpdate
+	33,  // 332: lnrpc.Lightning.CreateOffer:output_type -> lnrpc.CreateOfferResponse
+	71,  // 333: lnrpc.Lightning.ListAliases:output_type -> lnrpc.ListAliasesResponse
+	23,  // 334: lnrpc.Lightning.LookupHtlcResolution:output_type -> lnrpc.LookupHtlcResolutionResponse
+	267, // [267:335] is the sub-list for method output_type
+	199, // [199:267] is the sub-list for method input_type
 	199, // [199:199] is the sub-list for extension type_name
 	199, // [199:199] is the sub-list for extension extendee
 	0,   // [0:199] is the sub-list for field type_name
@@ -20760,36 +20907,37 @@ func file_lightning_proto_init() {
 	if File_lightning_proto != nil {
 		return
 	}
-	file_lightning_proto_msgTypes[15].OneofWrappers = []any{
+	file_lightning_proto_msgTypes[10].OneofWrappers = []any{}
+	file_lightning_proto_msgTypes[17].OneofWrappers = []any{
 		(*FeeLimit_Fixed)(nil),
 		(*FeeLimit_FixedMsat)(nil),
 		(*FeeLimit_Percent)(nil),
 	}
-	file_lightning_proto_msgTypes[18].OneofWrappers = []any{
+	file_lightning_proto_msgTypes[20].OneofWrappers = []any{
 		(*ChannelPoint_FundingTxidBytes)(nil),
 		(*ChannelPoint_FundingTxidStr)(nil),
 	}
-	file_lightning_proto_msgTypes[69].OneofWrappers = []any{
+	file_lightning_proto_msgTypes[71].OneofWrappers = []any{
 		(*CloseStatusUpdate_ClosePending)(nil),
 		(*CloseStatusUpdate_ChanClose)(nil),
 		(*CloseStatusUpdate_CloseInstant)(nil),
 	}
-	file_lightning_proto_msgTypes[77].OneofWrappers = []any{
+	file_lightning_proto_msgTypes[79].OneofWrappers = []any{
 		(*OpenStatusUpdate_ChanPending)(nil),
 		(*OpenStatusUpdate_ChanOpen)(nil),
 		(*OpenStatusUpdate_PsbtFund)(nil),
 	}
-	file_lightning_proto_msgTypes[82].OneofWrappers = []any{
+	file_lightning_proto_msgTypes[84].OneofWrappers = []any{
 		(*FundingShim_ChanPointShim)(nil),
 		(*FundingShim_PsbtShim)(nil),
 	}
-	file_lightning_proto_msgTypes[86].OneofWrappers = []any{
+	file_lightning_proto_msgTypes[88].OneofWrappers = []any{
 		(*FundingTransitionMsg_ShimRegister)(nil),
 		(*FundingTransitionMsg_ShimCancel)(nil),
 		(*FundingTransitionMsg_PsbtVerify)(nil),
 		(*FundingTransitionMsg_PsbtFinalize)(nil),
 	}
-	file_lightning_proto_msgTypes[93].OneofWrappers = []any{
+	file_lightning_proto_msgTypes[95].OneofWrappers = []any{
 		(*ChannelEventUpdate_OpenChannel)(nil),
 		(*ChannelEventUpdate_ClosedChannel)(nil),
 		(*ChannelEventUpdate_ActiveChannel)(nil),
@@ -20799,23 +20947,23 @@ func file_lightning_proto_init() {
 		(*ChannelEventUpdate_ChannelFundingTimeout)(nil),
 		(*ChannelEventUpdate_UpdatedChannel)(nil),
 	}
-	file_lightning_proto_msgTypes[138].OneofWrappers = []any{}
-	file_lightning_proto_msgTypes[167].OneofWrappers = []any{
+	file_lightning_proto_msgTypes[140].OneofWrappers = []any{}
+	file_lightning_proto_msgTypes[169].OneofWrappers = []any{
 		(*PolicyUpdateRequest_Global)(nil),
 		(*PolicyUpdateRequest_ChanPoint)(nil),
 	}
-	file_lightning_proto_msgTypes[171].OneofWrappers = []any{}
-	file_lightning_proto_msgTypes[179].OneofWrappers = []any{
+	file_lightning_proto_msgTypes[173].OneofWrappers = []any{}
+	file_lightning_proto_msgTypes[181].OneofWrappers = []any{
 		(*RestoreChanBackupRequest_ChanBackups)(nil),
 		(*RestoreChanBackupRequest_MultiChanBackup)(nil),
 	}
-	file_lightning_proto_msgTypes[199].OneofWrappers = []any{
+	file_lightning_proto_msgTypes[201].OneofWrappers = []any{
 		(*RPCMiddlewareRequest_StreamAuth)(nil),
 		(*RPCMiddlewareRequest_Request)(nil),
 		(*RPCMiddlewareRequest_Response)(nil),
 		(*RPCMiddlewareRequest_RegComplete)(nil),
 	}
-	file_lightning_proto_msgTypes[203].OneofWrappers = []any{
+	file_lightning_proto_msgTypes[205].OneofWrappers = []any{
 		(*RPCMiddlewareResponse_Register)(nil),
 		(*RPCMiddlewareResponse_Feedback)(nil),
 	}
@@ -20825,7 +20973,7 @@ func file_lightning_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_lightning_proto_rawDesc), len(file_lightning_proto_rawDesc)),
 			NumEnums:      22,
-			NumMessages:   234,
+			NumMessages:   236,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

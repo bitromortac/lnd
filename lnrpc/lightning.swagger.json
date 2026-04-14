@@ -4841,6 +4841,20 @@
         }
       }
     },
+    "lnrpcCreateOfferResponse": {
+      "type": "object",
+      "properties": {
+        "offer": {
+          "type": "string",
+          "description": "The bech32-encoded offer string (lno1...)."
+        },
+        "offer_id": {
+          "type": "string",
+          "format": "byte",
+          "description": "The 32-byte offer ID (SHA256 of the TLV-encoded offer), hex\nencoded."
+        }
+      }
+    },
     "lnrpcCustomMessage": {
       "type": "object",
       "properties": {

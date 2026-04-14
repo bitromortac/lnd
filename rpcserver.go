@@ -566,6 +566,10 @@ func MainRPCServerPermissions() map[string][]bakery.Op {
 			Entity: "offchain",
 			Action: "read",
 		}},
+		"/lnrpc.Lightning/CreateOffer": {{
+			Entity: "offchain",
+			Action: "write",
+		}},
 		"/lnrpc.Lightning/LookupHtlcResolution": {{
 			Entity: "offchain",
 			Action: "read",
@@ -8843,6 +8847,33 @@ func marshallBlindedPath(p *lnwire.BlindedPath) *lnrpc.BlindedPath {
 
 	return bp
 }
+
+// CreateOffer creates a new BOLT 12 offer, persists it in the offer store,
+// and returns the encoded offer string and offer ID.
+func (r *rpcServer) CreateOffer(ctx context.Context,
+	req *lnrpc.CreateOfferRequest) (*lnrpc.CreateOfferResponse,
+	error) {
+
+	var quantityMax *uint64
+	if req.QuantityMax != nil {
+		v := req.GetQuantityMax()
+		quantityMax = &v
+	}
+
+	result, err := r.server.CreateOffer(
+		ctx, req.Description, req.AmountMsat,
+		req.AbsoluteExpiry, quantityMax,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	return &lnrpc.CreateOfferResponse{
+		Offer:   result.Encoded,
+		OfferId: result.OfferID[:],
+	}, nil
+}
+
 
 // ListAliases returns the set of all aliases we have ever allocated along with
 // their base SCIDs and possibly a separate confirmed SCID in the case of
