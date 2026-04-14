@@ -16,6 +16,10 @@ type Querier interface {
 	AddV2ChannelProof(ctx context.Context, arg AddV2ChannelProofParams) (sql.Result, error)
 	ClearKVInvoiceHashIndex(ctx context.Context) error
 	CountPayments(ctx context.Context) (int64, error)
+	// Count succeeded payments for a given offer and their total amount.
+	// A payment is considered succeeded if it has at least one settled
+	// HTLC attempt (resolution_type = 1).
+	CountPaymentsForOffer(ctx context.Context, offerHash []byte) (CountPaymentsForOfferRow, error)
 	CountZombieChannels(ctx context.Context, version int16) (int64, error)
 	CreateChannel(ctx context.Context, arg CreateChannelParams) (int64, error)
 	DeleteCanceledInvoices(ctx context.Context) (sql.Result, error)
@@ -47,6 +51,9 @@ type Querier interface {
 	// group the resolutions by payment_id in the background.
 	FetchHtlcAttemptResolutionsForPayments(ctx context.Context, paymentIds []int64) ([]FetchHtlcAttemptResolutionsForPaymentsRow, error)
 	FetchHtlcAttemptsForPayments(ctx context.Context, paymentIds []int64) ([]FetchHtlcAttemptsForPaymentsRow, error)
+	// Fetch all invoice request records for a given offer, ordered by
+	// creation time descending.
+	FetchInvoiceRequestsByOfferHash(ctx context.Context, offerHash []byte) ([]InvoiceRequestStore, error)
 	// Fetch all non-terminal payments using pagination. A payment is
 	// non-terminal if it has an unresolved attempt, or if it has not been
 	// permanently failed and has no settled attempt yet.
@@ -167,6 +174,9 @@ type Querier interface {
 	GetV2DisabledSCIDs(ctx context.Context) ([][]byte, error)
 	GetZombieChannel(ctx context.Context, arg GetZombieChannelParams) (GraphZombieChannel, error)
 	GetZombieChannelsSCIDs(ctx context.Context, arg GetZombieChannelsSCIDsParams) ([]GraphZombieChannel, error)
+	// Check whether any non-failed payment exists for a given offer.
+	// Returns true if an in-flight or succeeded payment exists.
+	HasNonFailedForOffer(ctx context.Context, offerHash []byte) (bool, error)
 	HighestSCID(ctx context.Context, version int16) ([]byte, error)
 	InsertAMPSubInvoice(ctx context.Context, arg InsertAMPSubInvoiceParams) error
 	InsertAMPSubInvoiceHTLC(ctx context.Context, arg InsertAMPSubInvoiceHTLCParams) error
@@ -190,6 +200,9 @@ type Querier interface {
 	InsertInvoiceFeature(ctx context.Context, arg InsertInvoiceFeatureParams) error
 	InsertInvoiceHTLC(ctx context.Context, arg InsertInvoiceHTLCParams) (int64, error)
 	InsertInvoiceHTLCCustomRecord(ctx context.Context, arg InsertInvoiceHTLCCustomRecordParams) error
+	// Insert an outgoing invoice request record. invoice_bytes is NULL
+	// until the reply arrives.
+	InsertInvoiceRequest(ctx context.Context, arg InsertInvoiceRequestParams) (int64, error)
 	InsertKVInvoiceKeyAndAddIndex(ctx context.Context, arg InsertKVInvoiceKeyAndAddIndexParams) error
 	InsertMigratedInvoice(ctx context.Context, arg InsertMigratedInvoiceParams) (int64, error)
 	InsertNodeFeature(ctx context.Context, arg InsertNodeFeatureParams) error
@@ -211,6 +224,7 @@ type Querier interface {
 	InsertPaymentFirstHopCustomRecord(ctx context.Context, arg InsertPaymentFirstHopCustomRecordParams) error
 	InsertPaymentHopCustomRecord(ctx context.Context, arg InsertPaymentHopCustomRecordParams) error
 	// Insert a payment intent for a given payment and return its ID.
+	// offer_hash is NULL for BOLT 11 payments.
 	InsertPaymentIntent(ctx context.Context, arg InsertPaymentIntentParams) (int64, error)
 	// Migration-specific payment insert that allows setting fail_reason.
 	// Normal InsertPayment forces fail_reason to NULL since new payments
@@ -249,6 +263,9 @@ type Querier interface {
 	UpdateInvoiceAmountPaid(ctx context.Context, arg UpdateInvoiceAmountPaidParams) (sql.Result, error)
 	UpdateInvoiceHTLC(ctx context.Context, arg UpdateInvoiceHTLCParams) error
 	UpdateInvoiceHTLCs(ctx context.Context, arg UpdateInvoiceHTLCsParams) error
+	// Set the invoice_bytes on an existing record after the invoice
+	// reply arrives.
+	UpdateInvoiceRequestInvoice(ctx context.Context, arg UpdateInvoiceRequestInvoiceParams) error
 	UpdateInvoiceState(ctx context.Context, arg UpdateInvoiceStateParams) (sql.Result, error)
 	UpsertAMPSubInvoice(ctx context.Context, arg UpsertAMPSubInvoiceParams) (sql.Result, error)
 	UpsertChanPolicyExtraType(ctx context.Context, arg UpsertChanPolicyExtraTypeParams) error
