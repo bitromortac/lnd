@@ -197,6 +197,13 @@ func CreateRPCInvoice(invoice *invoices.Invoice,
 		PaymentAddr: invoice.Terms.PaymentAddr[:],
 		IsAmp:       invoice.IsAMP(),
 		IsBlinded:   invoice.IsBlinded(),
+		IsBolt12:    invoice.IsBolt12,
+	}
+
+	// Populate BOLT 12 detail from DB columns and the decoded
+	// lni1... payment request.
+	if invoice.IsBolt12 {
+		rpcInvoice.Bolt12Detail = marshalBolt12Detail(invoice)
 	}
 
 	rpcInvoice.AmpInvoiceState = make(map[string]*lnrpc.AMPInvoiceState)
@@ -367,4 +374,16 @@ func CreateZpay32HopHints(routeHints []*lnrpc.RouteHint) ([][]zpay32.HopHint, er
 		res = append(res, hopHints)
 	}
 	return res, nil
+}
+
+// marshalBolt12Detail populates an OfferInvoiceDetail from the invoice's
+// BOLT 12 side table data.
+func marshalBolt12Detail(
+	invoice *invoices.Invoice) *lnrpc.OfferInvoiceDetail {
+
+	return &lnrpc.OfferInvoiceDetail{
+		OfferHash:     invoice.OfferHash,
+		InvreqPayerId: invoice.InvreqPayerID,
+		Quantity:      invoice.InvreqQuantity,
+	}
 }
