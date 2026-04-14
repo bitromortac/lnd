@@ -1845,6 +1845,7 @@ func (r *RouterBackend) MarshallPayment(payment *paymentsdb.MPPayment) (
 		PaymentIndex:          payment.SequenceNum,
 		FailureReason:         failureReason,
 		FirstHopCustomRecords: payment.Info.FirstHopCustomRecords,
+		OfferId:               payment.Info.OfferID,
 	}, nil
 }
 
