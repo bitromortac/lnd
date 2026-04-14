@@ -1122,6 +1122,14 @@ func validateOfferRead(o *Offer, now time.Time, activeChain [32]byte,
 // the default when offer_chains is absent per the spec.
 var bitcoinMainnetGenesisHash = [32]byte(*chaincfg.MainNetParams.GenesisHash)
 
+// BitcoinMainnetGenesisHash returns the Bitcoin mainnet genesis hash, the
+// default chain a BOLT 12 message targets when its chain field is omitted.
+// Callers building an invoice request pass it (or another chain's genesis) as
+// the chain to pay on.
+func BitcoinMainnetGenesisHash() [32]byte {
+	return bitcoinMainnetGenesisHash
+}
+
 // getOfferChains returns the chains an offer is valid for. If offer_chains is
 // absent, the spec defaults to Bitcoin mainnet.
 func getOfferChains(o *Offer) [][32]byte {
