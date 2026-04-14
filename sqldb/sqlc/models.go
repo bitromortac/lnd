@@ -158,6 +158,10 @@ type Invoice struct {
 	IsHodl             bool
 	IsKeysend          bool
 	CreatedAt          time.Time
+	IsBolt12           bool
+	OfferID            sql.NullInt64
+	InvoiceNodeID      []byte
+	InvreqPayerID      []byte
 }
 
 type InvoiceEvent struct {
@@ -212,6 +216,20 @@ type InvoiceSequence struct {
 type MigrationTracker struct {
 	Version       int32
 	MigrationTime time.Time
+}
+
+type Offer struct {
+	ID             int64
+	OfferID        []byte
+	Encoded        string
+	IssuerNodeID   []byte
+	Description    sql.NullString
+	AmountMsat     sql.NullInt64
+	Currency       sql.NullString
+	AbsoluteExpiry sql.NullInt64
+	QuantityMax    sql.NullInt64
+	IsDisabled     bool
+	CreatedAt      time.Time
 }
 
 type Payment struct {

@@ -424,6 +424,25 @@ type Invoice struct {
 	// HodlInvoice indicates whether the invoice should be held in the
 	// Accepted state or be settled right away.
 	HodlInvoice bool
+
+	// IsBolt12 indicates whether this invoice was created via the
+	// BOLT 12 offer/invoice-request protocol.
+	IsBolt12 bool
+
+	// OfferID is the database primary key of the offer that spawned
+	// this invoice. Nil for BOLT 11 invoices and BOLT 12 invoices
+	// not tied to an offer.
+	OfferID *int64
+
+	// InvoiceNodeID is the 33-byte compressed pubkey that signed
+	// the BOLT 12 invoice (invoice_node_id, TLV type 176). Nil for
+	// BOLT 11.
+	InvoiceNodeID []byte
+
+	// InvreqPayerID is the 33-byte compressed pubkey from the
+	// invreq_payer_id TLV (type 88) in the invoice request. Nil
+	// for BOLT 11.
+	InvreqPayerID []byte
 }
 
 // HTLCSet returns the set of HTLCs belonging to setID and in the provided
