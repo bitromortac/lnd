@@ -40,6 +40,8 @@ type Querier interface {
 	FailPayment(ctx context.Context, arg FailPaymentParams) (sql.Result, error)
 	FetchAMPSubInvoiceHTLCs(ctx context.Context, arg FetchAMPSubInvoiceHTLCsParams) ([]FetchAMPSubInvoiceHTLCsRow, error)
 	FetchAMPSubInvoices(ctx context.Context, arg FetchAMPSubInvoicesParams) ([]AmpSubInvoice, error)
+	FetchBolt12Payment(ctx context.Context, idempotencyKey []byte) (FetchBolt12PaymentRow, error)
+	FetchBolt12PaymentIDsByOffer(ctx context.Context, offerHash []byte) ([]sql.NullInt64, error)
 	FetchHopLevelCustomRecords(ctx context.Context, hopIds []int64) ([]PaymentHopCustomRecord, error)
 	FetchHopsForAttempts(ctx context.Context, htlcAttemptIndices []int64) ([]FetchHopsForAttemptsRow, error)
 	// Batch query to fetch only HTLC resolution status for multiple payments.
@@ -251,6 +253,7 @@ type Querier interface {
 	UpdateInvoiceHTLCs(ctx context.Context, arg UpdateInvoiceHTLCsParams) error
 	UpdateInvoiceState(ctx context.Context, arg UpdateInvoiceStateParams) (sql.Result, error)
 	UpsertAMPSubInvoice(ctx context.Context, arg UpsertAMPSubInvoiceParams) (sql.Result, error)
+	UpsertBolt12Payment(ctx context.Context, arg UpsertBolt12PaymentParams) error
 	UpsertChanPolicyExtraType(ctx context.Context, arg UpsertChanPolicyExtraTypeParams) error
 	UpsertChannelExtraType(ctx context.Context, arg UpsertChannelExtraTypeParams) error
 	UpsertEdgePolicy(ctx context.Context, arg UpsertEdgePolicyParams) (int64, error)
