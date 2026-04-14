@@ -3290,6 +3290,13 @@ func (c *pathFindingTestContext) findPath(target route.Vertex,
 func (c *pathFindingTestContext) findBlindedPaths(
 	restrictions *blindedPathRestrictions) ([][]blindedHop, error) {
 
+	// Default to RouteBlindingOptional if no feature bit is set, so
+	// existing test call sites don't need updating.
+	if restrictions.requiredFeature == 0 {
+		restrictions.requiredFeature =
+			lnwire.RouteBlindingOptional
+	}
+
 	return dbFindBlindedPaths(c.v1Graph, restrictions)
 }
 
