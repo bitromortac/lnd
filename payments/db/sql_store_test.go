@@ -3,6 +3,7 @@
 package paymentsdb
 
 import (
+	"bytes"
 	"database/sql"
 	"testing"
 
@@ -225,5 +226,65 @@ func TestComputePaymentStatus(t *testing.T) {
 			require.Equal(t, tc.expectedStatus, status,
 				"got %s, want %s", status, tc.expectedStatus)
 		})
+	}
+}
+
+// TestQueryPaymentsOfferHash asserts that QueryPayments returns the BOLT 12
+// offer hash of a payment in both pagination directions, with and without the
+// offer hash filter.
+func TestQueryPaymentsOfferHash(t *testing.T) {
+	t.Parallel()
+
+	ctx := t.Context()
+	paymentDB, _ := NewTestDB(t)
+
+	offerHash := bytes.Repeat([]byte{0xab}, 32)
+
+	bolt12Info, _ := genInfo(t)
+	bolt12Info.OfferHash = offerHash
+	require.NoError(t, paymentDB.InitPayment(
+		ctx, bolt12Info.PaymentIdentifier, bolt12Info,
+	))
+
+	bolt11Info, _ := genInfo(t)
+	require.NoError(t, paymentDB.InitPayment(
+		ctx, bolt11Info.PaymentIdentifier, bolt11Info,
+	))
+
+	for _, reversed := range []bool{false, true} {
+		resp, err := paymentDB.QueryPayments(ctx, Query{
+			MaxPayments:       10,
+			Reversed:          reversed,
+			IncludeIncomplete: true,
+		})
+		require.NoError(t, err)
+		require.Len(t, resp.Payments, 2)
+
+		for _, p := range resp.Payments {
+			if p.Info.PaymentIdentifier ==
+				bolt12Info.PaymentIdentifier {
+
+				require.Equal(t, offerHash, p.Info.OfferHash,
+					"reversed=%v", reversed)
+
+				continue
+			}
+
+			require.Empty(t, p.Info.OfferHash,
+				"reversed=%v", reversed)
+		}
+
+		filtered, err := paymentDB.QueryPayments(ctx, Query{
+			MaxPayments:       10,
+			Reversed:          reversed,
+			IncludeIncomplete: true,
+			OfferHash:         offerHash,
+		})
+		require.NoError(t, err)
+		require.Len(t, filtered.Payments, 1)
+		require.Equal(
+			t, offerHash, filtered.Payments[0].Info.OfferHash,
+			"reversed=%v", reversed,
+		)
 	}
 }
