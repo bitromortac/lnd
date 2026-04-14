@@ -10,6 +10,7 @@ import (
 	"github.com/btcsuite/btcd/btcec/v2"
 	sphinx "github.com/lightningnetwork/lightning-onion"
 	"github.com/lightningnetwork/lnd/bolt12"
+	"github.com/lightningnetwork/lnd/fn/v2"
 	"github.com/lightningnetwork/lnd/lnwire"
 	"github.com/lightningnetwork/lnd/onionmessage"
 	"github.com/lightningnetwork/lnd/record"
@@ -17,6 +18,78 @@ import (
 	"github.com/lightningnetwork/lnd/subscribe"
 	"github.com/lightningnetwork/lnd/tlv"
 )
+
+const (
+	// maxOnionMessagePayloadSize is the maximum payload size for onion
+	// messages. Unlike payment onions (1300 bytes), onion messages can
+	// carry up to 32KB per BOLT 7.
+	maxOnionMessagePayloadSize = 32768
+)
+
+// ReplyPathBuilder constructs a blinded reply path for the sender to include
+// in invoice requests. The receiver will use this path to send the invoice
+// back. Implementations range from a single-hop path (direct peer) to
+// multi-hop blinded paths (routed messages).
+type ReplyPathBuilder interface {
+	// BuildReplyPath returns a blinded path that points back to the
+	// sender. The receiver will use this as the reply_path for the
+	// invoice onion message.
+	BuildReplyPath() (*sphinx.BlindedPathInfo, error)
+}
+
+// SingleHopReplyPathBuilder builds a trivial single-hop reply path where the
+// sender is both introduction node and destination. Suitable for the
+// direct-peer case.
+type SingleHopReplyPathBuilder struct {
+	NodePubKey *btcec.PublicKey
+}
+
+// BuildReplyPath creates a single-hop blinded path back to the sender.
+func (b *SingleHopReplyPathBuilder) BuildReplyPath() (
+	*sphinx.BlindedPathInfo, error) {
+
+	return BuildSingleHopReplyPath(b.NodePubKey)
+}
+
+// MultiHopReplyPathBuilder attempts to build a multi-hop blinded reply path
+// using the provided BuildPaths function. If no multi-hop paths are found, it
+// falls back to a single-hop path.
+type MultiHopReplyPathBuilder struct {
+	// NodePubKey is the node's identity public key, used as fallback for
+	// single-hop path construction.
+	NodePubKey *btcec.PublicKey
+
+	// BuildPaths attempts to find and construct multi-hop blinded message
+	// paths to this node.
+	BuildPaths func() ([]*sphinx.BlindedPathInfo, error)
+}
+
+// BuildReplyPath attempts to build a multi-hop blinded reply path. If no
+// multi-hop paths are available, it falls back to a single-hop path.
+func (b *MultiHopReplyPathBuilder) BuildReplyPath() (
+	*sphinx.BlindedPathInfo, error) {
+
+	paths, err := b.BuildPaths()
+	if err != nil {
+		log.Debugf("Multi-hop reply path construction failed, "+
+			"falling back to single-hop: %v", err)
+
+		return BuildSingleHopReplyPath(b.NodePubKey)
+	}
+
+	if len(paths) == 0 {
+		log.Debugf("No multi-hop reply paths found, falling " +
+			"back to single-hop")
+
+		return BuildSingleHopReplyPath(b.NodePubKey)
+	}
+
+	numHops := len(paths[0].Path.BlindedHops)
+	log.Infof("Using multi-hop reply path with %d blinded hop(s)",
+		numHops)
+
+	return paths[0], nil
+}
 
 // RequestOption configures optional fields on an invoice request.
 type RequestOption func(*requestConfig)
@@ -68,34 +141,30 @@ func BuildInvoiceRequest(offer *bolt12.Offer, opts ...RequestOption) (
 		return nil, nil, fmt.Errorf("generate payer key: %w", err)
 	}
 
-	ir := &bolt12.InvoiceRequest{}
-
-	// Mirror all offer fields (types 2-22).
-	ir.OfferChains = offer.OfferChains
-	ir.OfferMetadata = offer.OfferMetadata
-	ir.OfferCurrency = offer.OfferCurrency
-	ir.OfferAmount = offer.OfferAmount
-	ir.OfferDescription = offer.OfferDescription
-	ir.OfferFeatures = offer.OfferFeatures
-	ir.OfferAbsoluteExpiry = offer.OfferAbsoluteExpiry
-	ir.OfferPaths = offer.OfferPaths
-	ir.OfferIssuer = offer.OfferIssuer
-	ir.OfferQuantityMax = offer.OfferQuantityMax
-	ir.OfferIssuerID = offer.OfferIssuerID
-
 	metadata := make([]byte, 32)
 	if _, err := rand.Read(metadata); err != nil {
 		return nil, nil, fmt.Errorf("generate metadata: %w", err)
 	}
-	ir.InvreqMetadata = tlv.SomeRecordT(
-		tlv.RecordT[tlv.TlvType0, tlv.Blob]{
-			Val: metadata,
+
+	// Pay on the offer's chain: use the first listed offer_chains entry, or
+	// Bitcoin mainnet when offer_chains is absent. The constructor sets
+	// invreq_chain only for non-bitcoin chains (SHOULD omit for mainnet) and
+	// the writer validation enforces that the chain is one the offer lists.
+	chain := bolt12.BitcoinMainnetGenesisHash()
+	offer.OfferChains.WhenSome(
+		func(r tlv.RecordT[tlv.TlvType2, bolt12.ChainsRecord]) {
+			if len(r.Val.Chains) > 0 {
+				chain = r.Val.Chains[0]
+			}
 		},
 	)
 
-	ir.InvreqPayerID = tlv.SomeRecordT(
-		tlv.NewPrimitiveRecord[tlv.TlvType88](payerKey.PubKey()),
+	ir, err := bolt12.NewInvoiceRequestFromOffer(
+		offer, payerKey.PubKey(), metadata, chain,
 	)
+	if err != nil {
+		return nil, nil, err
+	}
 
 	if cfg.amountMsat > 0 {
 		amt := bolt12.TUint64(cfg.amountMsat)
@@ -123,31 +192,10 @@ func BuildInvoiceRequest(offer *bolt12.Offer, opts ...RequestOption) (
 		)
 	}
 
-	// Set invreq_chain (type 80) if the offer specifies a non-mainnet
-	// chain. Per spec, this defaults to Bitcoin mainnet when absent, so
-	// it must be explicitly set for regtest/testnet/signet.
-	offer.OfferChains.WhenSome(
-		func(r tlv.RecordT[tlv.TlvType2, bolt12.ChainsRecord]) {
-			if len(r.Val.Chains) > 0 {
-				chain := r.Val.Chains[0]
-				ir.InvreqChain = tlv.SomeRecordT(
-					tlv.NewPrimitiveRecord[
-						tlv.TlvType80, [32]byte,
-					](chain),
-				)
-			}
-		},
-	)
-
-	// Encode → decode round-trip to populate rawTLVs for signing.
-	irBytes, err := ir.Encode()
-	if err != nil {
+	// Encode emits canonical bytes and repopulates rawTLVs, removing
+	// the previous decode-after-encode dance.
+	if _, err := ir.Encode(); err != nil {
 		return nil, nil, fmt.Errorf("encode invreq: %w", err)
-	}
-
-	ir, err = bolt12.DecodeInvoiceRequest(irBytes)
-	if err != nil {
-		return nil, nil, fmt.Errorf("re-decode invreq: %w", err)
 	}
 
 	// Sign with the ephemeral payer key.
@@ -190,30 +238,14 @@ func BuildSingleHopReplyPath(nodePubKey *btcec.PublicKey) (
 }
 
 // SendInvoiceRequest sends a signed invoice request to the recipient via onion
-// message. It builds a single-hop blinded path to the recipient, wraps the
-// request in a type-64 TLV payload, and sends it with the provided reply path.
+// message. It wraps the request in a type-64 TLV payload and sends it along
+// the provided forward path with the provided reply path. The forward path is
+// a blinded path to the recipient (single-hop for direct peers, multi-hop for
+// routed messages).
 func SendInvoiceRequest(ctx context.Context, invreqBytes []byte,
-	recipientPubKey *btcec.PublicKey, replyPath *sphinx.BlindedPathInfo,
+	forwardPath *sphinx.BlindedPathInfo,
+	replyPath *sphinx.BlindedPathInfo,
 	sender OnionMessageSender) error {
-
-	recipientSessionKey, err := btcec.NewPrivateKey()
-	if err != nil {
-		return fmt.Errorf("generate recipient session key: %w", err)
-	}
-
-	recipientHops := []*sphinx.HopInfo{
-		{
-			NodePub:   recipientPubKey,
-			PlainText: encodeEmptyRouteData(),
-		},
-	}
-
-	recipientPath, err := sphinx.BuildBlindedPath(
-		recipientSessionKey, recipientHops,
-	)
-	if err != nil {
-		return fmt.Errorf("build recipient path: %w", err)
-	}
 
 	finalHopTLVs := []*lnwire.FinalHopTLV{
 		{
@@ -228,7 +260,7 @@ func SendInvoiceRequest(ctx context.Context, invreqBytes []byte,
 	}
 
 	sphinxPath, err := route.OnionMessageBlindedPathToSphinxPath(
-		recipientPath.Path,
+		forwardPath.Path,
 		replyBlindedPath, finalHopTLVs,
 	)
 	if err != nil {
@@ -243,7 +275,7 @@ func SendInvoiceRequest(ctx context.Context, invreqBytes []byte,
 	onionPkt, err := sphinx.NewOnionPacket(
 		sphinxPath, onionSessionKey, nil,
 		sphinx.DeterministicPacketFiller, sphinx.WithMaxPayloadSize(
-			sphinx.MaxRoutingPayloadSize,
+			maxOnionMessagePayloadSize,
 		),
 	)
 	if err != nil {
@@ -257,13 +289,87 @@ func SendInvoiceRequest(ctx context.Context, invreqBytes []byte,
 
 	var peerPub [33]byte
 	copy(
-		peerPub[:], recipientPath.Path.IntroductionPoint.
+		peerPub[:], forwardPath.Path.IntroductionPoint.
 			SerializeCompressed(),
 	)
 
 	return sender.SendOnionMessage(
-		ctx, peerPub, recipientPath.Path.BlindingPoint, buf.Bytes(),
+		ctx, peerPub, forwardPath.Path.BlindingPoint, buf.Bytes(),
 	)
+}
+
+// BuildForwardPath constructs a blinded path from the sender to the recipient
+// for forwarding an onion message. For a direct peer, this is a single-hop
+// path. For a multi-hop route, the cleartext hops are encoded as blinded hops
+// with next_node_id routing data.
+func BuildForwardPath(recipientPubKey *btcec.PublicKey,
+	route []route.Vertex) (*sphinx.BlindedPathInfo, error) {
+
+	sessionKey, err := btcec.NewPrivateKey()
+	if err != nil {
+		return nil, fmt.Errorf("generate session key: %w", err)
+	}
+
+	// Build hop infos. For multi-hop, each intermediate hop's encrypted
+	// data contains next_node_id. The final hop gets empty route data.
+	hops := make([]*sphinx.HopInfo, 0, len(route)+1)
+
+	for i, vertex := range route {
+		hopPub, err := btcec.ParsePubKey(vertex[:])
+		if err != nil {
+			return nil, fmt.Errorf("parse hop %d pubkey: %w",
+				i, err)
+		}
+
+		isFinal := i == len(route)-1
+		var plainText []byte
+
+		if isFinal {
+			plainText = encodeEmptyRouteData()
+		} else {
+			nextPub, err := btcec.ParsePubKey(
+				route[i+1][:],
+			)
+			if err != nil {
+				return nil, fmt.Errorf(
+					"parse hop %d pubkey: %w",
+					i+1, err,
+				)
+			}
+
+			data := record.NewNonFinalBlindedRouteDataOnionMessage(
+				fn.NewLeft[
+					*btcec.PublicKey,
+					lnwire.ShortChannelID,
+				](nextPub),
+				nil, nil,
+			)
+
+			plainText, err = record.EncodeBlindedRouteData(
+				data,
+			)
+			if err != nil {
+				return nil, fmt.Errorf(
+					"encode hop %d data: %w", i, err,
+				)
+			}
+		}
+
+		hops = append(hops, &sphinx.HopInfo{
+			NodePub:   hopPub,
+			PlainText: plainText,
+		})
+	}
+
+	// If no route hops, build a single-hop direct path.
+	if len(hops) == 0 {
+		hops = append(hops, &sphinx.HopInfo{
+			NodePub:   recipientPubKey,
+			PlainText: encodeEmptyRouteData(),
+		})
+	}
+
+	return sphinx.BuildBlindedPath(sessionKey, hops)
 }
 
 // ValidateInvoiceReply validates a received BOLT 12 invoice against the
@@ -379,6 +485,100 @@ func WaitForInvoiceReply(ctx context.Context, msgServer *subscribe.Server,
 			return nil, ctx.Err()
 		}
 	}
+}
+
+// BuildForwardPathToBlinded constructs a combined path: cleartext hops from
+// the sender to the blinded path's introduction node, then the blinded hops.
+// The last cleartext hop includes NextBlindingOverride to hand off the
+// blinding context to the blinded segment.
+func BuildForwardPathToBlinded(routeHops []route.Vertex,
+	blindedPath *sphinx.BlindedPath) (*sphinx.BlindedPathInfo, error) {
+
+	// If the route leads directly to the intro node (1 hop = intro
+	// node itself), use the blinded path as-is.
+	if len(routeHops) <= 1 {
+		return &sphinx.BlindedPathInfo{
+			Path: blindedPath,
+		}, nil
+	}
+
+	sessionKey, err := btcec.NewPrivateKey()
+	if err != nil {
+		return nil, fmt.Errorf("generate session key: %w", err)
+	}
+
+	// Build cleartext hops for all nodes BEFORE the intro node.
+	// The intro node is the last element of routeHops.
+	numCleartext := len(routeHops) - 1
+	cleartextHops := make([]*sphinx.HopInfo, numCleartext)
+
+	for i := 0; i < numCleartext; i++ {
+		hopPub, err := btcec.ParsePubKey(routeHops[i][:])
+		if err != nil {
+			return nil, fmt.Errorf("parse hop %d: %w", i, err)
+		}
+
+		isLast := i == numCleartext-1
+
+		var data *record.BlindedRouteData
+		if isLast {
+			data = record.NewNonFinalBlindedRouteDataOnionMessage(
+				fn.NewLeft[
+					*btcec.PublicKey,
+					lnwire.ShortChannelID,
+				](blindedPath.IntroductionPoint),
+				blindedPath.BlindingPoint, nil,
+			)
+		} else {
+			nextPub, err := btcec.ParsePubKey(
+				routeHops[i+1][:],
+			)
+			if err != nil {
+				return nil, fmt.Errorf(
+					"parse hop %d: %w", i+1, err,
+				)
+			}
+
+			data = record.NewNonFinalBlindedRouteDataOnionMessage(
+				fn.NewLeft[
+					*btcec.PublicKey,
+					lnwire.ShortChannelID,
+				](nextPub),
+				nil, nil,
+			)
+		}
+
+		plainText, err := record.EncodeBlindedRouteData(data)
+		if err != nil {
+			return nil, fmt.Errorf("encode hop %d: %w", i, err)
+		}
+
+		cleartextHops[i] = &sphinx.HopInfo{
+			NodePub:   hopPub,
+			PlainText: plainText,
+		}
+	}
+
+	cleartextPath, err := sphinx.BuildBlindedPath(
+		sessionKey, cleartextHops,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("build cleartext path: %w", err)
+	}
+
+	combined := &sphinx.BlindedPath{
+		IntroductionPoint: cleartextPath.Path.IntroductionPoint,
+		BlindingPoint:     cleartextPath.Path.BlindingPoint,
+		BlindedHops: append(
+			cleartextPath.Path.BlindedHops,
+			blindedPath.BlindedHops...,
+		),
+	}
+
+	return &sphinx.BlindedPathInfo{
+		Path:       combined,
+		SessionKey: cleartextPath.SessionKey,
+	}, nil
 }
 
 // encodeEmptyRouteData encodes an empty BlindedRouteData for use in single-hop

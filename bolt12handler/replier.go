@@ -13,13 +13,6 @@ import (
 	"github.com/lightningnetwork/lnd/routing/route"
 )
 
-const (
-	// maxOnionMessagePayloadSize is the maximum payload size for onion
-	// messages. Unlike payment onions (1300 bytes), onion messages can
-	// carry up to 32KB per BOLT 7.
-	maxOnionMessagePayloadSize = 32768
-)
-
 // OnionMessageSender is the low-level interface for sending an onion message to
 // a peer. This maps to server.SendOnionMessage.
 type OnionMessageSender interface {

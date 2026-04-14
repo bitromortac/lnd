@@ -9095,6 +9095,13 @@ func (r *rpcServer) RequestInvoice(ctx context.Context,
 		return nil, fmt.Errorf("build reply path: %w", err)
 	}
 
+	forwardPath, err := bolt12handler.BuildForwardPath(
+		recipientPubKey, nil,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("build forward path: %w", err)
+	}
+
 	timeout := 30 * time.Second
 	if req.TimeoutSeconds > 0 {
 		timeout = time.Duration(req.TimeoutSeconds) * time.Second
@@ -9120,7 +9127,7 @@ func (r *rpcServer) RequestInvoice(ctx context.Context,
 	}()
 
 	if err := bolt12handler.SendInvoiceRequest(
-		ctx, irBytes, recipientPubKey, replyPath, r.server,
+		ctx, irBytes, forwardPath, replyPath, r.server,
 	); err != nil {
 		cancel()
 
