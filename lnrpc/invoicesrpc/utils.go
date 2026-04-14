@@ -17,12 +17,19 @@ import (
 // decodePayReq decodes the invoice payment request if present. This is needed,
 // because not all information is stored in dedicated invoice fields. If there
 // is no payment request present, a dummy request will be returned. This can
-// happen with just-in-time inserted keysend invoices.
+// happen with just-in-time inserted keysend invoices or BOLT 12 invoices
+// whose payment request is an lni1... string that zpay32 cannot decode.
 func decodePayReq(invoice *invoices.Invoice,
 	activeNetParams *chaincfg.Params) (*zpay32.Invoice, error) {
 
 	paymentRequest := string(invoice.PaymentRequest)
-	if paymentRequest == "" {
+
+	// For keysend invoices with no payment request and BOLT 12
+	// invoices (whose lni1... string is not zpay32-decodable),
+	// return a minimal struct with just the payment hash. All
+	// other fields (memo, value, expiry, etc.) are read directly
+	// from invoice.* by CreateRPCInvoice.
+	if paymentRequest == "" || invoice.IsBolt12 {
 		preimage := invoice.Terms.PaymentPreimage
 		if preimage == nil {
 			return &zpay32.Invoice{}, nil
@@ -196,6 +203,13 @@ func CreateRPCInvoice(invoice *invoices.Invoice,
 		PaymentAddr: invoice.Terms.PaymentAddr[:],
 		IsAmp:       invoice.IsAMP(),
 		IsBlinded:   invoice.IsBlinded(),
+		IsBolt12:    invoice.IsBolt12,
+	}
+
+	// Populate BOLT 12 detail from DB columns and the decoded
+	// lni1... payment request.
+	if invoice.IsBolt12 {
+		rpcInvoice.Bolt12Detail = marshalBolt12Detail(invoice)
 	}
 
 	rpcInvoice.AmpInvoiceState = make(map[string]*lnrpc.AMPInvoiceState)
@@ -366,4 +380,16 @@ func CreateZpay32HopHints(routeHints []*lnrpc.RouteHint) ([][]zpay32.HopHint, er
 		res = append(res, hopHints)
 	}
 	return res, nil
+}
+
+// marshalBolt12Detail populates an OfferInvoiceDetail from the invoice's
+// BOLT 12 side table data.
+func marshalBolt12Detail(
+	invoice *invoices.Invoice) *lnrpc.OfferInvoiceDetail {
+
+	return &lnrpc.OfferInvoiceDetail{
+		OfferHash:     invoice.OfferHash,
+		InvreqPayerId: invoice.InvreqPayerID,
+		Quantity:      invoice.InvreqQuantity,
+	}
 }
