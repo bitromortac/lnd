@@ -93,6 +93,10 @@ type PaymentCreationInfo struct {
 	// wire message (UpdateAddHTLC) only and therefore do not affect the
 	// onion payload size.
 	FirstHopCustomRecords lnwire.CustomRecords
+
+	// OfferID is the 32-byte SHA256 hash of the TLV-encoded offer for
+	// BOLT 12 payments. Nil for BOLT 11 and other payment types.
+	OfferID []byte
 }
 
 // String returns a human-readable description of the payment creation info.

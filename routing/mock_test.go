@@ -592,6 +592,18 @@ func (m *mockControlTowerOld) SubscribeAllPayments() (
 	return nil, errors.New("not implemented")
 }
 
+func (m *mockControlTowerOld) HasNonFailedForOffer(_ context.Context,
+	_ []byte) (bool, error) {
+
+	return false, nil
+}
+
+func (m *mockControlTowerOld) CountPaymentsForOffer(_ context.Context,
+	_ []byte) (int64, int64, error) {
+
+	return 0, 0, nil
+}
+
 type mockPaymentAttemptDispatcher struct {
 	mock.Mock
 }
@@ -826,6 +838,20 @@ func (m *mockControlTower) SubscribeAllPayments() (
 
 	args := m.Called()
 	return args.Get(0).(ControlTowerSubscriber), args.Error(1)
+}
+
+func (m *mockControlTower) HasNonFailedForOffer(_ context.Context,
+	offerID []byte) (bool, error) {
+
+	args := m.Called(offerID)
+	return args.Bool(0), args.Error(1)
+}
+
+func (m *mockControlTower) CountPaymentsForOffer(_ context.Context,
+	offerID []byte) (int64, int64, error) {
+
+	args := m.Called(offerID)
+	return int64(args.Int(0)), int64(args.Int(1)), args.Error(2)
 }
 
 type mockMPPayment struct {
