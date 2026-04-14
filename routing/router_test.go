@@ -3303,3 +3303,132 @@ func TestFindBlindedPathsWithMC(t *testing.T) {
 		"alice,bob,dave",
 	})
 }
+
+// TestFindBlindedMessagePaths tests that FindBlindedMessagePaths filters nodes
+// by OnionMessagesOptional (bit 39) rather than RouteBlindingOptional (bit 25),
+// and returns paths without probability-based ranking.
+func TestFindBlindedMessagePaths(t *testing.T) {
+	t.Parallel()
+
+	omFeatureBits := []lnwire.FeatureBit{
+		lnwire.OnionMessagesOptional,
+	}
+
+	// Create the graph:
+	//
+	//	E -- A -- B -- D
+	//	          |
+	//	          C
+	//
+	// All nodes advertise OnionMessagesOptional (bit 39) but NOT
+	// RouteBlindingOptional (bit 25). This means FindBlindedPaths
+	// would find nothing, while FindBlindedMessagePaths should work.
+	featuresWithOM := lnwire.NewFeatureVector(
+		lnwire.NewRawFeatureVector(omFeatureBits...),
+		lnwire.Features,
+	)
+
+	policyWithOM := &testChannelPolicy{
+		Expiry:   144,
+		FeeRate:  400,
+		MinHTLC:  1,
+		MaxHTLC:  100000000,
+		Features: featuresWithOM,
+	}
+
+	testChannels := []*testChannel{
+		symmetricTestChannel(
+			"eve", "alice", 100000, policyWithOM, 1,
+		),
+		symmetricTestChannel(
+			"alice", "bob", 100000, policyWithOM, 2,
+		),
+		symmetricTestChannel(
+			"bob", "dave", 100000, policyWithOM, 3,
+		),
+		symmetricTestChannel(
+			"bob", "charlie", 100000, policyWithOM, 4,
+		),
+	}
+
+	testGraph, err := createTestGraphFromChannels(
+		t, true, testChannels, "dave", omFeatureBits...,
+	)
+	require.NoError(t, err)
+
+	ctx := createTestCtxFromGraphInstance(t, 101, testGraph)
+
+	dave := ctx.aliases["dave"]
+
+	assertPaths := func(paths []*route.Route,
+		expectedPaths []string) {
+
+		t.Helper()
+
+		require.Len(t, paths, len(expectedPaths))
+
+		actualPaths := make(map[string]bool)
+		for _, path := range paths {
+			label := getAliasFromPubKey(
+				path.SourcePubKey, ctx.aliases,
+			) + ","
+
+			for _, hop := range path.Hops {
+				label += getAliasFromPubKey(
+					hop.PubKeyBytes, ctx.aliases,
+				) + ","
+			}
+
+			actualPaths[strings.TrimRight(label, ",")] = true
+		}
+
+		for _, expected := range expectedPaths {
+			require.True(
+				t, actualPaths[expected],
+				"expected path %q not found in %v",
+				expected, actualPaths,
+			)
+		}
+	}
+
+	// Find message paths with 1 hop (intro + destination). Since
+	// minNumHops defaults to 0, the self-only path (dave as intro
+	// node) is also included.
+	routes, err := ctx.router.FindBlindedMessagePaths(
+		dave, &BlindedMessagePathRestrictions{
+			NumHops:     1,
+			MaxNumPaths: 5,
+		},
+	)
+	require.NoError(t, err)
+
+	assertPaths(routes, []string{
+		"bob,dave",
+		"dave",
+	})
+
+	// Extend to 2 hops.
+	routes, err = ctx.router.FindBlindedMessagePaths(
+		dave, &BlindedMessagePathRestrictions{
+			NumHops:     2,
+			MaxNumPaths: 10,
+		},
+	)
+	require.NoError(t, err)
+
+	assertPaths(routes, []string{
+		"bob,dave",
+		"alice,bob,dave",
+		"dave",
+	})
+
+	// Cap to 1 path.
+	routes, err = ctx.router.FindBlindedMessagePaths(
+		dave, &BlindedMessagePathRestrictions{
+			NumHops:     2,
+			MaxNumPaths: 1,
+		},
+	)
+	require.NoError(t, err)
+	require.Len(t, routes, 1)
+}
