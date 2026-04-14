@@ -554,6 +554,24 @@ func testBolt12PayOffer(ht *lntest.HarnessTest) {
 	require.NoError(ht, err, "CreateOffer")
 	ht.Logf("Alice offer: %s", offerResp.Offer)
 
+	// Stateless settlement: Alice should have zero BOLT 12 invoices before
+	// any payment. The invoice is only reconstructed at HTLC arrival time.
+	listBefore, err := alice.RPC.LN.ListInvoices(
+		ctxt, &lnrpc.ListInvoiceRequest{},
+	)
+	require.NoError(ht, err)
+
+	bolt12CountBefore := 0
+	for _, inv := range listBefore.Invoices {
+		if inv.IsBolt12 {
+			bolt12CountBefore++
+		}
+	}
+	require.Equal(
+		ht, 0, bolt12CountBefore,
+		"stateless: no BOLT 12 invoices should exist before payment",
+	)
+
 	// Bob pays Alice's offer.
 	payResp := bob.RPC.PayOffer(
 		&lnrpc.PayOfferRequest{
@@ -595,6 +613,85 @@ func testBolt12PayOffer(ht *lntest.HarnessTest) {
 	require.NoError(ht, decErr, "decode invoice string")
 	require.NoError(
 		ht, bolt12.VerifyInvoice(inv), "verify invoice signature",
+	)
+
+	// --- Layer 6: Verify ListInvoices BOLT 12 fields ---
+
+	// Alice (receiver) lists invoices and verifies the BOLT 12
+	// invoice has the OfferInvoiceDetail populated.
+	listInvResp, err := alice.RPC.LN.ListInvoices(
+		ctxt, &lnrpc.ListInvoiceRequest{},
+	)
+	require.NoError(ht, err, "ListInvoices")
+
+	// Find the BOLT 12 invoice.
+	var bolt12Inv *lnrpc.Invoice
+	for _, rpcInv := range listInvResp.Invoices {
+		if rpcInv.IsBolt12 {
+			bolt12Inv = rpcInv
+			break
+		}
+	}
+	require.NotNil(ht, bolt12Inv, "BOLT 12 invoice in ListInvoices")
+	require.NotNil(
+		ht, bolt12Inv.Bolt12Detail,
+		"bolt12_detail should be populated",
+	)
+	require.Len(
+		ht, bolt12Inv.Bolt12Detail.OfferId, 32,
+		"offer_id should be 32 bytes",
+	)
+	require.Equal(
+		ht, offerResp.OfferId, bolt12Inv.Bolt12Detail.OfferId,
+		"offer_id should match CreateOffer response",
+	)
+	require.Len(
+		ht, bolt12Inv.Bolt12Detail.InvoiceNodeId, 33,
+		"invoice_node_id should be 33 bytes",
+	)
+	require.Len(
+		ht, bolt12Inv.Bolt12Detail.InvreqPayerId, 33,
+		"invreq_payer_id should be 33 bytes",
+	)
+
+	// --- Layer 6: Verify ListPayments BOLT 12 fields ---
+
+	// Bob (sender) lists payments and verifies offer_id.
+	listPayResp, err := bob.RPC.LN.ListPayments(
+		ctxt, &lnrpc.ListPaymentsRequest{
+			IncludeIncomplete: true,
+		},
+	)
+	require.NoError(ht, err, "ListPayments")
+
+	// Find the payment with a non-empty offer_id.
+	var bolt12Pay *lnrpc.Payment
+	for _, rpcPay := range listPayResp.Payments {
+		if len(rpcPay.OfferId) > 0 {
+			bolt12Pay = rpcPay
+			break
+		}
+	}
+	require.NotNil(ht, bolt12Pay, "BOLT 12 payment in ListPayments")
+	require.Equal(
+		ht, offerResp.OfferId, bolt12Pay.OfferId,
+		"payment offer_id should match CreateOffer response",
+	)
+
+	// Verify ListPayments offer_id filter.
+	filteredResp, err := bob.RPC.LN.ListPayments(
+		ctxt, &lnrpc.ListPaymentsRequest{
+			IncludeIncomplete: true,
+			OfferId:           offerResp.OfferId,
+		},
+	)
+	require.NoError(ht, err, "ListPayments with offer_id filter")
+	require.Len(
+		ht, filteredResp.Payments, 1,
+		"offer_id filter should return exactly one payment",
+	)
+	require.Equal(
+		ht, offerResp.OfferId, filteredResp.Payments[0].OfferId,
 	)
 
 	ht.Log("PayOffer verified successfully")
@@ -977,4 +1074,117 @@ func testBolt12PayOfferStreamEvents(ht *lntest.HarnessTest) {
 	require.Equal(ht, uint64(20000), result.AmountMsat)
 
 	ht.Log("PayOffer stream events verified successfully")
+}
+
+// testBolt12PayOfferMPP tests BOLT 12 payment over multiple paths. Alice
+// creates an offer, Bob has two smaller channels to Alice so that the payment
+// forces MPP splitting. This verifies that the stateless reconstruction handles
+// multi-shard correctly (first shard INSERTs, subsequent shards accumulate).
+func testBolt12PayOfferMPP(ht *lntest.HarnessTest) {
+	alice := ht.NewNode("Alice", nil)
+	bob := ht.NewNode("Bob", nil)
+
+	ht.EnsureConnected(alice, bob)
+
+	ht.FundCoins(btcutil.SatoshiPerBitcoin, bob)
+
+	// Open two channels from Bob to Alice sized so that a 150k-sat
+	// payment exceeds either channel's per-shard usable balance
+	// (commit fees + 1% reserve consume ~25k per 200k channel) but
+	// fits comfortably within the combined liquidity. This forces
+	// the sender into MPP splitting.
+	chanPoint1 := ht.OpenChannel(
+		bob, alice, lntest.OpenChannelParams{
+			Amt: 200_000,
+		},
+	)
+	defer ht.CloseChannel(bob, chanPoint1)
+
+	chanPoint2 := ht.OpenChannel(
+		bob, alice, lntest.OpenChannelParams{
+			Amt: 200_000,
+		},
+	)
+	defer ht.CloseChannel(bob, chanPoint2)
+
+	// Wait for both channels to be visible in Bob's routing graph
+	// before paying so the sender's pathfinder can split across them.
+	ht.AssertChannelInGraph(bob, chanPoint1)
+	ht.AssertChannelInGraph(bob, chanPoint2)
+
+	ctxt, cancel := context.WithTimeout(
+		ht.Context(), lntest.DefaultTimeout,
+	)
+	defer cancel()
+
+	// Alice creates an offer. The amount must exceed the per-channel
+	// usable balance (~190k sat after commit fee + 1% reserve on a
+	// 200k channel) so the sender is forced to split the payment.
+	offerResp, err := alice.RPC.LN.CreateOffer(
+		ctxt, &lnrpc.CreateOfferRequest{
+			Description: "mpp test",
+			AmountMsat:  250_000_000, // 250k sat in msat
+		},
+	)
+	if err != nil && strings.Contains(
+		err.Error(), "offer store not initialized",
+	) {
+
+		ht.Skipf(
+			"offer store requires --dbbackend=sqlite --nativesql",
+		)
+	}
+	require.NoError(ht, err, "CreateOffer")
+
+	// Bob pays with an amount exceeding single-channel capacity,
+	// forcing MPP.
+	payResp := bob.RPC.PayOffer(
+		&lnrpc.PayOfferRequest{
+			Offer:          offerResp.Offer,
+			TimeoutSeconds: 60,
+		},
+	)
+	require.Len(ht, payResp.PaymentPreimage, 32)
+	require.Equal(
+		ht, uint64(250_000_000), payResp.AmountMsat,
+		"settled amount should match offer",
+	)
+
+	// Verify Alice has exactly one settled BOLT 12 invoice.
+	listResp, err := alice.RPC.LN.ListInvoices(
+		ctxt, &lnrpc.ListInvoiceRequest{},
+	)
+	require.NoError(ht, err)
+
+	var bolt12Inv *lnrpc.Invoice
+	for _, inv := range listResp.Invoices {
+		if inv.IsBolt12 {
+			bolt12Inv = inv
+		}
+	}
+	require.NotNil(ht, bolt12Inv, "BOLT 12 invoice after MPP payment")
+	require.True(ht, bolt12Inv.Settled)
+	require.Equal(
+		ht, int64(250_000_000), bolt12Inv.AmtPaidMsat,
+		"settled amount should match",
+	)
+
+	// Verify Bob's payment shows multiple HTLC attempts.
+	listPayResp, err := bob.RPC.LN.ListPayments(
+		ctxt, &lnrpc.ListPaymentsRequest{},
+	)
+	require.NoError(ht, err)
+
+	var mppPayment *lnrpc.Payment
+	for _, p := range listPayResp.Payments {
+		if len(p.Htlcs) > 1 {
+			mppPayment = p
+		}
+	}
+	require.NotNil(
+		ht, mppPayment,
+		"payment should have multiple HTLC attempts (MPP)",
+	)
+
+	ht.Log("BOLT 12 MPP payment verified with stateless settlement")
 }

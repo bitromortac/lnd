@@ -604,6 +604,10 @@ var allTestCases = []*lntest.TestCase{
 		TestFunc: testBolt12PayOfferStreamEvents,
 	},
 	{
+		Name:     "bolt12 pay offer mpp",
+		TestFunc: testBolt12PayOfferMPP,
+	},
+	{
 		Name:     "sign verify message with addr",
 		TestFunc: testSignVerifyMessageWithAddr,
 	},

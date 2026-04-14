@@ -607,6 +607,7 @@ func buildPaymentFromBatchData(dbPayment sqlc.PaymentAndIntent,
 		payment.PaymentIdentifier, payment.AmountMsat,
 		payment.CreatedAt, paymentRequest, firstHopCustomRecords,
 	)
+	info.OfferID = paymentIntent.OfferID
 
 	// Get all HTLC attempts from batch data for a given payment.
 	dbAttempts := batchData.attempts[payment.ID]
@@ -801,11 +802,15 @@ func (s *SQLStore) QueryPayments(ctx context.Context, query Query) (Response,
 				NumLimit:      limit,
 				CreatedAfter:  createdAfter,
 				CreatedBefore: createdBefore,
-				// For now there only BOLT 11 payment intents
-				// exist.
-				IntentType: sqldb.SQLInt16(
-					PaymentIntentTypeBolt11,
-				),
+			}
+
+			// When filtering by offer_id, restrict to
+			// BOLT 12 intents. Otherwise include all types.
+			if len(query.OfferID) > 0 {
+				filterParams.OfferID = query.OfferID
+				filterParams.IntentType = sqldb.SQLInt16(
+					PaymentIntentTypeBolt12,
+				)
 			}
 
 			if query.Reversed {
