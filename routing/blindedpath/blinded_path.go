@@ -183,6 +183,16 @@ func buildBlindedPaymentPath(cfg *BuildBlindedPathCfg, path *candidatePath) (
 			"info: %w", err)
 	}
 
+	// For self-only paths (receiver is the introduction node with no
+	// relay hops), collectRelayInfo returns zero for maxHTLC because
+	// no channel policies are collected. Default to the payment
+	// amount so the blinded_payinfo correctly advertises the path's
+	// capacity. Without this, senders that enforce htlc_maximum_msat
+	// (e.g. Eclair) reject the blinded path.
+	if maxHTLC == 0 {
+		maxHTLC = cfg.ValueMsat
+	}
+
 	relayInfo := make([]*record.PaymentRelayInfo, len(hops))
 	for i, hop := range hops {
 		relayInfo[i] = hop.relayInfo

@@ -1028,12 +1028,14 @@ func TestSingleHopBlindedPath(t *testing.T) {
 
 	// Check that all the accumulated policy values are correct. Since this
 	// is a unique case where the destination node is also the introduction
-	// node, the accumulated fee and HTLC values should be zero and the
-	// CLTV expiry delta should be equal to Carol's MinFinalCLTVExpiryDelta.
+	// node, the accumulated fee values are zero and HTLCMinMsat is zero;
+	// HTLCMaxMsat defaults to cfg.ValueMsat (the self-only-path policy)
+	// so senders enforcing htlc_maximum_msat accept the path. The CLTV
+	// expiry delta equals Carol's MinFinalCLTVExpiryDelta.
 	require.EqualValues(t, 0, path.FeeBaseMsat)
 	require.EqualValues(t, 0, path.FeeRate)
 	require.EqualValues(t, 0, path.HTLCMinMsat)
-	require.EqualValues(t, 0, path.HTLCMaxMsat)
+	require.EqualValues(t, 1000, path.HTLCMaxMsat)
 	require.EqualValues(t, 12, path.CltvExpiryDelta)
 }
 
