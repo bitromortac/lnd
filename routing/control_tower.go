@@ -73,6 +73,11 @@ type ControlTower interface {
 	FetchInFlightPayments(ctx context.Context) ([]*paymentsdb.MPPayment,
 		error)
 
+	// FetchBolt12Payment returns the stored state of the idempotency key
+	// of an offer payment, or paymentsdb.ErrBolt12PaymentNotFound.
+	FetchBolt12Payment(ctx context.Context,
+		key []byte) (*paymentsdb.Bolt12PaymentRecord, error)
+
 	// SubscribePayment subscribes to updates for the payment with the given
 	// hash. A first update with the current state of the payment is always
 	// sent out immediately.
@@ -266,6 +271,14 @@ func (p *controlTower) FetchPayment(ctx context.Context,
 	paymentsdb.DBMPPayment, error) {
 
 	return p.db.FetchPayment(ctx, paymentHash)
+}
+
+// FetchBolt12Payment returns the stored state of the idempotency key of an
+// offer payment.
+func (p *controlTower) FetchBolt12Payment(ctx context.Context,
+	key []byte) (*paymentsdb.Bolt12PaymentRecord, error) {
+
+	return p.db.FetchBolt12Payment(ctx, key)
 }
 
 // FailPayment transitions a payment into the Failed state, and records the

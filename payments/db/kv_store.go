@@ -184,6 +184,11 @@ func initKVStore(db kvdb.Backend) error {
 func (p *KVStore) InitPayment(_ context.Context, paymentHash lntypes.Hash,
 	info *PaymentCreationInfo) error {
 
+	// BOLT 12 payments need the SQL tables of the native SQL store.
+	if info.Bolt12 != nil {
+		return ErrBolt12NotSupported
+	}
+
 	// Obtain a new sequence number for this payment. This is used
 	// to sort the payments in order of creation, and also acts as
 	// a unique identifier for each payment.
@@ -730,6 +735,14 @@ func fetchPaymentStatus(bucket kvdb.RBucket) (PaymentStatus, error) {
 	}
 
 	return payment.Status, nil
+}
+
+// FetchBolt12Payment is not supported by the KV store, which holds no BOLT
+// 12 payments.
+func (p *KVStore) FetchBolt12Payment(_ context.Context,
+	_ []byte) (*Bolt12PaymentRecord, error) {
+
+	return nil, ErrBolt12NotSupported
 }
 
 // FetchInFlightPayments returns all payments with status InFlight.

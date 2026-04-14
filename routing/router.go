@@ -913,6 +913,11 @@ type LightningPayment struct {
 	// Metadata is additional data that is sent along with the payment to
 	// the payee.
 	Metadata []byte
+
+	// Bolt12 binds the payment to the idempotency key of an offer
+	// payment. Nil for any other payment. The payments store checks the
+	// key in the same transaction that creates the payment.
+	Bolt12 *paymentsdb.Bolt12PaymentInfo
 }
 
 // AMPOptions houses information that must be known in order to send an AMP
@@ -1072,6 +1077,7 @@ func (r *ChannelRouter) PreparePayment(payment *LightningPayment) (
 		CreationTime:          r.cfg.Clock.Now(),
 		PaymentRequest:        payment.PaymentRequest,
 		FirstHopCustomRecords: payment.FirstHopCustomRecords,
+		Bolt12:                payment.Bolt12,
 	}
 
 	// Create a new ShardTracker that we'll use during the life cycle of

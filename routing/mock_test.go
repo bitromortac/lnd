@@ -592,6 +592,12 @@ func (m *mockControlTowerOld) SubscribeAllPayments() (
 	return nil, errors.New("not implemented")
 }
 
+func (m *mockControlTowerOld) FetchBolt12Payment(_ context.Context,
+	_ []byte) (*paymentsdb.Bolt12PaymentRecord, error) {
+
+	return nil, paymentsdb.ErrBolt12PaymentNotFound
+}
+
 type mockPaymentAttemptDispatcher struct {
 	mock.Mock
 }
@@ -826,6 +832,15 @@ func (m *mockControlTower) SubscribeAllPayments() (
 
 	args := m.Called()
 	return args.Get(0).(ControlTowerSubscriber), args.Error(1)
+}
+
+func (m *mockControlTower) FetchBolt12Payment(_ context.Context,
+	key []byte) (*paymentsdb.Bolt12PaymentRecord, error) {
+
+	args := m.Called(key)
+	record, _ := args.Get(0).(*paymentsdb.Bolt12PaymentRecord)
+
+	return record, args.Error(1)
 }
 
 type mockMPPayment struct {
