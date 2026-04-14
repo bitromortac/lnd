@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"testing"
+	"time"
 
 	"github.com/btcsuite/btcd/btcec/v2"
 	sphinx "github.com/lightningnetwork/lightning-onion"
@@ -82,6 +83,14 @@ func TestHandleInvoiceRequest_FullFlow(t *testing.T) {
 	require.Len(t, replier.replies, 1)
 	sent, err := bolt12.DecodeInvoice(replier.replies[0])
 	require.NoError(t, err)
+
+	// A payer accepts the reply, which covers the signature, the mirror
+	// against the request and the expiry.
+	sentReq, err := bolt12.DecodeInvoiceRequest(invreqBytes)
+	require.NoError(t, err)
+	require.NoError(t, ValidateInvoiceReply(
+		sent, sentReq, nil, testChainHash(), time.Now(),
+	))
 
 	createdAt := sent.InvoiceCreatedAt.UnwrapOrFailV(t)
 	require.Equal(t, int64(createdAt), inv.CreationDate.Unix())
