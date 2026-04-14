@@ -93,6 +93,11 @@ type PaymentCreationInfo struct {
 	// wire message (UpdateAddHTLC) only and therefore do not affect the
 	// onion payload size.
 	FirstHopCustomRecords lnwire.CustomRecords
+
+	// Bolt12 binds the payment to the idempotency key of an offer
+	// payment. It is nil for any other payment, and only an SQL store
+	// with the BOLT 12 tables accepts it.
+	Bolt12 *Bolt12PaymentInfo
 }
 
 // String returns a human-readable description of the payment creation info.
