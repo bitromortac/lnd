@@ -409,6 +409,12 @@ type LightningClient interface {
 	// waits for the invoice reply, validates it, and returns the decoded
 	// BOLT 12 invoice. No payment is dispatched.
 	RequestInvoice(ctx context.Context, in *RequestInvoiceRequest, opts ...grpc.CallOption) (*RequestInvoiceResponse, error)
+	// lncli: `payoffer`
+	// PayOffer takes a BOLT 12 offer string, negotiates an invoice with the
+	// offer's issuer via onion message, validates the returned invoice, and
+	// dispatches an HTLC to complete the payment. Returns the payment preimage
+	// on success.
+	PayOffer(ctx context.Context, in *PayOfferRequest, opts ...grpc.CallOption) (*PayOfferResponse, error)
 	// lncli: `listaliases`
 	// ListAliases returns the set of all aliases that have ever existed with
 	// their confirmed SCID (if it exists) and/or the base SCID (in the case of
@@ -1314,6 +1320,15 @@ func (c *lightningClient) RequestInvoice(ctx context.Context, in *RequestInvoice
 	return out, nil
 }
 
+func (c *lightningClient) PayOffer(ctx context.Context, in *PayOfferRequest, opts ...grpc.CallOption) (*PayOfferResponse, error) {
+	out := new(PayOfferResponse)
+	err := c.cc.Invoke(ctx, "/lnrpc.Lightning/PayOffer", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *lightningClient) ListAliases(ctx context.Context, in *ListAliasesRequest, opts ...grpc.CallOption) (*ListAliasesResponse, error) {
 	out := new(ListAliasesResponse)
 	err := c.cc.Invoke(ctx, "/lnrpc.Lightning/ListAliases", in, out, opts...)
@@ -1727,6 +1742,12 @@ type LightningServer interface {
 	// waits for the invoice reply, validates it, and returns the decoded
 	// BOLT 12 invoice. No payment is dispatched.
 	RequestInvoice(context.Context, *RequestInvoiceRequest) (*RequestInvoiceResponse, error)
+	// lncli: `payoffer`
+	// PayOffer takes a BOLT 12 offer string, negotiates an invoice with the
+	// offer's issuer via onion message, validates the returned invoice, and
+	// dispatches an HTLC to complete the payment. Returns the payment preimage
+	// on success.
+	PayOffer(context.Context, *PayOfferRequest) (*PayOfferResponse, error)
 	// lncli: `listaliases`
 	// ListAliases returns the set of all aliases that have ever existed with
 	// their confirmed SCID (if it exists) and/or the base SCID (in the case of
@@ -1946,6 +1967,9 @@ func (UnimplementedLightningServer) DecodeOffer(context.Context, *DecodeOfferReq
 }
 func (UnimplementedLightningServer) RequestInvoice(context.Context, *RequestInvoiceRequest) (*RequestInvoiceResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method RequestInvoice not implemented")
+}
+func (UnimplementedLightningServer) PayOffer(context.Context, *PayOfferRequest) (*PayOfferResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method PayOffer not implemented")
 }
 func (UnimplementedLightningServer) ListAliases(context.Context, *ListAliasesRequest) (*ListAliasesResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ListAliases not implemented")
@@ -3236,6 +3260,24 @@ func _Lightning_RequestInvoice_Handler(srv interface{}, ctx context.Context, dec
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Lightning_PayOffer_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(PayOfferRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(LightningServer).PayOffer(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/lnrpc.Lightning/PayOffer",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(LightningServer).PayOffer(ctx, req.(*PayOfferRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _Lightning_ListAliases_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(ListAliasesRequest)
 	if err := dec(in); err != nil {
@@ -3502,6 +3544,10 @@ var Lightning_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "RequestInvoice",
 			Handler:    _Lightning_RequestInvoice_Handler,
+		},
+		{
+			MethodName: "PayOffer",
+			Handler:    _Lightning_PayOffer_Handler,
 		},
 		{
 			MethodName: "ListAliases",

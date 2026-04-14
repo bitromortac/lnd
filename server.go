@@ -30,6 +30,7 @@ import (
 	"github.com/lightningnetwork/lnd/actor"
 	"github.com/lightningnetwork/lnd/aliasmgr"
 	"github.com/lightningnetwork/lnd/autopilot"
+	"github.com/lightningnetwork/lnd/bolt12"
 	"github.com/lightningnetwork/lnd/bolt12handler"
 	"github.com/lightningnetwork/lnd/brontide"
 	"github.com/lightningnetwork/lnd/chainio"
@@ -91,6 +92,7 @@ import (
 	"github.com/lightningnetwork/lnd/watchtower/wtclient"
 	"github.com/lightningnetwork/lnd/watchtower/wtpolicy"
 	"github.com/lightningnetwork/lnd/watchtower/wtserver"
+	"github.com/lightningnetwork/lnd/zpay32"
 )
 
 const (
@@ -457,13 +459,13 @@ type server struct {
 	// turned off).
 	onionLimiter onionmessage.IngressLimiter
 
+	// bolt12Replier sends invoice replies via onion messages. Stored
+	// separately to set the route finder after router initialization.
+	bolt12Replier *bolt12handler.ServerOnionReplier
+
 	// bolt12Handler handles incoming BOLT 12 invoice requests and
 	// generates signed invoices in response.
 	bolt12Handler *bolt12handler.Handler
-
-	// bolt12Replier sends invoice replies via onion messages. Stored
-	// separately for deferred route-finder wiring.
-	bolt12Replier *bolt12handler.ServerOnionReplier
 
 	// sciddirResolver translates BOLT 4 sciddir blinded-path
 	// introduction nodes into pubkeys via the channel graph. Shared
@@ -1211,6 +1213,42 @@ func newServer(ctx context.Context, cfg *Config, listenAddrs []net.Addr,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("can't create router: %w", err)
+	}
+
+	// Wire the payment path builder and reply route finder into the
+	// BOLT 12 handler now that the router is available.
+	if s.bolt12Handler != nil {
+		s.bolt12Handler.SetPaymentPathBuilder(
+			&bolt12PaymentPathBuilder{
+				router:     s.chanRouter,
+				selfNode:   nodePubKey,
+				v1Graph:    s.v1Graph,
+				chanDB:     dbs.ChanStateDB,
+				nodePubKey: nodeKeyECDH.PubKey(),
+				getProbability: s.defaultMC.GetProbability,
+				bestHeight: cc.BestBlockTracker.BestHeight,
+			},
+		)
+
+		// Wire BFS route finding into the replier so it can route
+		// invoice replies to non-direct-peer intro nodes.
+		s.bolt12Replier.SetFindRoute(
+			func(introNode route.Vertex) (
+				[]route.Vertex, error) {
+
+				omPath, err := onionmessage.FindPath(
+					context.Background(),
+					s.v1Graph, nodePubKey,
+					introNode,
+					sphinx.NumMaxHops,
+				)
+				if err != nil {
+					return nil, err
+				}
+
+				return omPath, nil
+			},
+		)
 	}
 
 	chanSeries := discovery.NewChanSeries(
@@ -4482,19 +4520,40 @@ func (s *server) SubscribeOnionMessages() (*subscribe.Client, error) {
 }
 
 // CreateOffer creates a new BOLT 12 offer, persists it in the offer
-// store, and returns the encoded offer string and offer ID.
+// store, and returns the encoded offer string and offer ID. When
+// useBlindedPaths is true, the offer uses offer_paths for receiver privacy
+// instead of offer_issuer_id.
 func (s *server) CreateOffer(ctx context.Context,
 	description string, amountMsat uint64,
-	absoluteExpiry uint64,
-	quantityMax *uint64) (*offers.CreateOfferResult, error) {
+	absoluteExpiry uint64, quantityMax *uint64,
+	useBlindedPaths bool) (*offers.CreateOfferResult, error) {
 
 	if s.offerStore == nil {
 		return nil, fmt.Errorf("offer store not initialized")
 	}
 
-	identity := fn.NewLeft[
-		*btcec.PublicKey, []lnwire.BlindedPath,
-	](s.identityECDH.PubKey())
+	// Determine the offer identity: either issuer pubkey or blinded
+	// message paths.
+	var identity fn.Either[*btcec.PublicKey, []lnwire.BlindedPath]
+
+	if useBlindedPaths && s.bolt12Replier != nil &&
+		s.bolt12Replier.HasFindRoute() {
+
+		// Build blinded message paths to self for offer_paths.
+		paths, err := s.buildOfferPaths()
+		if err != nil {
+			return nil, fmt.Errorf("build offer paths: %w",
+				err)
+		}
+
+		identity = fn.NewRight[
+			*btcec.PublicKey, []lnwire.BlindedPath,
+		](paths)
+	} else {
+		identity = fn.NewLeft[
+			*btcec.PublicKey, []lnwire.BlindedPath,
+		](s.identityECDH.PubKey())
+	}
 
 	// Include the active chain hash so other implementations can
 	// validate the offer on non-mainnet networks. The spec defaults
@@ -4510,6 +4569,64 @@ func (s *server) CreateOffer(ctx context.Context,
 		QuantityMax:    quantityMax,
 		Chains:         chains,
 	})
+}
+
+// buildOfferPaths constructs blinded message paths to self for use as
+// offer_paths. Uses the same DFS pathfinder as the reply path builder.
+func (s *server) buildOfferPaths() ([]lnwire.BlindedPath, error) {
+	sourceNode, err := s.v1Graph.SourceNode(context.Background())
+	if err != nil {
+		return nil, fmt.Errorf("get source node: %w", err)
+	}
+
+	routes, err := s.chanRouter.FindBlindedMessagePaths(
+		sourceNode.PubKeyBytes,
+		&routing.BlindedMessagePathRestrictions{
+			NumHops:     1,
+			MaxNumPaths: 3,
+		},
+	)
+	if err != nil {
+		return nil, fmt.Errorf("find message paths: %w", err)
+	}
+
+	paths, err := blindedpath.BuildBlindedMessagePaths(
+		&blindedpath.BuildBlindedMessagePathCfg{
+			FindRoutes: func() ([]*route.Route, error) {
+				return routes, nil
+			},
+		},
+	)
+	if err != nil {
+		return nil, fmt.Errorf("build message paths: %w", err)
+	}
+
+	// Convert sphinx paths to bolt12 paths.
+	bolt12Paths := make([]lnwire.BlindedPath, len(paths))
+	for i, p := range paths {
+		path := p.Path
+
+		hops := make([]lnwire.BlindedHop, len(path.BlindedHops))
+		for j, hop := range path.BlindedHops {
+			hops[j] = lnwire.BlindedHop{
+				BlindedNodeID: hop.BlindedNodePub,
+				EncryptedData: hop.CipherText,
+			}
+		}
+
+		introNode, err := lnwire.NewPubkeyIntro(path.IntroductionPoint)
+		if err != nil {
+			return nil, err
+		}
+
+		bolt12Paths[i] = lnwire.BlindedPath{
+			IntroductionNode: introNode,
+			BlindingPoint:    path.BlindingPoint,
+			Hops:             hops,
+		}
+	}
+
+	return bolt12Paths, nil
 }
 
 // bolt12InvoiceRequestLoop subscribes to onion message updates and
@@ -6134,4 +6251,132 @@ func (s *server) setSelfNode(ctx context.Context, nodePub route.Vertex,
 	s.currentNodeAnn = nodeAnn
 
 	return nil
+}
+
+// bolt12PaymentPathBuilder implements bolt12handler.PaymentPathBuilder using
+// the router's FindBlindedPaths to construct multi-hop blinded payment paths
+// for BOLT 12 invoices.
+type bolt12PaymentPathBuilder struct {
+	router         *routing.ChannelRouter
+	selfNode       route.Vertex
+	v1Graph        *graphdb.VersionedGraph
+	chanDB         *channeldb.DB
+	nodePubKey     *btcec.PublicKey
+	getProbability func(route.Vertex, route.Vertex,
+		lnwire.MilliSatoshi, btcutil.Amount) float64
+	bestHeight func() (uint32, error)
+}
+
+// BuildPaymentPaths constructs blinded payment paths for a BOLT 12 invoice
+// using the existing BuildBlindedPaymentPaths infrastructure.
+func (b *bolt12PaymentPathBuilder) BuildPaymentPaths(amountMsat uint64,
+	pathID []byte,
+	invoiceEnvelope []byte) (*bolt12handler.PaymentPathResult, error) {
+
+	ctx := context.Background()
+
+	amt := lnwire.MilliSatoshi(amountMsat)
+
+	// Use the existing payment path builder that's already used by
+	// AddInvoice for BOLT 11 blinded paths.
+	paths, err := blindedpath.BuildBlindedPaymentPaths(
+		&blindedpath.BuildBlindedPathCfg{
+			FindRoutes: func(
+				value lnwire.MilliSatoshi) (
+				[]*route.Route, error) {
+
+				return b.router.FindBlindedPaths(
+					b.selfNode, value,
+					b.getProbability,
+					&routing.BlindedPathRestrictions{
+						NumHops:     1,
+						MaxNumPaths: 3,
+					},
+				)
+			},
+			FetchChannelEdgesByID: func(chanID uint64) (
+				*models.ChannelEdgeInfo,
+				*models.ChannelEdgePolicy,
+				*models.ChannelEdgePolicy, error) {
+
+				return b.v1Graph.FetchChannelEdgesByID(
+					ctx, chanID,
+				)
+			},
+			FetchOurOpenChannels: func() (
+				[]*channeldb.OpenChannel, error) {
+
+				return b.chanDB.ChannelStateDB().
+					FetchAllOpenChannels()
+			},
+			BestHeight: b.bestHeight,
+			AddPolicyBuffer: func(
+				policy *blindedpath.BlindedHopPolicy) (
+				*blindedpath.BlindedHopPolicy, error) {
+
+				return blindedpath.AddPolicyBuffer(
+					policy, 1.1, 0.9,
+				)
+			},
+			PathID:                  pathID,
+			InvoiceEnvelope:         invoiceEnvelope,
+			ValueMsat:               amt,
+			MinFinalCLTVExpiryDelta: zpay32.DefaultAssumedFinalCLTVDelta,
+			// The payer's cleartext route to the intro node adds
+			// CLTV delta per hop (typically 40-144 blocks each).
+			// 2016 blocks (~2 weeks) provides enough headroom for
+			// routes up to ~10 cleartext hops at default deltas.
+			BlocksUntilExpiry: 2016,
+			DefaultDummyHopPolicy: &blindedpath.BlindedHopPolicy{
+				CLTVExpiryDelta: zpay32.DefaultAssumedFinalCLTVDelta,
+				FeeRate:         0,
+				BaseFee:         0,
+				MinHTLCMsat:     0,
+				MaxHTLCMsat:     lnwire.MilliSatoshi(amountMsat),
+			},
+		},
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	// Convert zpay32.BlindedPaymentPath to bolt12 types.
+	result := &bolt12handler.PaymentPathResult{
+		Paths:    make([]lnwire.BlindedPath, len(paths)),
+		PayInfos: make([]bolt12.BlindedPayInfo, len(paths)),
+	}
+
+	for i, p := range paths {
+		// Convert hops.
+		bolt12Hops := make([]lnwire.BlindedHop, len(p.Hops))
+		for j, hop := range p.Hops {
+			bolt12Hops[j] = lnwire.BlindedHop{
+				BlindedNodeID: hop.BlindedNodePub,
+				EncryptedData: hop.CipherText,
+			}
+		}
+
+		// The first blinded hop's pub key is the real intro node pub
+		// key (set by BuildBlindedPaymentPaths).
+		introNode, err := lnwire.NewPubkeyIntro(p.Hops[0].BlindedNodePub)
+		if err != nil {
+			return nil, err
+		}
+
+		result.Paths[i] = lnwire.BlindedPath{
+			IntroductionNode: introNode,
+			BlindingPoint:    p.FirstEphemeralBlindingPoint,
+			Hops:             bolt12Hops,
+		}
+
+		result.PayInfos[i] = bolt12.BlindedPayInfo{
+			FeeBaseMsat:               p.FeeBaseMsat,
+			FeeProportionalMillionths: p.FeeRate,
+			CltvExpiryDelta:           uint16(p.CltvExpiryDelta),
+			HtlcMinimumMsat:           p.HTLCMinMsat,
+			HtlcMaximumMsat:           p.HTLCMaxMsat,
+		}
+	}
+
+	return result, nil
 }

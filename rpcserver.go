@@ -35,6 +35,7 @@ import (
 	"github.com/btcsuite/btcwallet/wallet"
 	"github.com/btcsuite/btcwallet/wallet/txauthor"
 	proxy "github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
+	sphinx "github.com/lightningnetwork/lightning-onion"
 	"github.com/lightningnetwork/lnd/autopilot"
 	"github.com/lightningnetwork/lnd/bolt12"
 	"github.com/lightningnetwork/lnd/bolt12handler"
@@ -581,6 +582,10 @@ func MainRPCServerPermissions() map[string][]bakery.Op {
 			Entity: "offchain",
 			Action: "write",
 		}},
+		"/lnrpc.Lightning/PayOffer": {{
+			Entity: "offchain",
+			Action: "write",
+		}},
 		"/lnrpc.Lightning/LookupHtlcResolution": {{
 			Entity: "offchain",
 			Action: "read",
@@ -635,6 +640,15 @@ type rpcServer struct {
 	chanPredicate chanacceptor.MultiplexAcceptor
 
 	quit chan struct{}
+
+	// payOfferFlights tracks in-flight PayOffer calls by offer ID to
+	// prevent concurrent payments for the same offer.
+	payOfferFlights sync.Map
+
+	// replyPathBuilder constructs blinded reply paths for BOLT 12 invoice
+	// requests. When nil, a single-hop reply path is used (direct-peer
+	// fallback).
+	replyPathBuilder bolt12handler.ReplyPathBuilder
 
 	// macService is the macaroon service that we need to mint new
 	// macaroons.
@@ -887,6 +901,32 @@ func (r *rpcServer) addDeps(ctx context.Context, s *server,
 	r.chanPredicate = chanPredicate
 	r.macService = macService
 	r.selfNode = selfNode.PubKeyBytes
+
+	r.replyPathBuilder = &bolt12handler.MultiHopReplyPathBuilder{
+		NodePubKey: s.identityECDH.PubKey(),
+		BuildPaths: func() ([]*sphinx.BlindedPathInfo, error) {
+			routes, err := s.chanRouter.FindBlindedMessagePaths(
+				selfNode.PubKeyBytes,
+				&routing.BlindedMessagePathRestrictions{
+					NumHops:     1,
+					MaxNumPaths: 3,
+				},
+			)
+			if err != nil {
+				return nil, err
+			}
+
+			return blindedpath.BuildBlindedMessagePaths(
+				&blindedpath.BuildBlindedMessagePathCfg{
+					FindRoutes: func() (
+						[]*route.Route, error) {
+
+						return routes, nil
+					},
+				},
+			)
+		},
+	}
 
 	graphCacheDuration := r.cfg.Caches.RPCGraphCacheDuration
 	if graphCacheDuration != 0 {
@@ -8890,6 +8930,7 @@ func (r *rpcServer) CreateOffer(ctx context.Context,
 	result, err := r.server.CreateOffer(
 		ctx, req.Description, req.AmountMsat,
 		req.AbsoluteExpiry, quantityMax,
+		req.UseBlindedPaths,
 	)
 	if err != nil {
 		return nil, err
@@ -9034,6 +9075,130 @@ func marshalDecodeOfferResponse(offer *bolt12.Offer,
 	return resp, nil
 }
 
+// buildForwardPath constructs a blinded forward path to the recipient for
+// sending an onion message. It uses BFS pathfinding to find a route through
+// the graph, falling back to a single-hop direct path if no graph route is
+// found (direct peer case).
+func (r *rpcServer) buildForwardPath(
+	recipientPubKey *btcec.PublicKey) (*sphinx.BlindedPathInfo, error) {
+
+	var recipientVertex route.Vertex
+	copy(recipientVertex[:], recipientPubKey.SerializeCompressed())
+
+	// Try BFS pathfinding through the graph.
+	omPath, err := onionmessage.FindPath(
+		context.Background(), r.server.v1Graph, r.selfNode,
+		recipientVertex, sphinx.NumMaxHops,
+	)
+	if err != nil {
+		rpcsLog.Debugf("Graph pathfinding to %x failed (%v), "+
+			"using direct path", recipientVertex[:6], err)
+
+		// Fall back to direct single-hop path.
+		hops := []route.Vertex{recipientVertex}
+
+		return bolt12handler.BuildForwardPath(
+			recipientPubKey, hops,
+		)
+	}
+
+	rpcsLog.Infof("Found %d-hop onion message route to %x",
+		len(omPath), recipientVertex[:6])
+
+	return bolt12handler.BuildForwardPath(
+		recipientPubKey, omPath,
+	)
+}
+
+// buildOfferForwardPath constructs a blinded forward path for sending an
+// invoice request to the offer's issuer. If the offer has offer_paths, the
+// first blinded path is used directly. Otherwise, BFS pathfinding is used to
+// find a route to offer_issuer_id.
+func (r *rpcServer) buildOfferForwardPath(
+	offer *bolt12.Offer) (*sphinx.BlindedPathInfo, error) {
+
+	// Check for offer_paths first — these provide blinded message paths
+	// to the receiver.
+	var offerPaths *lnwire.BlindedPaths
+	offer.OfferPaths.WhenSome(
+		func(r tlv.RecordT[tlv.TlvType16, lnwire.BlindedPaths]) {
+			offerPaths = &r.Val
+		},
+	)
+
+	if offerPaths != nil && len(offerPaths.Paths) > 0 {
+		// Use the first offer path. Build a forward path to the
+		// introduction node, then stitch with the blinded segment.
+		offerPath := offerPaths.Paths[0]
+
+		blindedPath, err := offerPath.ToSphinx(
+			r.server.sciddirResolver,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("resolve offer path "+
+				"intro node: %w", err)
+		}
+
+		var introVertex route.Vertex
+		copy(
+			introVertex[:],
+			blindedPath.IntroductionPoint.SerializeCompressed(),
+		)
+
+		// BFS to find a route to the introduction node.
+		omPath, bfsErr := onionmessage.FindPath(
+			context.Background(), r.server.v1Graph,
+			r.selfNode, introVertex,
+			sphinx.NumMaxHops,
+		)
+
+		if bfsErr != nil || len(omPath) == 0 {
+			// Intro node is a direct peer — use the offer
+			// path directly.
+			rpcsLog.Infof("Using offer_path directly to "+
+				"intro node %x", introVertex[:6])
+
+			return &sphinx.BlindedPathInfo{
+				Path: blindedPath,
+			}, nil
+		}
+
+		rpcsLog.Infof("Found %d-hop route to offer_path "+
+			"intro node %x", len(omPath),
+			introVertex[:6])
+
+		// Build cleartext hops to the intro node with
+		// NextBlindingOverride on the last hop.
+		return bolt12handler.BuildForwardPathToBlinded(
+			omPath, blindedPath,
+		)
+	}
+
+	// Fall back to offer_issuer_id with BFS pathfinding.
+	recipientPubKey, err := offer.OfferIssuerID.UnwrapOrErrV(
+		fmt.Errorf("offer has neither offer_issuer_id nor " +
+			"offer_paths"),
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	return r.buildForwardPath(recipientPubKey)
+}
+
+// buildReplyPath constructs a blinded reply path for BOLT 12 invoice requests.
+// If a multi-hop reply path builder is configured, it is used; otherwise a
+// single-hop path is built as a direct-peer fallback.
+func (r *rpcServer) buildReplyPath() (*sphinx.BlindedPathInfo, error) {
+	if r.replyPathBuilder != nil {
+		return r.replyPathBuilder.BuildReplyPath()
+	}
+
+	nodePubKey := r.server.identityECDH.PubKey()
+
+	return bolt12handler.BuildSingleHopReplyPath(nodePubKey)
+}
+
 // RequestInvoice constructs a signed BOLT 12 invoice request for the given
 // offer, sends it to the offer's issuer via onion message, waits for the
 // invoice reply, validates it, and returns the decoded invoice.
@@ -9047,16 +9212,6 @@ func (r *rpcServer) RequestInvoice(ctx context.Context,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("decode offer: %w", err)
-	}
-
-	recipientPubKey, err := offer.OfferIssuerPubKey()
-	if err != nil {
-		return nil, fmt.Errorf("parse offer_issuer_id: %w", err)
-	}
-	if recipientPubKey == nil {
-		// TODO(bolt12): Support offer_paths in Layer 5.
-		return nil, fmt.Errorf("offer_issuer_id is required " +
-			"for direct-peer invoice requests")
 	}
 
 	var opts []bolt12handler.RequestOption
@@ -9087,17 +9242,12 @@ func (r *rpcServer) RequestInvoice(ctx context.Context,
 		return nil, fmt.Errorf("encode invoice request: %w", err)
 	}
 
-	nodePubKey := r.server.identityECDH.PubKey()
-	replyPath, err := bolt12handler.BuildSingleHopReplyPath(
-		nodePubKey,
-	)
+	replyPath, err := r.buildReplyPath()
 	if err != nil {
 		return nil, fmt.Errorf("build reply path: %w", err)
 	}
 
-	forwardPath, err := bolt12handler.BuildForwardPath(
-		recipientPubKey, nil,
-	)
+	forwardPath, err := r.buildOfferForwardPath(offer)
 	if err != nil {
 		return nil, fmt.Errorf("build forward path: %w", err)
 	}
@@ -9202,8 +9352,15 @@ func (r *rpcServer) RequestInvoice(ctx context.Context,
 	return resp, nil
 }
 
-// ListAliases returns the set of all aliases we have ever allocated along with
-// their base SCIDs and possibly a separate confirmed SCID in the case of
+// PayOffer takes a BOLT 12 offer, negotiates an invoice with the issuer via
+// onion message, validates the returned invoice, and dispatches an HTLC to
+// complete the payment. Returns the preimage on success.
+func (r *rpcServer) PayOffer(ctx context.Context,
+	req *lnrpc.PayOfferRequest) (*lnrpc.PayOfferResponse, error) {
+
+	return nil, fmt.Errorf("PayOffer not yet implemented")
+}
+
 // zero-conf.
 func (r *rpcServer) ListAliases(_ context.Context,
 	_ *lnrpc.ListAliasesRequest) (*lnrpc.ListAliasesResponse, error) {

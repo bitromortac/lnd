@@ -589,6 +589,14 @@ service Lightning {
     */
     rpc RequestInvoice (RequestInvoiceRequest) returns (RequestInvoiceResponse);
 
+    /* lncli: `payoffer`
+    PayOffer takes a BOLT 12 offer string, negotiates an invoice with the
+    offer's issuer via onion message, validates the returned invoice, and
+    dispatches an HTLC to complete the payment. Returns the payment preimage
+    on success.
+    */
+    rpc PayOffer (PayOfferRequest) returns (PayOfferResponse);
+
     /* lncli: `listaliases`
     ListAliases returns the set of all aliases that have ever existed with
     their confirmed SCID (if it exists) and/or the base SCID (in the case of
@@ -738,6 +746,12 @@ message CreateOfferRequest {
     // Zero means unlimited. If not set, quantity selection is not
     // supported.
     optional uint64 quantity_max = 4;
+
+    // When true, the offer uses blinded message paths (offer_paths) instead
+    // of revealing the node's identity via offer_issuer_id. This provides
+    // receiver privacy — the payer cannot learn the receiver's node pubkey
+    // from the offer.
+    bool use_blinded_paths = 5;
 }
 
 message CreateOfferResponse {
@@ -836,6 +850,51 @@ message RequestInvoiceResponse {
 
     // The 32-byte payment hash for the invoice.
     bytes invoice_payment_hash = 4;
+
+    // The 33-byte compressed ephemeral payer pubkey from the
+    // invoice request.
+    bytes invreq_payer_id = 5;
+
+    // The decoded offer fields from the invoice for convenience.
+    DecodeOfferResponse offer = 6;
+}
+
+message PayOfferRequest {
+    // The bech32-encoded offer string (lno1...).
+    string offer = 1;
+
+    // The amount in millisatoshis. Required when the offer does not
+    // specify a fixed amount.
+    uint64 amount_msat = 2;
+
+    // The number of items to request. Required when the offer
+    // supports quantity selection.
+    uint64 quantity = 3;
+
+    // An optional payer note included in the invoice request.
+    string payer_note = 4;
+
+    // Timeout in seconds to wait for the invoice reply during
+    // negotiation. Defaults to 60 if unset or zero.
+    uint64 timeout_seconds = 5;
+
+    // Maximum fee in millisatoshis to pay for routing. If zero, a
+    // default percentage of the payment amount is used.
+    int64 fee_limit_msat = 6;
+}
+
+message PayOfferResponse {
+    // The 32-byte payment preimage proving settlement.
+    bytes payment_preimage = 1;
+
+    // The 32-byte payment hash.
+    bytes payment_hash = 2;
+
+    // The settled amount in millisatoshis.
+    uint64 amount_msat = 3;
+
+    // The bech32-encoded BOLT 12 invoice string (lni1...).
+    string invoice_string = 4;
 
     // The 33-byte compressed ephemeral payer pubkey from the
     // invoice request.
