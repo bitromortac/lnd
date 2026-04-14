@@ -1226,6 +1226,12 @@ type blindedPathRestrictions struct {
 	// via scid (short channel id) starting from a channel which points to
 	// the receiver node.
 	incomingChainedChannels []uint64
+
+	// requiredFeature is the feature bit that each hop on the blinded
+	// path must advertise. For payment paths this is
+	// RouteBlindingOptional (bit 25); for onion message paths this is
+	// OnionMessagesOptional (bit 39).
+	requiredFeature lnwire.FeatureBit
 }
 
 // blindedHop holds the information about a hop we have selected for a blinded
@@ -1240,7 +1246,7 @@ type blindedHop struct {
 // of blinded paths to the target node given the set of restrictions. This
 // function will select and return any candidate path. A candidate path is a
 // path to the target node with a size determined by the given hop number
-// constraints where all the nodes on the path signal the route blinding feature
+// constraints where all the nodes on the path signal the required feature bit
 // _and_ the introduction node for the path has more than one public channel.
 // Any filtering of paths based on payment value or success probabilities is
 // left to the caller.
@@ -1263,12 +1269,12 @@ func findBlindedPaths(g Graph, target route.Vertex,
 			vertex: target,
 		}}
 
-		// supportsRouteBlinding is a list of nodes that we can assume
-		// support route blinding without needing to rely on the feature
-		// bits announced in their node announcement. Since we are
-		// finding a path to the target node, we can assume it supports
-		// route blinding.
-		supportsRouteBlinding = map[route.Vertex]bool{
+		// supportsFeature is a list of nodes that we can assume
+		// support the required feature without needing to rely on the
+		// feature bits announced in their node announcement. Since we
+		// are finding a path to the target node, we can assume it
+		// supports the required feature.
+		supportsFeature = map[route.Vertex]bool{
 			target: true,
 		}
 
@@ -1344,13 +1350,13 @@ func findBlindedPaths(g Graph, target route.Vertex,
 				"specified for the incoming blinded path")
 		}
 
-		supportsRouteBlinding[nextTarget] = true
+		supportsFeature[nextTarget] = true
 	}
 
-	// A helper closure which checks if the node in question has advertised
-	// that it supports route blinding.
-	nodeSupportsRouteBlinding := func(node route.Vertex) (bool, error) {
-		if supportsRouteBlinding[node] {
+	// A helper closure which checks if the node in question has
+	// advertised that it supports the required feature.
+	nodeSupportsFeature := func(node route.Vertex) (bool, error) {
+		if supportsFeature[node] {
 			return true, nil
 		}
 
@@ -1359,7 +1365,9 @@ func findBlindedPaths(g Graph, target route.Vertex,
 			return false, err
 		}
 
-		return features.HasFeature(lnwire.RouteBlindingOptional), nil
+		return features.HasFeature(
+			restrictions.requiredFeature,
+		), nil
 	}
 
 	// This function will have some recursion. We will spin out from the
@@ -1372,7 +1380,7 @@ func findBlindedPaths(g Graph, target route.Vertex,
 	// that if we have a fixed list of incoming chained channels, then this
 	// fixed list must be appended to any of the returned paths.
 	paths, _, err := processNodeForBlindedPath(
-		g, nextTarget, nodeSupportsRouteBlinding, visited, restrictions,
+		g, nextTarget, nodeSupportsFeature, visited, restrictions,
 	)
 	if err != nil {
 		return nil, err
@@ -1419,7 +1427,7 @@ func findBlindedPaths(g Graph, target route.Vertex,
 // in a depth first manner searching for a set of blinded paths to the given
 // node.
 func processNodeForBlindedPath(g Graph, node route.Vertex,
-	supportsRouteBlinding func(vertex route.Vertex) (bool, error),
+	supportsFeature func(vertex route.Vertex) (bool, error),
 	alreadyVisited map[route.Vertex]bool,
 	restrictions *blindedPathRestrictions) ([][]blindedHop, bool, error) {
 
@@ -1441,7 +1449,7 @@ func processNodeForBlindedPath(g Graph, node route.Vertex,
 		return nil, false, nil
 	}
 
-	supports, err := supportsRouteBlinding(node)
+	supports, err := supportsFeature(node)
 	if err != nil {
 		return nil, false, err
 	}
@@ -1476,7 +1484,7 @@ func processNodeForBlindedPath(g Graph, node route.Vertex,
 			// Process each channel peer to gather any paths that
 			// lead to the peer.
 			nextPaths, hasMoreChans, err := processNodeForBlindedPath( //nolint:ll
-				g, channel.OtherNode, supportsRouteBlinding,
+				g, channel.OtherNode, supportsFeature,
 				visited, restrictions,
 			)
 			if err != nil {
