@@ -828,11 +828,6 @@ func (s *SQLStore) QueryPayments(ctx context.Context, query Query) (Response,
 				NumLimit:      limit,
 				CreatedAfter:  createdAfter,
 				CreatedBefore: createdBefore,
-				// For now there only BOLT 11 payment intents
-				// exist.
-				IntentType: sqldb.SQLInt16(
-					PaymentIntentTypeBolt11,
-				),
 			}
 
 			if query.Reversed {
