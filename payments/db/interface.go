@@ -26,6 +26,16 @@ type PaymentReader interface {
 
 	// FetchInFlightPayments returns all payments with status InFlight.
 	FetchInFlightPayments(ctx context.Context) ([]*MPPayment, error)
+
+	// HasNonFailedForOffer reports whether any non-failed (in-flight
+	// or succeeded) payment exists for the given offer hash.
+	HasNonFailedForOffer(ctx context.Context,
+		offerHash []byte) (bool, error)
+
+	// CountPaymentsForOffer returns the number of succeeded payments
+	// for the given offer hash and their total amount in millisatoshis.
+	CountPaymentsForOffer(ctx context.Context,
+		offerHash []byte) (int64, int64, error)
 }
 
 // PaymentWriter represents the interface to write operations to the payments
