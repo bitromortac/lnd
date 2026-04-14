@@ -68,6 +68,11 @@ type BuildBlindedPathCfg struct {
 	// that the path is being used in the correct context.
 	PathID []byte
 
+	// InvoiceEnvelope is an optional signed envelope for stateless BOLT 12
+	// invoice settlement. When set, it is embedded alongside PathID in the
+	// final hop's encrypted data.
+	InvoiceEnvelope []byte
+
 	// ValueMsat is the payment amount in milli-satoshis that must be
 	// routed. This will be used for selecting appropriate routes to use for
 	// the blinded path.
@@ -221,10 +226,11 @@ func buildBlindedPaymentPath(cfg *BuildBlindedPathCfg, path *candidatePath) (
 		finalHopPubKey = path.hops[len(path.hops)-1].pubKey
 	}
 
-	// For the final hop, we only send it the path ID and payment
-	// constraints.
+	// For the final hop, we send it the path ID, optional invoice
+	// envelope, and payment constraints.
 	info, err := buildFinalHopRouteData(
-		finalHopPubKey, cfg.PathID, constraints,
+		finalHopPubKey, cfg.PathID, cfg.InvoiceEnvelope,
+		constraints,
 	)
 	if err != nil {
 		return nil, err
@@ -621,10 +627,11 @@ func buildHopRouteData(node route.Vertex, scid lnwire.ShortChannelID,
 // final hop and packages it with the real node ID of the node it is intended
 // for.
 func buildFinalHopRouteData(node route.Vertex, pathID []byte,
+	invoiceEnvelope []byte,
 	constraints *record.PaymentConstraints) (*hopData, error) {
 
 	blindedRouteHopData := record.NewFinalHopBlindedRouteData(
-		constraints, pathID,
+		constraints, pathID, invoiceEnvelope,
 	)
 	nodeID, err := btcec.ParsePubKey(node[:])
 	if err != nil {

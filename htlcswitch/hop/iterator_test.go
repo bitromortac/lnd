@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/binary"
 	"errors"
+	"reflect"
 	"testing"
 
 	"github.com/btcsuite/btcd/btcec/v2"
@@ -95,7 +96,7 @@ func TestSphinxHopIteratorForwardingInstructions(t *testing.T) {
 		}
 
 		fwdInfo := pld.ForwardingInfo()
-		if fwdInfo != testCase.expectedFwdInfo {
+		if !reflect.DeepEqual(fwdInfo, testCase.expectedFwdInfo) {
 			t.Fatalf("#%v: wrong fwding info: expected %v, got %v",
 				i, spew.Sdump(testCase.expectedFwdInfo),
 				spew.Sdump(fwdInfo))

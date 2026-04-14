@@ -263,8 +263,18 @@ func deriveBlindedRouteFinalHopForwardingInfo(
 		}
 	}
 
+	// Extract the optional invoice envelope for stateless BOLT 12
+	// settlement.
+	var invoiceEnvelope []byte
+	routeData.InvoiceEnvelope.WhenSome(
+		func(r tlv.RecordT[tlv.TlvType65538, []byte]) {
+			invoiceEnvelope = r.Val
+		},
+	)
+
 	payload.FwdInfo = ForwardingInfo{
-		PathID: pathID,
+		PathID:          pathID,
+		InvoiceEnvelope: invoiceEnvelope,
 	}
 
 	return payload, routeRole, nil
