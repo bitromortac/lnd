@@ -479,6 +479,7 @@ func Main() {
 		CreateOfferCommand,
 		DecodeOfferCommand,
 		RequestInvoiceCommand,
+		PayOfferCommand,
 		lookupInvoiceCommand,
 		listInvoicesCommand,
 		deleteCanceledInvoiceCommand,
