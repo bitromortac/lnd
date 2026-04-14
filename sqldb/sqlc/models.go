@@ -208,6 +208,15 @@ type InvoicePaymentHash struct {
 	Hash     []byte
 }
 
+type InvoiceRequestStore struct {
+	ID           int64
+	OfferID      []byte
+	InvreqBytes  []byte
+	InvoiceBytes []byte
+	PayerKey     []byte
+	CreatedAt    time.Time
+}
+
 type InvoiceSequence struct {
 	Name         string
 	CurrentValue int64
@@ -299,6 +308,7 @@ type PaymentIntent struct {
 	PaymentID     int64
 	IntentType    int16
 	IntentPayload []byte
+	OfferID       []byte
 }
 
 type PaymentRouteHop struct {

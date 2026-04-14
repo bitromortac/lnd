@@ -146,6 +146,16 @@ var (
 			Version:       20,
 			SchemaVersion: 17,
 		},
+		{
+			Name:          "000018_bolt12_payment_intents",
+			Version:       21,
+			SchemaVersion: 18,
+		},
+		{
+			Name:          "000019_invoice_request_store",
+			Version:       22,
+			SchemaVersion: 19,
+		},
 	}, migrationAdditions...)
 
 	// ErrMigrationMismatch is returned when a migrated record does not

@@ -23,6 +23,37 @@ func (q *Queries) CountPayments(ctx context.Context) (int64, error) {
 	return count, err
 }
 
+const countPaymentsForOffer = `-- name: CountPaymentsForOffer :one
+SELECT
+    COUNT(DISTINCT p.id) AS payment_count,
+    CAST(COALESCE(SUM(p.amount_msat), 0) AS BIGINT) AS total_amount_msat
+FROM payment_intents pi
+JOIN payments p ON pi.payment_id = p.id
+WHERE pi.offer_id = $1
+  AND EXISTS (
+      SELECT 1 FROM payment_htlc_attempts ha
+      JOIN payment_htlc_attempt_resolutions hr
+          ON hr.attempt_index = ha.attempt_index
+      WHERE ha.payment_id = p.id
+        AND hr.resolution_type = 1
+  )
+`
+
+type CountPaymentsForOfferRow struct {
+	PaymentCount    int64
+	TotalAmountMsat int64
+}
+
+// Count succeeded payments for a given offer and their total amount.
+// A payment is considered succeeded if it has at least one settled
+// HTLC attempt (resolution_type = 1).
+func (q *Queries) CountPaymentsForOffer(ctx context.Context, offerID []byte) (CountPaymentsForOfferRow, error) {
+	row := q.db.QueryRowContext(ctx, countPaymentsForOffer, offerID)
+	var i CountPaymentsForOfferRow
+	err := row.Scan(&i.PaymentCount, &i.TotalAmountMsat)
+	return i, err
+}
+
 const deleteFailedAttempts = `-- name: DeleteFailedAttempts :exec
 DELETE FROM payment_htlc_attempts
 WHERE payment_id = $1
@@ -742,6 +773,56 @@ func (q *Queries) FetchPaymentsByIDsMig(ctx context.Context, paymentIds []int64)
 	return items, nil
 }
 
+const fetchPaymentsByOfferID = `-- name: FetchPaymentsByOfferID :many
+SELECT
+    p.id, p.amount_msat, p.created_at, p.payment_identifier, p.fail_reason,
+    pi.intent_type AS "intent_type",
+    pi.intent_payload AS "intent_payload"
+FROM payments p
+JOIN payment_intents pi ON pi.payment_id = p.id
+WHERE pi.offer_id = $1
+ORDER BY p.created_at DESC
+`
+
+type FetchPaymentsByOfferIDRow struct {
+	Payment       Payment
+	IntentType    int16
+	IntentPayload []byte
+}
+
+// Fetch all payments linked to a given offer ID, ordered by creation
+// time descending. Used by the ListPayments offer_id filter.
+func (q *Queries) FetchPaymentsByOfferID(ctx context.Context, offerID []byte) ([]FetchPaymentsByOfferIDRow, error) {
+	rows, err := q.db.QueryContext(ctx, fetchPaymentsByOfferID, offerID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []FetchPaymentsByOfferIDRow
+	for rows.Next() {
+		var i FetchPaymentsByOfferIDRow
+		if err := rows.Scan(
+			&i.Payment.ID,
+			&i.Payment.AmountMsat,
+			&i.Payment.CreatedAt,
+			&i.Payment.PaymentIdentifier,
+			&i.Payment.FailReason,
+			&i.IntentType,
+			&i.IntentPayload,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const fetchRouteLevelFirstHopCustomRecords = `-- name: FetchRouteLevelFirstHopCustomRecords :many
 SELECT
     l.id,
@@ -948,6 +1029,24 @@ func (q *Queries) FilterPaymentsDesc(ctx context.Context, arg FilterPaymentsDesc
 	return items, nil
 }
 
+const hasNonFailedForOffer = `-- name: HasNonFailedForOffer :one
+SELECT EXISTS(
+    SELECT 1 FROM payment_intents pi
+    JOIN payments p ON pi.payment_id = p.id
+    WHERE pi.offer_id = $1
+      AND p.fail_reason IS NULL
+) AS has_non_failed
+`
+
+// Check whether any non-failed payment exists for a given offer.
+// Returns true if an in-flight or succeeded payment exists.
+func (q *Queries) HasNonFailedForOffer(ctx context.Context, offerID []byte) (bool, error) {
+	row := q.db.QueryRowContext(ctx, hasNonFailedForOffer, offerID)
+	var has_non_failed bool
+	err := row.Scan(&has_non_failed)
+	return has_non_failed, err
+}
+
 const insertHtlcAttempt = `-- name: InsertHtlcAttempt :one
 INSERT INTO payment_htlc_attempts (
     payment_id,
@@ -1152,12 +1251,14 @@ func (q *Queries) InsertPaymentHopCustomRecord(ctx context.Context, arg InsertPa
 const insertPaymentIntent = `-- name: InsertPaymentIntent :one
 INSERT INTO payment_intents (
     payment_id,
-    intent_type, 
-    intent_payload)
+    intent_type,
+    intent_payload,
+    offer_id)
 VALUES (
     $1,
-    $2, 
-    $3
+    $2,
+    $3,
+    $4
 )
 RETURNING id
 `
@@ -1166,11 +1267,18 @@ type InsertPaymentIntentParams struct {
 	PaymentID     int64
 	IntentType    int16
 	IntentPayload []byte
+	OfferID       []byte
 }
 
 // Insert a payment intent for a given payment and return its ID.
+// offer_id is NULL for BOLT 11 payments.
 func (q *Queries) InsertPaymentIntent(ctx context.Context, arg InsertPaymentIntentParams) (int64, error) {
-	row := q.db.QueryRowContext(ctx, insertPaymentIntent, arg.PaymentID, arg.IntentType, arg.IntentPayload)
+	row := q.db.QueryRowContext(ctx, insertPaymentIntent,
+		arg.PaymentID,
+		arg.IntentType,
+		arg.IntentPayload,
+		arg.OfferID,
+	)
 	var id int64
 	err := row.Scan(&id)
 	return id, err
