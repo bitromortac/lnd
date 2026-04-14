@@ -26,6 +26,12 @@ type PaymentReader interface {
 
 	// FetchInFlightPayments returns all payments with status InFlight.
 	FetchInFlightPayments(ctx context.Context) ([]*MPPayment, error)
+
+	// FetchBolt12Payment returns the stored state of the idempotency key
+	// of an offer payment, or ErrBolt12PaymentNotFound when no payment
+	// uses it.
+	FetchBolt12Payment(ctx context.Context,
+		key []byte) (*Bolt12PaymentRecord, error)
 }
 
 // PaymentWriter represents the interface to write operations to the payments

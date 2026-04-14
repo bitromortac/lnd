@@ -23,6 +23,10 @@ type PaymentIntentType int16
 const (
 	// PaymentIntentTypeBolt11 indicates a BOLT11 invoice payment.
 	PaymentIntentTypeBolt11 PaymentIntentType = 0
+
+	// PaymentIntentTypeBolt12 indicates a payment of a BOLT 12 invoice.
+	// The intent payload holds the lni1 invoice string.
+	PaymentIntentTypeBolt12 PaymentIntentType = 1
 )
 
 // HTLCAttemptResolutionType represents the type of HTLC attempt resolution.
@@ -58,6 +62,14 @@ type SQLQueries interface {
 	FetchHopsForAttempts(ctx context.Context, htlcAttemptIndices []int64) ([]sqlc.FetchHopsForAttemptsRow, error)
 
 	FetchPaymentDuplicates(ctx context.Context, paymentID int64) ([]sqlc.PaymentDuplicate, error)
+
+	/*
+		BOLT 12 operations. Only offer payments reach them, and the
+		BOLT 12 gate makes sure that their tables exist.
+	*/
+	FetchBolt12Payment(ctx context.Context, idempotencyKey []byte) (sqlc.FetchBolt12PaymentRow, error)
+	FetchBolt12PaymentIDsByOffer(ctx context.Context, offerHash []byte) ([]sql.NullInt64, error)
+	UpsertBolt12Payment(ctx context.Context, arg sqlc.UpsertBolt12PaymentParams) error
 
 	FetchPaymentLevelFirstHopCustomRecords(ctx context.Context, paymentIDs []int64) ([]sqlc.PaymentFirstHopCustomRecord, error)
 	FetchRouteLevelFirstHopCustomRecords(ctx context.Context, htlcAttemptIndices []int64) ([]sqlc.PaymentAttemptFirstHopCustomRecord, error)
@@ -790,6 +802,8 @@ func (s *SQLStore) QueryPayments(ctx context.Context, query Query) (Response,
 				).UTC()
 			}
 
+			// A NULL intent type returns the payments of
+			// every intent type, BOLT 11 and BOLT 12.
 			filterParams := sqlc.FilterPaymentsParams{
 				NumLimit:      limit,
 				CreatedAfter:  createdAfter,
@@ -1208,6 +1222,17 @@ func (s *SQLStore) InitPayment(ctx context.Context, paymentHash lntypes.Hash,
 
 	// Create the payment in the database.
 	err := s.db.ExecTx(ctx, sqldb.WriteTxOpt(), func(db SQLQueries) error {
+		// The key check runs first. A retry of a failed payment
+		// deletes the old row below, and the key must be judged by
+		// that payment's status before it is gone.
+		bolt12 := paymentCreationInfo.Bolt12
+		if bolt12 != nil {
+			err := checkBolt12Key(ctx, s.cfg.QueryCfg, db, bolt12)
+			if err != nil {
+				return err
+			}
+		}
+
 		existingPayment, err := db.FetchPayment(ctx, paymentHash[:])
 		switch {
 		// A payment with this hash already exists. We need to check its
@@ -1265,12 +1290,15 @@ func (s *SQLStore) InitPayment(ctx context.Context, paymentHash lntypes.Hash,
 
 		// If there's a payment request, insert the payment intent.
 		if len(paymentCreationInfo.PaymentRequest) > 0 {
+			intentType := PaymentIntentTypeBolt11
+			if bolt12 != nil {
+				intentType = PaymentIntentTypeBolt12
+			}
+
 			_, err = db.InsertPaymentIntent(
 				ctx, sqlc.InsertPaymentIntentParams{
-					PaymentID: paymentID,
-					IntentType: int16(
-						PaymentIntentTypeBolt11,
-					),
+					PaymentID:  paymentID,
+					IntentType: int16(intentType),
 					IntentPayload: paymentCreationInfo.
 						PaymentRequest,
 				},
@@ -1278,6 +1306,28 @@ func (s *SQLStore) InitPayment(ctx context.Context, paymentHash lntypes.Hash,
 			if err != nil {
 				return fmt.Errorf("failed to insert "+
 					"payment intent: %w", err)
+			}
+		}
+
+		// The key now points to this payment. For a new key the
+		// row is created, and for a key whose payment failed it
+		// moves to the retry.
+		if bolt12 != nil {
+			err = db.UpsertBolt12Payment(
+				ctx, sqlc.UpsertBolt12PaymentParams{
+					IdempotencyKey: bolt12.IdempotencyKey,
+					PaymentID: sqldb.SQLInt64(
+						paymentID,
+					),
+					OfferHash:  bolt12.OfferHash[:],
+					ParamsHash: bolt12.ParamsHash[:],
+					CreatedAt: paymentCreationInfo.
+						CreationTime.UTC(),
+				},
+			)
+			if err != nil {
+				return fmt.Errorf("failed to store BOLT 12 "+
+					"payment: %w", err)
 			}
 		}
 
