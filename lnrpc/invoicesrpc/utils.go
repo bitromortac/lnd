@@ -8,21 +8,30 @@ import (
 
 	"github.com/btcsuite/btcd/btcec/v2"
 	"github.com/btcsuite/btcd/chaincfg"
+	"github.com/lightningnetwork/lnd/bolt12"
 	"github.com/lightningnetwork/lnd/invoices"
 	"github.com/lightningnetwork/lnd/lnrpc"
 	"github.com/lightningnetwork/lnd/lnwire"
+	"github.com/lightningnetwork/lnd/tlv"
 	"github.com/lightningnetwork/lnd/zpay32"
 )
 
 // decodePayReq decodes the invoice payment request if present. This is needed,
 // because not all information is stored in dedicated invoice fields. If there
 // is no payment request present, a dummy request will be returned. This can
-// happen with just-in-time inserted keysend invoices.
+// happen with just-in-time inserted keysend invoices or BOLT 12 invoices
+// whose payment request is an lni1... string that zpay32 cannot decode.
 func decodePayReq(invoice *invoices.Invoice,
 	activeNetParams *chaincfg.Params) (*zpay32.Invoice, error) {
 
 	paymentRequest := string(invoice.PaymentRequest)
-	if paymentRequest == "" {
+
+	// For keysend invoices with no payment request and BOLT 12
+	// invoices (whose lni1... string is not zpay32-decodable),
+	// return a minimal struct with just the payment hash. All
+	// other fields (memo, value, expiry, etc.) are read directly
+	// from invoice.* by CreateRPCInvoice.
+	if paymentRequest == "" || invoice.IsBolt12 {
 		preimage := invoice.Terms.PaymentPreimage
 		if preimage == nil {
 			return &zpay32.Invoice{}, nil
@@ -196,6 +205,13 @@ func CreateRPCInvoice(invoice *invoices.Invoice,
 		PaymentAddr: invoice.Terms.PaymentAddr[:],
 		IsAmp:       invoice.IsAMP(),
 		IsBlinded:   invoice.IsBlinded(),
+		IsBolt12:    invoice.IsBolt12,
+	}
+
+	// Populate BOLT 12 detail from DB columns and the decoded
+	// lni1... payment request.
+	if invoice.IsBolt12 {
+		rpcInvoice.Bolt12Detail = marshalBolt12Detail(invoice)
 	}
 
 	rpcInvoice.AmpInvoiceState = make(map[string]*lnrpc.AMPInvoiceState)
@@ -366,4 +382,57 @@ func CreateZpay32HopHints(routeHints []*lnrpc.RouteHint) ([][]zpay32.HopHint, er
 		res = append(res, hopHints)
 	}
 	return res, nil
+}
+
+// marshalBolt12Detail populates an OfferInvoiceDetail from the
+// invoice's DB columns and the decoded lni1... payment request.
+// Fields available from DB columns are read directly; payer_note
+// and quantity require a lightweight TLV decode of the payment
+// request.
+func marshalBolt12Detail(
+	invoice *invoices.Invoice) *lnrpc.OfferInvoiceDetail {
+
+	detail := &lnrpc.OfferInvoiceDetail{
+		OfferId:       invoice.OfferIDHash,
+		InvoiceNodeId: invoice.InvoiceNodeID,
+		InvreqPayerId: invoice.InvreqPayerID,
+	}
+
+	// Decode the lni1... payment request for fields not stored
+	// in DB columns (payer_note, quantity, offer_string). This is
+	// a display-only path: validation and expiry checks already ran
+	// when the invoice was stored, so we skip the bech32 wrapper's
+	// re-validation and use the low-level decoder directly.
+	payReq := string(invoice.PaymentRequest)
+	if payReq == "" {
+		return detail
+	}
+
+	_, tlvBytes, err := bolt12.Decode(payReq)
+	if err != nil {
+		// Best-effort: return what we have from DB columns.
+		return detail
+	}
+
+	inv, err := bolt12.DecodeInvoice(tlvBytes)
+	if err != nil {
+		// Best-effort: return what we have from DB columns.
+		return detail
+	}
+
+	inv.InvreqPayerNote.WhenSome(
+		func(r tlv.RecordT[tlv.TlvType89, tlv.Blob]) {
+			detail.PayerNote = string(r.Val)
+		},
+	)
+
+	inv.InvreqQuantity.WhenSome(
+		func(r tlv.RecordT[tlv.TlvType86,
+			bolt12.TUint64]) {
+
+			detail.Quantity = uint64(r.Val)
+		},
+	)
+
+	return detail
 }
