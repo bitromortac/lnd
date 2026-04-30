@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/hex"
+	"strings"
 	"time"
 
 	"github.com/btcsuite/btcd/btcec/v2"
@@ -470,6 +471,471 @@ func testBolt12RequestInvoiceRPC(ht *lntest.HarnessTest) {
 	require.NoError(ht, decErr, "decode invoice string")
 
 	ht.Log("RequestInvoice RPC verified successfully")
+}
+
+// testBolt12PayOffer tests the full end-to-end BOLT 12 payment flow: Alice
+// creates an offer, Bob pays it via PayOffer, and both sides see the settled
+// payment.
+func testBolt12PayOffer(ht *lntest.HarnessTest) {
+	alice := ht.NewNode("Alice", bolt12NodeArgs(ht))
+	bob := ht.NewNode("Bob", bolt12NodeArgs(ht))
+
+	ht.EnsureConnected(alice, bob)
+
+	// Fund Bob so he can open a channel to Alice.
+	ht.FundCoins(btcutil.SatoshiPerBitcoin, bob)
+
+	// Open a channel from Bob to Alice so Bob can pay.
+	chanPoint := ht.OpenChannel(
+		bob, alice, lntest.OpenChannelParams{
+			Amt: 500_000,
+		},
+	)
+	defer ht.CloseChannel(bob, chanPoint)
+
+	ctxt, cancel := context.WithTimeout(
+		ht.Context(), lntest.DefaultTimeout,
+	)
+	defer cancel()
+
+	// Alice creates an offer.
+	offerResp, err := alice.RPC.LN.CreateOffer(
+		ctxt, &lnrpc.CreateOfferRequest{
+			Description: "pay offer test",
+			AmountMsat:  50000,
+		},
+	)
+	require.NoError(ht, err, "CreateOffer")
+	ht.Logf("Alice offer: %s", offerResp.Offer)
+
+	// Bob pays Alice's offer.
+	payResp := bob.RPC.PayOffer(
+		&lnrpc.PayOfferRequest{
+			Offer:          offerResp.Offer,
+			TimeoutSeconds: 30,
+		},
+	)
+
+	// Verify the payment preimage is 32 bytes and non-zero.
+	require.Len(ht, payResp.PaymentPreimage, 32)
+	require.NotEqual(
+		ht, make([]byte, 32), payResp.PaymentPreimage,
+	)
+
+	// Verify the payment hash is 32 bytes.
+	require.Len(ht, payResp.PaymentHash, 32)
+
+	// Verify the settled amount matches the offer.
+	require.Equal(
+		ht, uint64(50000), payResp.AmountMsat,
+		"settled amount should match offer",
+	)
+
+	// Verify payer ID is present (33-byte compressed pubkey).
+	require.Len(ht, payResp.InvreqPayerId, 33)
+
+	// Verify the embedded offer fields.
+	require.NotNil(ht, payResp.Offer)
+	require.Equal(ht, "pay offer test", payResp.Offer.Description)
+	require.Equal(
+		ht, uint64(50000), payResp.Offer.AmountMsat,
+	)
+
+	// The string decodes through the reader gates, which include the
+	// signature check.
+	_, decErr := bolt12.DecodeInvoiceString(
+		payResp.InvoiceString, time.Now(),
+		*harnessNetParams.GenesisHash,
+	)
+	require.NoError(ht, decErr, "decode invoice string")
+
+	ht.Log("PayOffer verified successfully")
+}
+
+// testBolt12PayOfferNoAmount tests PayOffer with an offer that has no fixed
+// amount. The sender specifies the amount.
+func testBolt12PayOfferNoAmount(ht *lntest.HarnessTest) {
+	alice := ht.NewNode("Alice", bolt12NodeArgs(ht))
+	bob := ht.NewNode("Bob", bolt12NodeArgs(ht))
+
+	ht.EnsureConnected(alice, bob)
+
+	ht.FundCoins(btcutil.SatoshiPerBitcoin, bob)
+
+	chanPoint := ht.OpenChannel(
+		bob, alice, lntest.OpenChannelParams{
+			Amt: 500_000,
+		},
+	)
+	defer ht.CloseChannel(bob, chanPoint)
+
+	ctxt, cancel := context.WithTimeout(
+		ht.Context(), lntest.DefaultTimeout,
+	)
+	defer cancel()
+
+	// Alice creates a no-amount offer.
+	offerResp, err := alice.RPC.LN.CreateOffer(
+		ctxt, &lnrpc.CreateOfferRequest{
+			Description: "tips welcome",
+		},
+	)
+	require.NoError(ht, err, "CreateOffer")
+
+	// Bob pays with a sender-specified amount.
+	payResp := bob.RPC.PayOffer(
+		&lnrpc.PayOfferRequest{
+			Offer:          offerResp.Offer,
+			AmountMsat:     25000,
+			TimeoutSeconds: 30,
+		},
+	)
+
+	require.Len(ht, payResp.PaymentPreimage, 32)
+	require.Equal(
+		ht, uint64(25000), payResp.AmountMsat,
+		"settled amount should match sender request",
+	)
+
+	ht.Log("PayOffer no-amount verified successfully")
+}
+
+// testBolt12PayOfferMultiHop tests the full end-to-end multi-hop BOLT 12 flow
+// with no direct channel between sender and receiver.
+//
+// Topology (4-node chain):
+//
+//	Carol → Bob → Dave → Alice
+//
+// Carol (sender) pays Alice's (receiver) offer. Everything is multi-hop:
+//   - Forward onion message: Carol → Bob → Dave → Alice (BFS pathfinding)
+//   - Reply path: Bob (intro) → Carol (DFS blinded message path)
+//   - Invoice blinded payment path: Dave (intro) → Alice (DFS blinded payment
+//     path)
+//   - HTLC payment: Carol → Bob → Dave (cleartext) → Alice (blinded)
+func testBolt12PayOfferMultiHop(ht *lntest.HarnessTest) {
+	// Create a 4-node chain: Carol → Bob → Dave → Alice.
+	// CreateSimpleNetwork opens channels left-to-right and funds the
+	// opener, so Carol has outbound to Bob, Bob to Dave, Dave to Alice.
+	chanPoints, nodes := ht.CreateSimpleNetwork(
+		[][]string{nil, nil, nil, nil},
+		lntest.OpenChannelParams{Amt: 500_000},
+	)
+	defer func() {
+		for i := len(chanPoints) - 1; i >= 0; i-- {
+			ht.CloseChannel(nodes[i], chanPoints[i])
+		}
+	}()
+
+	carol := nodes[0]
+	alice := nodes[3]
+
+	ctxt, cancel := context.WithTimeout(
+		ht.Context(), lntest.DefaultTimeout,
+	)
+	defer cancel()
+
+	// Alice creates an offer.
+	offerResp, err := alice.RPC.LN.CreateOffer(
+		ctxt, &lnrpc.CreateOfferRequest{
+			Description: "multi-hop e2e test",
+			AmountMsat:  50000,
+		},
+	)
+	require.NoError(ht, err, "CreateOffer")
+	ht.Logf("Alice offer: %s", offerResp.Offer)
+
+	// Carol pays Alice's offer through the full 4-node chain.
+	// No direct channel exists between Carol and Alice. Everything routes
+	// through Bob and Dave.
+	payResp := carol.RPC.PayOffer(
+		&lnrpc.PayOfferRequest{
+			Offer:          offerResp.Offer,
+			TimeoutSeconds: 60,
+			FeeLimitMsat:   50000,
+		},
+	)
+
+	// Verify the payment settled correctly.
+	require.Len(ht, payResp.PaymentPreimage, 32)
+	require.NotEqual(
+		ht, make([]byte, 32), payResp.PaymentPreimage,
+	)
+	require.Equal(
+		ht, uint64(50000), payResp.AmountMsat,
+		"settled amount should match offer",
+	)
+
+	ht.Log("PayOffer multi-hop e2e verified successfully")
+}
+
+// testBolt12PayOfferBlindedOffer tests the full end-to-end BOLT 12 flow using
+// offer_paths instead of offer_issuer_id. The receiver's identity is hidden
+// behind blinded message paths in the offer.
+//
+// Topology (4-node chain):
+//
+//	Carol → Bob → Dave → Alice
+//
+// Alice creates an offer with use_blinded_paths=true. The offer contains
+// blinded message paths (offer_paths) instead of Alice's pubkey. Carol sends
+// the invoice request through the offer's blinded path to reach Alice.
+func testBolt12PayOfferBlindedOffer(ht *lntest.HarnessTest) {
+	chanPoints, nodes := ht.CreateSimpleNetwork(
+		[][]string{nil, nil, nil, nil},
+		lntest.OpenChannelParams{Amt: 500_000},
+	)
+	defer func() {
+		for i := len(chanPoints) - 1; i >= 0; i-- {
+			ht.CloseChannel(nodes[i], chanPoints[i])
+		}
+	}()
+
+	carol := nodes[0]
+	alice := nodes[3]
+
+	ctxt, cancel := context.WithTimeout(
+		ht.Context(), lntest.DefaultTimeout,
+	)
+	defer cancel()
+
+	// Alice creates an offer with blinded paths (no offer_issuer_id).
+	offerResp, err := alice.RPC.LN.CreateOffer(
+		ctxt, &lnrpc.CreateOfferRequest{
+			Description:     "private offer",
+			AmountMsat:      50000,
+			UseBlindedPaths: true,
+		},
+	)
+	require.NoError(ht, err, "CreateOffer with blinded paths")
+	ht.Logf("Alice blinded offer: %s", offerResp.Offer)
+
+	// Decode the offer to verify it has offer_paths and no
+	// offer_issuer_id.
+	offer, err := bolt12.DecodeOfferString(
+		offerResp.Offer, time.Now(), *harnessNetParams.GenesisHash,
+	)
+	require.NoError(ht, err, "decode offer")
+
+	hasIssuerID := false
+	offer.OfferIssuerID.WhenSome(
+		func(_ tlv.RecordT[tlv.TlvType22, *btcec.PublicKey]) {
+			hasIssuerID = true
+		},
+	)
+	require.False(ht, hasIssuerID,
+		"blinded offer should not have offer_issuer_id")
+
+	hasPaths := false
+	offer.OfferPaths.WhenSome(
+		func(_ tlv.RecordT[tlv.TlvType16, lnwire.BlindedPaths]) {
+			hasPaths = true
+		},
+	)
+	require.True(ht, hasPaths,
+		"blinded offer should have offer_paths")
+
+	// Carol pays Alice's blinded offer.
+	payResp := carol.RPC.PayOffer(
+		&lnrpc.PayOfferRequest{
+			Offer:          offerResp.Offer,
+			TimeoutSeconds: 60,
+			FeeLimitMsat:   50000,
+		},
+	)
+
+	require.Len(ht, payResp.PaymentPreimage, 32)
+	require.NotEqual(
+		ht, make([]byte, 32), payResp.PaymentPreimage,
+	)
+	require.Equal(
+		ht, uint64(50000), payResp.AmountMsat,
+		"settled amount should match offer",
+	)
+
+	ht.Log("PayOffer with blinded offer_paths verified successfully")
+}
+
+// testBolt12PayOfferDedup tests the offer-level dedup guard: paying the
+// same offer twice without --force is rejected, with --force succeeds.
+func testBolt12PayOfferDedup(ht *lntest.HarnessTest) {
+	alice := ht.NewNode("Alice", bolt12NodeArgs(ht))
+	bob := ht.NewNode("Bob", bolt12NodeArgs(ht))
+
+	ht.EnsureConnected(alice, bob)
+	ht.FundCoins(btcutil.SatoshiPerBitcoin, bob)
+
+	chanPoint := ht.OpenChannel(
+		bob, alice, lntest.OpenChannelParams{
+			Amt: 500_000,
+		},
+	)
+	defer ht.CloseChannel(bob, chanPoint)
+
+	ctxt, cancel := context.WithTimeout(
+		ht.Context(), lntest.DefaultTimeout,
+	)
+	defer cancel()
+
+	// Alice creates an offer.
+	offerResp, err := alice.RPC.LN.CreateOffer(
+		ctxt, &lnrpc.CreateOfferRequest{
+			Description: "dedup test",
+			AmountMsat:  10000,
+		},
+	)
+	if err != nil && strings.Contains(
+		err.Error(), "offer store not initialized",
+	) {
+
+		ht.Skipf(
+			"offer store requires --dbbackend=sqlite " +
+				"--nativesql",
+		)
+	}
+	require.NoError(ht, err, "CreateOffer")
+
+	// The first payment with key K1 pays the offer.
+	keyOne := bytes.Repeat([]byte{0x01}, 32)
+	payResp := bob.RPC.PayOffer(
+		&lnrpc.PayOfferRequest{
+			Offer:          offerResp.Offer,
+			TimeoutSeconds: 30,
+			IdempotencyKey: keyOne,
+		},
+	)
+	require.Len(ht, payResp.PaymentPreimage, 32)
+	require.Equal(ht, keyOne, payResp.IdempotencyKey)
+
+	// A retry with K1 returns the first payment instead of paying again.
+	retryResp := bob.RPC.PayOffer(
+		&lnrpc.PayOfferRequest{
+			Offer:          offerResp.Offer,
+			TimeoutSeconds: 30,
+			IdempotencyKey: keyOne,
+		},
+	)
+	require.Equal(ht, payResp.PaymentHash, retryResp.PaymentHash)
+	require.Equal(
+		ht, payResp.PaymentPreimage, retryResp.PaymentPreimage,
+	)
+
+	payments := bob.RPC.ListPayments(&lnrpc.ListPaymentsRequest{
+		OfferHash: offerResp.OfferHash,
+	})
+	require.Len(ht, payments.Payments, 1, "retry must not pay again")
+
+	// K1 with other parameters is a different request and is refused.
+	stream, err := bob.RPC.LN.PayOffer(
+		ctxt, &lnrpc.PayOfferRequest{
+			Offer:          offerResp.Offer,
+			AmountMsat:     20000,
+			TimeoutSeconds: 30,
+			IdempotencyKey: keyOne,
+		},
+	)
+	require.NoError(ht, err, "PayOffer stream open")
+
+	_, recvErr := stream.Recv()
+	require.Error(ht, recvErr, "expected parameter mismatch")
+	require.Contains(ht, recvErr.Error(), "other payment parameters")
+
+	// A new key K2 pays the same offer again, because offers are
+	// reusable.
+	keyTwo := bytes.Repeat([]byte{0x02}, 32)
+	payResp2 := bob.RPC.PayOffer(
+		&lnrpc.PayOfferRequest{
+			Offer:          offerResp.Offer,
+			TimeoutSeconds: 30,
+			IdempotencyKey: keyTwo,
+		},
+	)
+	require.Len(ht, payResp2.PaymentPreimage, 32)
+	require.NotEqual(ht, payResp.PaymentHash, payResp2.PaymentHash)
+
+	payments = bob.RPC.ListPayments(&lnrpc.ListPaymentsRequest{
+		OfferHash: offerResp.OfferHash,
+	})
+	require.Len(ht, payments.Payments, 2)
+
+	ht.Log("PayOffer idempotency verified successfully")
+}
+
+// testBolt12PayOfferStreamEvents tests that the PayOffer stream
+// emits all three update types in the correct order.
+func testBolt12PayOfferStreamEvents(ht *lntest.HarnessTest) {
+	alice := ht.NewNode("Alice", bolt12NodeArgs(ht))
+	bob := ht.NewNode("Bob", bolt12NodeArgs(ht))
+
+	ht.EnsureConnected(alice, bob)
+	ht.FundCoins(btcutil.SatoshiPerBitcoin, bob)
+
+	chanPoint := ht.OpenChannel(
+		bob, alice, lntest.OpenChannelParams{
+			Amt: 500_000,
+		},
+	)
+	defer ht.CloseChannel(bob, chanPoint)
+
+	ctxt, cancel := context.WithTimeout(
+		ht.Context(), lntest.DefaultTimeout,
+	)
+	defer cancel()
+
+	offerResp, err := alice.RPC.LN.CreateOffer(
+		ctxt, &lnrpc.CreateOfferRequest{
+			Description: "stream events test",
+			AmountMsat:  20000,
+		},
+	)
+	if err != nil && strings.Contains(
+		err.Error(), "offer store not initialized",
+	) {
+
+		ht.Skipf(
+			"offer store requires --dbbackend=sqlite " +
+				"--nativesql",
+		)
+	}
+	require.NoError(ht, err, "CreateOffer")
+
+	// Open stream directly (not via harness helper).
+	stream, err := bob.RPC.LN.PayOffer(
+		ctxt, &lnrpc.PayOfferRequest{
+			Offer:          offerResp.Offer,
+			TimeoutSeconds: 30,
+		},
+	)
+	require.NoError(ht, err, "PayOffer stream open")
+
+	// First update: invoice_request_sent.
+	update1, err := stream.Recv()
+	require.NoError(ht, err, "recv update 1")
+	reqSent := update1.GetInvoiceRequestSent()
+	require.NotNil(ht, reqSent, "expected invoice_request_sent")
+	require.NotNil(ht, reqSent.Offer)
+
+	// Second update: invoice_received.
+	update2, err := stream.Recv()
+	require.NoError(ht, err, "recv update 2")
+	invRecv := update2.GetInvoiceReceived()
+	require.NotNil(ht, invRecv, "expected invoice_received")
+	require.NotEmpty(ht, invRecv.InvoiceString)
+	require.Len(ht, invRecv.InvoicePaymentHash, 32)
+	require.Equal(ht, uint64(20000), invRecv.InvoiceAmountMsat)
+
+	// Third update: payment_result.
+	update3, err := stream.Recv()
+	require.NoError(ht, err, "recv update 3")
+	result := update3.GetPaymentResult()
+	require.NotNil(ht, result, "expected payment_result")
+	require.Len(ht, result.PaymentPreimage, 32)
+	require.NotEqual(
+		ht, make([]byte, 32), result.PaymentPreimage,
+	)
+	require.Equal(ht, uint64(20000), result.AmountMsat)
+
+	ht.Log("PayOffer stream events verified successfully")
 }
 
 // bolt12NodeArgs returns the node arguments that enable BOLT 12 offers. It
