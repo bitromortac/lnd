@@ -4894,6 +4894,80 @@
         }
       }
     },
+    "lnrpcDecodeOfferResponse": {
+      "type": "object",
+      "properties": {
+        "offer_id": {
+          "type": "string",
+          "format": "byte",
+          "description": "The 32-byte offer ID (SHA256 of the TLV-encoded offer)."
+        },
+        "description": {
+          "type": "string",
+          "description": "The UTF-8 description of the purpose of the payment."
+        },
+        "amount_msat": {
+          "type": "string",
+          "format": "uint64",
+          "description": "The amount per item in millisatoshis. Zero if the payer chooses."
+        },
+        "has_amount": {
+          "type": "boolean",
+          "description": "Whether the offer specifies a fixed amount."
+        },
+        "issuer": {
+          "type": "string",
+          "description": "The offer issuer's free-form name or identifier."
+        },
+        "absolute_expiry": {
+          "type": "string",
+          "format": "uint64",
+          "description": "Seconds since epoch after which the offer expires. Zero if no\nexpiry."
+        },
+        "has_expiry": {
+          "type": "boolean",
+          "description": "Whether the offer has an expiry."
+        },
+        "quantity_max": {
+          "type": "string",
+          "format": "uint64",
+          "description": "Maximum number of items per invoice. Zero means unlimited."
+        },
+        "has_quantity_max": {
+          "type": "boolean",
+          "description": "Whether the offer supports quantity selection."
+        },
+        "offer_issuer_id": {
+          "type": "string",
+          "format": "byte",
+          "description": "The 33-byte compressed pubkey of the offer issuer. Empty when\noffer_paths is used instead."
+        },
+        "offer_paths": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/lnrpcBlindedPath"
+          },
+          "description": "Blinded paths for reaching the offer issuer when\noffer_issuer_id is absent."
+        },
+        "features": {
+          "type": "string",
+          "format": "byte",
+          "description": "The raw feature bits advertised by the offer."
+        },
+        "chains": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "The chains this offer is valid for, as hex-encoded 32-byte\nchain hashes. Empty implies bitcoin only."
+        },
+        "currency": {
+          "type": "string",
+          "description": "The currency for offer_amount (e.g. \"USD\"). Empty means the\namount is denominated in the chain's native unit (msat for\nbitcoin)."
+        }
+      }
+    },
     "lnrpcDelCanceledInvoiceResp": {
       "type": "object",
       "properties": {
@@ -7314,6 +7388,39 @@
           "type": "string",
           "format": "byte",
           "description": "A raw PSBT that contains the pending channel output. If a base PSBT was\nprovided in the PsbtShim, this is the base PSBT with one additional output.\nIf no base PSBT was specified, this is an otherwise empty PSBT with exactly\none output."
+        }
+      }
+    },
+    "lnrpcRequestInvoiceResponse": {
+      "type": "object",
+      "properties": {
+        "invoice_string": {
+          "type": "string",
+          "description": "The bech32-encoded BOLT 12 invoice string (lni1...)."
+        },
+        "invoice_node_id": {
+          "type": "string",
+          "format": "byte",
+          "description": "The 33-byte compressed pubkey that signed the invoice."
+        },
+        "invoice_amount_msat": {
+          "type": "string",
+          "format": "uint64",
+          "description": "The invoice amount in millisatoshis."
+        },
+        "invoice_payment_hash": {
+          "type": "string",
+          "format": "byte",
+          "description": "The 32-byte payment hash for the invoice."
+        },
+        "invreq_payer_id": {
+          "type": "string",
+          "format": "byte",
+          "description": "The 33-byte compressed ephemeral payer pubkey from the\ninvoice request."
+        },
+        "offer": {
+          "$ref": "#/definitions/lnrpcDecodeOfferResponse",
+          "description": "The decoded offer fields from the invoice for convenience."
         }
       }
     },

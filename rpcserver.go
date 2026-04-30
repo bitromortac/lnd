@@ -3,6 +3,7 @@ package lnd
 import (
 	"bytes"
 	"context"
+	"crypto/sha256"
 	"encoding/hex"
 	"errors"
 	"fmt"
@@ -35,6 +36,8 @@ import (
 	"github.com/btcsuite/btcwallet/wallet/txauthor"
 	proxy "github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 	"github.com/lightningnetwork/lnd/autopilot"
+	"github.com/lightningnetwork/lnd/bolt12"
+	"github.com/lightningnetwork/lnd/bolt12handler"
 	"github.com/lightningnetwork/lnd/build"
 	"github.com/lightningnetwork/lnd/chainreg"
 	"github.com/lightningnetwork/lnd/chanacceptor"
@@ -567,6 +570,14 @@ func MainRPCServerPermissions() map[string][]bakery.Op {
 			Action: "read",
 		}},
 		"/lnrpc.Lightning/CreateOffer": {{
+			Entity: "offchain",
+			Action: "write",
+		}},
+		"/lnrpc.Lightning/DecodeOffer": {{
+			Entity: "offchain",
+			Action: "read",
+		}},
+		"/lnrpc.Lightning/RequestInvoice": {{
 			Entity: "offchain",
 			Action: "write",
 		}},
@@ -8801,8 +8812,24 @@ func (r *rpcServer) SubscribeOnionMessages(
 					"failed type assertion: %T", update)
 			}
 
-			// Perform a verbatim pass-through of any reply path.
-			bp := marshallBlindedPath(oMsg.ReplyPath)
+			bp := &lnrpc.BlindedPath{}
+
+			//nolint:ll
+			if oMsg.ReplyPath != nil {
+				// Verbatim pass-through. Resolving here would
+				// add a cost in terms of graph lookups.
+				bp.IntroductionNode = oMsg.ReplyPath.IntroductionNode.Bytes()
+				bp.BlindingPoint = oMsg.ReplyPath.BlindingPoint.SerializeCompressed()
+
+				for _, hop := range oMsg.ReplyPath.Hops {
+					bp.BlindedHops = append(
+						bp.BlindedHops, &lnrpc.BlindedHop{
+							BlindedNode:   hop.BlindedNodeID.SerializeCompressed(),
+							EncryptedData: hop.EncryptedData,
+						},
+					)
+				}
+			}
 
 			//nolint:ll
 			err := server.Send(&lnrpc.OnionMessageUpdate{
@@ -8874,6 +8901,299 @@ func (r *rpcServer) CreateOffer(ctx context.Context,
 	}, nil
 }
 
+// DecodeOffer decodes a bech32-encoded BOLT 12 offer string and returns the
+// decoded fields. This is a stateless utility analogous to DecodePayReq for
+// BOLT 11.
+func (r *rpcServer) DecodeOffer(_ context.Context,
+	req *lnrpc.DecodeOfferRequest) (*lnrpc.DecodeOfferResponse, error) {
+
+	offer, err := bolt12.DecodeOfferString(
+		req.Offer, time.Now(),
+		*r.server.cfg.ActiveNetParams.GenesisHash,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("decode offer: %w", err)
+	}
+
+	return marshalDecodeOfferResponse(offer, r.server.sciddirResolver)
+}
+
+// marshalDecodeOfferResponse extracts a decoded bolt12.Offer into a
+// DecodeOfferResponse. Offer paths whose introduction node fails sciddir
+// resolution are dropped with a warn-log so the rest of the offer still ships.
+func marshalDecodeOfferResponse(offer *bolt12.Offer,
+	resolver lnwire.IntroNodeResolver) (*lnrpc.DecodeOfferResponse, error) {
+
+	resp := &lnrpc.DecodeOfferResponse{}
+
+	tlvBytes, err := offer.Encode()
+	if err != nil {
+		return nil, fmt.Errorf("encode offer for id: %w", err)
+	}
+	offerID := sha256.Sum256(tlvBytes)
+	resp.OfferId = offerID[:]
+
+	offer.OfferDescription.WhenSome(
+		func(r tlv.RecordT[tlv.TlvType10, tlv.Blob]) {
+			resp.Description = string(r.Val)
+		},
+	)
+
+	offer.OfferAmount.WhenSome(
+		func(r tlv.RecordT[tlv.TlvType8, bolt12.TUint64]) {
+			resp.AmountMsat = uint64(r.Val)
+			resp.HasAmount = true
+		},
+	)
+
+	offer.OfferIssuer.WhenSome(
+		func(r tlv.RecordT[tlv.TlvType18, tlv.Blob]) {
+			resp.Issuer = string(r.Val)
+		},
+	)
+
+	offer.OfferAbsoluteExpiry.WhenSome(
+		func(r tlv.RecordT[tlv.TlvType14, bolt12.TUint64]) {
+			resp.AbsoluteExpiry = uint64(r.Val)
+			resp.HasExpiry = true
+		},
+	)
+
+	offer.OfferQuantityMax.WhenSome(
+		func(r tlv.RecordT[tlv.TlvType20, bolt12.TUint64]) {
+			resp.QuantityMax = uint64(r.Val)
+			resp.HasQuantityMax = true
+		},
+	)
+
+	offer.OfferIssuerID.WhenSome(
+		func(r tlv.RecordT[tlv.TlvType22, *btcec.PublicKey]) {
+			resp.OfferIssuerId = r.Val.SerializeCompressed()
+		},
+	)
+
+	offer.OfferPaths.WhenSome(
+		func(r tlv.RecordT[tlv.TlvType16, lnwire.BlindedPaths]) {
+			for _, p := range r.Val.Paths {
+				introPub, err := lnwire.ResolveIntroductionNode(
+					p.IntroductionNode, resolver,
+				)
+				if err != nil {
+					rpcsLog.Warnf("Dropping offer path: "+
+						"resolve intro node: %v", err)
+
+					continue
+				}
+
+				rpcPath := &lnrpc.BlindedPath{
+					IntroductionNode: introPub.SerializeCompressed(),
+					BlindingPoint:    p.BlindingPoint.SerializeCompressed(),
+				}
+				for _, h := range p.Hops {
+					rpcPath.BlindedHops = append(
+						rpcPath.BlindedHops,
+						&lnrpc.BlindedHop{
+							BlindedNode:   h.BlindedNodeID.SerializeCompressed(),
+							EncryptedData: h.EncryptedData,
+						},
+					)
+				}
+				resp.OfferPaths = append(
+					resp.OfferPaths, rpcPath,
+				)
+			}
+		},
+	)
+
+	offer.OfferFeatures.WhenSome(
+		func(r tlv.RecordT[tlv.TlvType12, lnwire.RawFeatureVector]) {
+			var buf bytes.Buffer
+			if err := r.Val.EncodeBase256(&buf); err == nil {
+				resp.Features = buf.Bytes()
+			}
+		},
+	)
+
+	offer.OfferChains.WhenSome(
+		func(r tlv.RecordT[tlv.TlvType2, bolt12.ChainsRecord]) {
+			for _, chain := range r.Val.Chains {
+				resp.Chains = append(
+					resp.Chains,
+					hex.EncodeToString(chain[:]),
+				)
+			}
+		},
+	)
+
+	offer.OfferCurrency.WhenSome(
+		func(r tlv.RecordT[tlv.TlvType6, tlv.Blob]) {
+			resp.Currency = string(r.Val)
+		},
+	)
+
+	return resp, nil
+}
+
+// RequestInvoice constructs a signed BOLT 12 invoice request for the given
+// offer, sends it to the offer's issuer via onion message, waits for the
+// invoice reply, validates it, and returns the decoded invoice.
+func (r *rpcServer) RequestInvoice(ctx context.Context,
+	req *lnrpc.RequestInvoiceRequest) (*lnrpc.RequestInvoiceResponse,
+	error) {
+
+	offer, err := bolt12.DecodeOfferString(
+		req.Offer, time.Now(),
+		*r.server.cfg.ActiveNetParams.GenesisHash,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("decode offer: %w", err)
+	}
+
+	recipientPubKey, err := offer.OfferIssuerPubKey()
+	if err != nil {
+		return nil, fmt.Errorf("parse offer_issuer_id: %w", err)
+	}
+	if recipientPubKey == nil {
+		// TODO(bolt12): Support offer_paths in Layer 5.
+		return nil, fmt.Errorf("offer_issuer_id is required " +
+			"for direct-peer invoice requests")
+	}
+
+	var opts []bolt12handler.RequestOption
+	if req.AmountMsat > 0 {
+		opts = append(
+			opts, bolt12handler.WithAmount(req.AmountMsat),
+		)
+	}
+	if req.Quantity > 0 {
+		opts = append(
+			opts, bolt12handler.WithQuantity(req.Quantity),
+		)
+	}
+	if req.PayerNote != "" {
+		opts = append(
+			opts,
+			bolt12handler.WithPayerNote(req.PayerNote),
+		)
+	}
+
+	ir, _, err := bolt12handler.BuildInvoiceRequest(offer, opts...)
+	if err != nil {
+		return nil, fmt.Errorf("build invoice request: %w", err)
+	}
+
+	irBytes, err := ir.Encode()
+	if err != nil {
+		return nil, fmt.Errorf("encode invoice request: %w", err)
+	}
+
+	nodePubKey := r.server.identityECDH.PubKey()
+	replyPath, err := bolt12handler.BuildSingleHopReplyPath(
+		nodePubKey,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("build reply path: %w", err)
+	}
+
+	timeout := 30 * time.Second
+	if req.TimeoutSeconds > 0 {
+		timeout = time.Duration(req.TimeoutSeconds) * time.Second
+	}
+
+	// Subscribe to onion messages before sending to avoid a race.
+	replyCtx, cancel := context.WithTimeout(ctx, timeout)
+	defer cancel()
+
+	replyCh := make(chan []byte, 1)
+	errCh := make(chan error, 1)
+
+	go func() {
+		invoiceBytes, waitErr := bolt12handler.WaitForInvoiceReply(
+			replyCtx, r.server.onionMessageServer,
+			timeout,
+		)
+		if waitErr != nil {
+			errCh <- waitErr
+			return
+		}
+		replyCh <- invoiceBytes
+	}()
+
+	if err := bolt12handler.SendInvoiceRequest(
+		ctx, irBytes, recipientPubKey, replyPath, r.server,
+	); err != nil {
+		cancel()
+
+		return nil, fmt.Errorf("send invoice request: %w", err)
+	}
+
+	var invoiceBytes []byte
+	select {
+	case invoiceBytes = <-replyCh:
+	case err := <-errCh:
+		return nil, err
+	}
+
+	inv, err := bolt12.DecodeInvoice(invoiceBytes)
+	if err != nil {
+		return nil, fmt.Errorf("decode invoice reply: %w", err)
+	}
+
+	// Re-decode to populate rawTLVs needed for field comparison.
+	ir, err = bolt12.DecodeInvoiceRequest(irBytes)
+	if err != nil {
+		return nil, fmt.Errorf("re-decode request: %w", err)
+	}
+
+	if err := bolt12handler.ValidateInvoiceReply(
+		inv, ir, offer, *r.cfg.ActiveNetParams.GenesisHash,
+	); err != nil {
+		return nil, fmt.Errorf("validate invoice: %w", err)
+	}
+
+	invoiceStr, err := bolt12.EncodeInvoiceString(inv)
+	if err != nil {
+		return nil, fmt.Errorf("encode invoice string: %w", err)
+	}
+
+	resp := &lnrpc.RequestInvoiceResponse{
+		InvoiceString: invoiceStr,
+	}
+
+	inv.InvoiceNodeID.WhenSome(
+		func(r tlv.RecordT[tlv.TlvType176, *btcec.PublicKey]) {
+			if r.Val != nil {
+				resp.InvoiceNodeId = r.Val.SerializeCompressed()
+			}
+		},
+	)
+
+	inv.InvoiceAmount.WhenSome(
+		func(r tlv.RecordT[tlv.TlvType170, bolt12.TUint64]) {
+			resp.InvoiceAmountMsat = uint64(r.Val)
+		},
+	)
+
+	inv.InvoicePaymentHash.WhenSome(
+		func(r tlv.RecordT[tlv.TlvType168, [32]byte]) {
+			resp.InvoicePaymentHash = append([]byte(nil), r.Val[:]...)
+		},
+	)
+
+	ir.InvreqPayerID.WhenSome(
+		func(r tlv.RecordT[tlv.TlvType88, *btcec.PublicKey]) {
+			resp.InvreqPayerId = r.Val.SerializeCompressed()
+		},
+	)
+
+	offerResp, err := marshalDecodeOfferResponse(offer, r.server.sciddirResolver)
+	if err != nil {
+		return nil, fmt.Errorf("marshal offer: %w", err)
+	}
+	resp.Offer = offerResp
+
+	return resp, nil
+}
 
 // ListAliases returns the set of all aliases we have ever allocated along with
 // their base SCIDs and possibly a separate confirmed SCID in the case of

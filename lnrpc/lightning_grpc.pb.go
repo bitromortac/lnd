@@ -398,6 +398,17 @@ type LightningClient interface {
 	// CreateOffer creates a new BOLT 12 offer. The offer is persisted in the
 	// offer store and the encoded offer string (lno1...) is returned.
 	CreateOffer(ctx context.Context, in *CreateOfferRequest, opts ...grpc.CallOption) (*CreateOfferResponse, error)
+	// lncli: `decodeoffer`
+	// DecodeOffer takes a bech32-encoded BOLT 12 offer string (lno1...) and
+	// returns the decoded fields. This is a stateless utility analogous to
+	// DecodePayReq for BOLT 11.
+	DecodeOffer(ctx context.Context, in *DecodeOfferRequest, opts ...grpc.CallOption) (*DecodeOfferResponse, error)
+	// lncli: `requestinvoice`
+	// RequestInvoice takes a BOLT 12 offer string, constructs and signs an
+	// invoice request, sends it to the offer's issuer via onion message,
+	// waits for the invoice reply, validates it, and returns the decoded
+	// BOLT 12 invoice. No payment is dispatched.
+	RequestInvoice(ctx context.Context, in *RequestInvoiceRequest, opts ...grpc.CallOption) (*RequestInvoiceResponse, error)
 	// lncli: `listaliases`
 	// ListAliases returns the set of all aliases that have ever existed with
 	// their confirmed SCID (if it exists) and/or the base SCID (in the case of
@@ -1285,6 +1296,24 @@ func (c *lightningClient) CreateOffer(ctx context.Context, in *CreateOfferReques
 	return out, nil
 }
 
+func (c *lightningClient) DecodeOffer(ctx context.Context, in *DecodeOfferRequest, opts ...grpc.CallOption) (*DecodeOfferResponse, error) {
+	out := new(DecodeOfferResponse)
+	err := c.cc.Invoke(ctx, "/lnrpc.Lightning/DecodeOffer", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *lightningClient) RequestInvoice(ctx context.Context, in *RequestInvoiceRequest, opts ...grpc.CallOption) (*RequestInvoiceResponse, error) {
+	out := new(RequestInvoiceResponse)
+	err := c.cc.Invoke(ctx, "/lnrpc.Lightning/RequestInvoice", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *lightningClient) ListAliases(ctx context.Context, in *ListAliasesRequest, opts ...grpc.CallOption) (*ListAliasesResponse, error) {
 	out := new(ListAliasesResponse)
 	err := c.cc.Invoke(ctx, "/lnrpc.Lightning/ListAliases", in, out, opts...)
@@ -1687,6 +1716,17 @@ type LightningServer interface {
 	// CreateOffer creates a new BOLT 12 offer. The offer is persisted in the
 	// offer store and the encoded offer string (lno1...) is returned.
 	CreateOffer(context.Context, *CreateOfferRequest) (*CreateOfferResponse, error)
+	// lncli: `decodeoffer`
+	// DecodeOffer takes a bech32-encoded BOLT 12 offer string (lno1...) and
+	// returns the decoded fields. This is a stateless utility analogous to
+	// DecodePayReq for BOLT 11.
+	DecodeOffer(context.Context, *DecodeOfferRequest) (*DecodeOfferResponse, error)
+	// lncli: `requestinvoice`
+	// RequestInvoice takes a BOLT 12 offer string, constructs and signs an
+	// invoice request, sends it to the offer's issuer via onion message,
+	// waits for the invoice reply, validates it, and returns the decoded
+	// BOLT 12 invoice. No payment is dispatched.
+	RequestInvoice(context.Context, *RequestInvoiceRequest) (*RequestInvoiceResponse, error)
 	// lncli: `listaliases`
 	// ListAliases returns the set of all aliases that have ever existed with
 	// their confirmed SCID (if it exists) and/or the base SCID (in the case of
@@ -1900,6 +1940,12 @@ func (UnimplementedLightningServer) SubscribeOnionMessages(*SubscribeOnionMessag
 }
 func (UnimplementedLightningServer) CreateOffer(context.Context, *CreateOfferRequest) (*CreateOfferResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method CreateOffer not implemented")
+}
+func (UnimplementedLightningServer) DecodeOffer(context.Context, *DecodeOfferRequest) (*DecodeOfferResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method DecodeOffer not implemented")
+}
+func (UnimplementedLightningServer) RequestInvoice(context.Context, *RequestInvoiceRequest) (*RequestInvoiceResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method RequestInvoice not implemented")
 }
 func (UnimplementedLightningServer) ListAliases(context.Context, *ListAliasesRequest) (*ListAliasesResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ListAliases not implemented")
@@ -3154,6 +3200,42 @@ func _Lightning_CreateOffer_Handler(srv interface{}, ctx context.Context, dec fu
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Lightning_DecodeOffer_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DecodeOfferRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(LightningServer).DecodeOffer(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/lnrpc.Lightning/DecodeOffer",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(LightningServer).DecodeOffer(ctx, req.(*DecodeOfferRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Lightning_RequestInvoice_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(RequestInvoiceRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(LightningServer).RequestInvoice(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/lnrpc.Lightning/RequestInvoice",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(LightningServer).RequestInvoice(ctx, req.(*RequestInvoiceRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _Lightning_ListAliases_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(ListAliasesRequest)
 	if err := dec(in); err != nil {
@@ -3412,6 +3494,14 @@ var Lightning_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "CreateOffer",
 			Handler:    _Lightning_CreateOffer_Handler,
+		},
+		{
+			MethodName: "DecodeOffer",
+			Handler:    _Lightning_DecodeOffer_Handler,
+		},
+		{
+			MethodName: "RequestInvoice",
+			Handler:    _Lightning_RequestInvoice_Handler,
 		},
 		{
 			MethodName: "ListAliases",

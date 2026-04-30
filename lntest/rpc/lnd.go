@@ -780,6 +780,34 @@ func (h *HarnessRPC) CreateOffer(
 	return resp
 }
 
+// DecodeOffer makes an RPC call to the node's DecodeOffer and returns the
+// response.
+func (h *HarnessRPC) DecodeOffer(
+	req *lnrpc.DecodeOfferRequest) *lnrpc.DecodeOfferResponse {
+
+	ctxt, cancel := context.WithTimeout(h.runCtx, DefaultTimeout)
+	defer cancel()
+
+	resp, err := h.LN.DecodeOffer(ctxt, req)
+	h.NoError(err, "DecodeOffer")
+
+	return resp
+}
+
+// RequestInvoice makes an RPC call to the node's RequestInvoice and returns
+// the response.
+func (h *HarnessRPC) RequestInvoice(
+	req *lnrpc.RequestInvoiceRequest) *lnrpc.RequestInvoiceResponse {
+
+	ctxt, cancel := context.WithTimeout(h.runCtx, DefaultTimeout)
+	defer cancel()
+
+	resp, err := h.LN.RequestInvoice(ctxt, req)
+	h.NoError(err, "RequestInvoice")
+
+	return resp
+}
+
 // GetChanInfo makes a RPC call to the node's GetChanInfo and returns the
 // response.
 func (h *HarnessRPC) GetChanInfo(

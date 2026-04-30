@@ -165,3 +165,13 @@ func decodeOffer(data []byte) (*Offer, error) {
 
 	return &o, nil
 }
+
+// OfferIssuerPubKey returns the parsed public key from the OfferIssuerID field,
+// or nil if the field is not set.
+func (o *Offer) OfferIssuerPubKey() (*btcec.PublicKey, error) {
+	var pubKey *btcec.PublicKey
+	o.OfferIssuerID.WhenSome(func(r tlv.RecordT[tlv.TlvType22, *btcec.PublicKey]) {
+		pubKey = r.Val
+	})
+	return pubKey, nil
+}
