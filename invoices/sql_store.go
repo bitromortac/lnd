@@ -319,6 +319,7 @@ func makeInsertInvoiceParams(invoice *Invoice, paymentHash lntypes.Hash) (
 		params.OfferID = sqldb.SQLInt64(id)
 	})
 	params.InvreqPayerID = invoice.InvreqPayerID
+	params.OfferHash = invoice.OfferHash
 	if invoice.InvreqQuantity > 0 {
 		params.InvreqQuantity = sqldb.SQLInt64(
 			int64(invoice.InvreqQuantity),
@@ -1885,6 +1886,7 @@ func unmarshalInvoice(row sqlc.Invoice) (*lntypes.Hash, *Invoice,
 		HodlInvoice:   row.IsHodl,
 		IsBolt12:      row.IsBolt12,
 		InvreqPayerID: row.InvreqPayerID,
+		OfferHash:     row.OfferHash,
 	}
 
 	if row.OfferID.Valid {
