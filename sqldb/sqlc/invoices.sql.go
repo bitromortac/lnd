@@ -66,7 +66,7 @@ func (q *Queries) DeleteInvoice(ctx context.Context, arg DeleteInvoiceParams) (s
 
 const fetchPendingInvoices = `-- name: FetchPendingInvoices :many
 SELECT
-    invoices.id, invoices.hash, invoices.preimage, invoices.settle_index, invoices.settled_at, invoices.memo, invoices.amount_msat, invoices.cltv_delta, invoices.expiry, invoices.payment_addr, invoices.payment_request, invoices.payment_request_hash, invoices.state, invoices.amount_paid_msat, invoices.is_amp, invoices.is_hodl, invoices.is_keysend, invoices.created_at, invoices.is_bolt12, invoices.offer_id, invoices.invoice_node_id, invoices.invreq_payer_id, invoices.invreq_quantity
+    invoices.id, invoices.hash, invoices.preimage, invoices.settle_index, invoices.settled_at, invoices.memo, invoices.amount_msat, invoices.cltv_delta, invoices.expiry, invoices.payment_addr, invoices.payment_request, invoices.payment_request_hash, invoices.state, invoices.amount_paid_msat, invoices.is_amp, invoices.is_hodl, invoices.is_keysend, invoices.created_at, invoices.is_bolt12, invoices.offer_id, invoices.invoice_node_id, invoices.invreq_payer_id, invoices.invreq_quantity, invoices.offer_hash
 FROM invoices
 WHERE state IN (0, 3) -- 0 = ContractOpen, 3 = ContractAccepted
   AND id > $1
@@ -117,6 +117,7 @@ func (q *Queries) FetchPendingInvoices(ctx context.Context, arg FetchPendingInvo
 			&i.InvoiceNodeID,
 			&i.InvreqPayerID,
 			&i.InvreqQuantity,
+			&i.OfferHash,
 		); err != nil {
 			return nil, err
 		}
@@ -133,7 +134,7 @@ func (q *Queries) FetchPendingInvoices(ctx context.Context, arg FetchPendingInvo
 
 const filterInvoicesByAddIndex = `-- name: FilterInvoicesByAddIndex :many
 SELECT
-    invoices.id, invoices.hash, invoices.preimage, invoices.settle_index, invoices.settled_at, invoices.memo, invoices.amount_msat, invoices.cltv_delta, invoices.expiry, invoices.payment_addr, invoices.payment_request, invoices.payment_request_hash, invoices.state, invoices.amount_paid_msat, invoices.is_amp, invoices.is_hodl, invoices.is_keysend, invoices.created_at, invoices.is_bolt12, invoices.offer_id, invoices.invoice_node_id, invoices.invreq_payer_id, invoices.invreq_quantity
+    invoices.id, invoices.hash, invoices.preimage, invoices.settle_index, invoices.settled_at, invoices.memo, invoices.amount_msat, invoices.cltv_delta, invoices.expiry, invoices.payment_addr, invoices.payment_request, invoices.payment_request_hash, invoices.state, invoices.amount_paid_msat, invoices.is_amp, invoices.is_hodl, invoices.is_keysend, invoices.created_at, invoices.is_bolt12, invoices.offer_id, invoices.invoice_node_id, invoices.invreq_payer_id, invoices.invreq_quantity, invoices.offer_hash
 FROM invoices
 WHERE id >= $1
 ORDER BY id ASC
@@ -183,6 +184,7 @@ func (q *Queries) FilterInvoicesByAddIndex(ctx context.Context, arg FilterInvoic
 			&i.InvoiceNodeID,
 			&i.InvreqPayerID,
 			&i.InvreqQuantity,
+			&i.OfferHash,
 		); err != nil {
 			return nil, err
 		}
@@ -199,7 +201,7 @@ func (q *Queries) FilterInvoicesByAddIndex(ctx context.Context, arg FilterInvoic
 
 const filterInvoicesBySettleIndex = `-- name: FilterInvoicesBySettleIndex :many
 SELECT
-    invoices.id, invoices.hash, invoices.preimage, invoices.settle_index, invoices.settled_at, invoices.memo, invoices.amount_msat, invoices.cltv_delta, invoices.expiry, invoices.payment_addr, invoices.payment_request, invoices.payment_request_hash, invoices.state, invoices.amount_paid_msat, invoices.is_amp, invoices.is_hodl, invoices.is_keysend, invoices.created_at, invoices.is_bolt12, invoices.offer_id, invoices.invoice_node_id, invoices.invreq_payer_id, invoices.invreq_quantity
+    invoices.id, invoices.hash, invoices.preimage, invoices.settle_index, invoices.settled_at, invoices.memo, invoices.amount_msat, invoices.cltv_delta, invoices.expiry, invoices.payment_addr, invoices.payment_request, invoices.payment_request_hash, invoices.state, invoices.amount_paid_msat, invoices.is_amp, invoices.is_hodl, invoices.is_keysend, invoices.created_at, invoices.is_bolt12, invoices.offer_id, invoices.invoice_node_id, invoices.invreq_payer_id, invoices.invreq_quantity, invoices.offer_hash
 FROM invoices
 WHERE settle_index >= $1
   AND id > $2
@@ -252,6 +254,7 @@ func (q *Queries) FilterInvoicesBySettleIndex(ctx context.Context, arg FilterInv
 			&i.InvoiceNodeID,
 			&i.InvreqPayerID,
 			&i.InvreqQuantity,
+			&i.OfferHash,
 		); err != nil {
 			return nil, err
 		}
@@ -268,7 +271,7 @@ func (q *Queries) FilterInvoicesBySettleIndex(ctx context.Context, arg FilterInv
 
 const filterInvoicesForward = `-- name: FilterInvoicesForward :many
 SELECT
-    invoices.id, invoices.hash, invoices.preimage, invoices.settle_index, invoices.settled_at, invoices.memo, invoices.amount_msat, invoices.cltv_delta, invoices.expiry, invoices.payment_addr, invoices.payment_request, invoices.payment_request_hash, invoices.state, invoices.amount_paid_msat, invoices.is_amp, invoices.is_hodl, invoices.is_keysend, invoices.created_at, invoices.is_bolt12, invoices.offer_id, invoices.invoice_node_id, invoices.invreq_payer_id, invoices.invreq_quantity
+    invoices.id, invoices.hash, invoices.preimage, invoices.settle_index, invoices.settled_at, invoices.memo, invoices.amount_msat, invoices.cltv_delta, invoices.expiry, invoices.payment_addr, invoices.payment_request, invoices.payment_request_hash, invoices.state, invoices.amount_paid_msat, invoices.is_amp, invoices.is_hodl, invoices.is_keysend, invoices.created_at, invoices.is_bolt12, invoices.offer_id, invoices.invoice_node_id, invoices.invreq_payer_id, invoices.invreq_quantity, invoices.offer_hash
 FROM invoices
 WHERE id >= $1
   AND (NOT $2 OR state IN (0, 3)) -- 0 = ContractOpen, 3 = ContractAccepted
@@ -335,6 +338,7 @@ func (q *Queries) FilterInvoicesForward(ctx context.Context, arg FilterInvoicesF
 			&i.InvoiceNodeID,
 			&i.InvreqPayerID,
 			&i.InvreqQuantity,
+			&i.OfferHash,
 		); err != nil {
 			return nil, err
 		}
@@ -351,7 +355,7 @@ func (q *Queries) FilterInvoicesForward(ctx context.Context, arg FilterInvoicesF
 
 const filterInvoicesReverse = `-- name: FilterInvoicesReverse :many
 SELECT
-    invoices.id, invoices.hash, invoices.preimage, invoices.settle_index, invoices.settled_at, invoices.memo, invoices.amount_msat, invoices.cltv_delta, invoices.expiry, invoices.payment_addr, invoices.payment_request, invoices.payment_request_hash, invoices.state, invoices.amount_paid_msat, invoices.is_amp, invoices.is_hodl, invoices.is_keysend, invoices.created_at, invoices.is_bolt12, invoices.offer_id, invoices.invoice_node_id, invoices.invreq_payer_id, invoices.invreq_quantity
+    invoices.id, invoices.hash, invoices.preimage, invoices.settle_index, invoices.settled_at, invoices.memo, invoices.amount_msat, invoices.cltv_delta, invoices.expiry, invoices.payment_addr, invoices.payment_request, invoices.payment_request_hash, invoices.state, invoices.amount_paid_msat, invoices.is_amp, invoices.is_hodl, invoices.is_keysend, invoices.created_at, invoices.is_bolt12, invoices.offer_id, invoices.invoice_node_id, invoices.invreq_payer_id, invoices.invreq_quantity, invoices.offer_hash
 FROM invoices
 WHERE id <= $1
   AND (NOT $2 OR state IN (0, 3)) -- 0 = ContractOpen, 3 = ContractAccepted
@@ -413,6 +417,7 @@ func (q *Queries) FilterInvoicesReverse(ctx context.Context, arg FilterInvoicesR
 			&i.InvoiceNodeID,
 			&i.InvreqPayerID,
 			&i.InvreqQuantity,
+			&i.OfferHash,
 		); err != nil {
 			return nil, err
 		}
@@ -428,7 +433,7 @@ func (q *Queries) FilterInvoicesReverse(ctx context.Context, arg FilterInvoicesR
 }
 
 const getInvoiceByAddr = `-- name: GetInvoiceByAddr :one
-SELECT i.id, i.hash, i.preimage, i.settle_index, i.settled_at, i.memo, i.amount_msat, i.cltv_delta, i.expiry, i.payment_addr, i.payment_request, i.payment_request_hash, i.state, i.amount_paid_msat, i.is_amp, i.is_hodl, i.is_keysend, i.created_at, i.is_bolt12, i.offer_id, i.invoice_node_id, i.invreq_payer_id, i.invreq_quantity
+SELECT i.id, i.hash, i.preimage, i.settle_index, i.settled_at, i.memo, i.amount_msat, i.cltv_delta, i.expiry, i.payment_addr, i.payment_request, i.payment_request_hash, i.state, i.amount_paid_msat, i.is_amp, i.is_hodl, i.is_keysend, i.created_at, i.is_bolt12, i.offer_id, i.invoice_node_id, i.invreq_payer_id, i.invreq_quantity, i.offer_hash
 FROM invoices i
 WHERE i.payment_addr = $1
 `
@@ -460,12 +465,13 @@ func (q *Queries) GetInvoiceByAddr(ctx context.Context, paymentAddr []byte) (Inv
 		&i.InvoiceNodeID,
 		&i.InvreqPayerID,
 		&i.InvreqQuantity,
+		&i.OfferHash,
 	)
 	return i, err
 }
 
 const getInvoiceByHash = `-- name: GetInvoiceByHash :one
-SELECT i.id, i.hash, i.preimage, i.settle_index, i.settled_at, i.memo, i.amount_msat, i.cltv_delta, i.expiry, i.payment_addr, i.payment_request, i.payment_request_hash, i.state, i.amount_paid_msat, i.is_amp, i.is_hodl, i.is_keysend, i.created_at, i.is_bolt12, i.offer_id, i.invoice_node_id, i.invreq_payer_id, i.invreq_quantity
+SELECT i.id, i.hash, i.preimage, i.settle_index, i.settled_at, i.memo, i.amount_msat, i.cltv_delta, i.expiry, i.payment_addr, i.payment_request, i.payment_request_hash, i.state, i.amount_paid_msat, i.is_amp, i.is_hodl, i.is_keysend, i.created_at, i.is_bolt12, i.offer_id, i.invoice_node_id, i.invreq_payer_id, i.invreq_quantity, i.offer_hash
 FROM invoices i
 WHERE i.hash = $1
 `
@@ -497,12 +503,13 @@ func (q *Queries) GetInvoiceByHash(ctx context.Context, hash []byte) (Invoice, e
 		&i.InvoiceNodeID,
 		&i.InvreqPayerID,
 		&i.InvreqQuantity,
+		&i.OfferHash,
 	)
 	return i, err
 }
 
 const getInvoiceBySetID = `-- name: GetInvoiceBySetID :many
-SELECT i.id, i.hash, i.preimage, i.settle_index, i.settled_at, i.memo, i.amount_msat, i.cltv_delta, i.expiry, i.payment_addr, i.payment_request, i.payment_request_hash, i.state, i.amount_paid_msat, i.is_amp, i.is_hodl, i.is_keysend, i.created_at, i.is_bolt12, i.offer_id, i.invoice_node_id, i.invreq_payer_id, i.invreq_quantity
+SELECT i.id, i.hash, i.preimage, i.settle_index, i.settled_at, i.memo, i.amount_msat, i.cltv_delta, i.expiry, i.payment_addr, i.payment_request, i.payment_request_hash, i.state, i.amount_paid_msat, i.is_amp, i.is_hodl, i.is_keysend, i.created_at, i.is_bolt12, i.offer_id, i.invoice_node_id, i.invreq_payer_id, i.invreq_quantity, i.offer_hash
 FROM invoices i
 INNER JOIN amp_sub_invoices a 
 ON i.id = a.invoice_id AND a.set_id = $1
@@ -543,6 +550,7 @@ func (q *Queries) GetInvoiceBySetID(ctx context.Context, setID []byte) ([]Invoic
 			&i.InvoiceNodeID,
 			&i.InvreqPayerID,
 			&i.InvreqQuantity,
+			&i.OfferHash,
 		); err != nil {
 			return nil, err
 		}
@@ -680,10 +688,10 @@ INSERT INTO invoices (
     hash, preimage, memo, amount_msat, cltv_delta, expiry, payment_addr,
     payment_request, payment_request_hash, state, amount_paid_msat, is_amp,
     is_hodl, is_keysend, created_at, is_bolt12, offer_id, invoice_node_id,
-    invreq_payer_id, invreq_quantity
+    invreq_payer_id, offer_hash, invreq_quantity
 ) VALUES (
     $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15,
-    $16, $17, $18, $19, $20
+    $16, $17, $18, $19, $20, $21
 ) RETURNING id
 `
 
@@ -707,6 +715,7 @@ type InsertInvoiceParams struct {
 	OfferID            sql.NullInt64
 	InvoiceNodeID      []byte
 	InvreqPayerID      []byte
+	OfferHash          []byte
 	InvreqQuantity     sql.NullInt64
 }
 
@@ -731,6 +740,7 @@ func (q *Queries) InsertInvoice(ctx context.Context, arg InsertInvoiceParams) (i
 		arg.OfferID,
 		arg.InvoiceNodeID,
 		arg.InvreqPayerID,
+		arg.OfferHash,
 		arg.InvreqQuantity,
 	)
 	var id int64
