@@ -807,6 +807,40 @@ func (h *HarnessRPC) RequestInvoice(
 	return resp
 }
 
+// PayOffer makes an RPC call to the node's PayOffer, consumes the stream,
+// and returns the final PayOfferPaymentResult.
+func (h *HarnessRPC) PayOffer(
+	req *devrpc.PayOfferRequest) *devrpc.PayOfferPaymentResult {
+
+	ctxt, cancel := context.WithTimeout(h.runCtx, DefaultTimeout)
+	defer cancel()
+
+	stream, err := h.Dev.PayOffer(ctxt, req)
+	h.NoError(err, "PayOffer")
+
+	var result *devrpc.PayOfferPaymentResult
+	for {
+		update, recvErr := stream.Recv()
+		if recvErr != nil {
+			h.NoError(recvErr, "PayOffer stream recv")
+
+			break
+		}
+
+		if r := update.GetPaymentResult(); r != nil {
+			result = r
+
+			break
+		}
+	}
+
+	if result == nil {
+		require.FailNow(h, "PayOffer: no payment result")
+	}
+
+	return result
+}
+
 // GetChanInfo makes a RPC call to the node's GetChanInfo and returns the
 // response.
 func (h *HarnessRPC) GetChanInfo(
