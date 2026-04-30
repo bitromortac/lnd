@@ -375,6 +375,10 @@ type server struct {
 
 	controlTower routing.ControlTower
 
+	// bolt12Signer signs BOLT 12 messages with the node key and derives
+	// the payer keys of offer payments. It is nil when BOLT 12 is off.
+	bolt12Signer *bolt12handler.KeyRingSigner
+
 	authGossiper *discovery.AuthenticatedGossiper
 
 	localChanMgr *localchans.Manager
@@ -921,6 +925,7 @@ func newServer(ctx context.Context, cfg *Config, listenAddrs []net.Addr,
 			cc.KeyRing, nodeKeyDesc.KeyLocator,
 			nodeKeyECDH.PubKey(),
 		)
+		s.bolt12Signer = signer
 		replier := bolt12handler.NewServerOnionReplier(s, nil)
 		s.bolt12Handler = bolt12handler.NewHandler(
 			s.offerStore, s.invoices, replier, signer,
@@ -5926,8 +5931,8 @@ func (s *server) processOnionMessageLocally(ctx context.Context,
 		return fmt.Errorf("process self-routed onion: %w", err)
 	}
 
-	var selfPub2 [33]byte
-	copy(selfPub2[:], s.identityECDH.PubKey().SerializeCompressed())
+	var selfPub [33]byte
+	copy(selfPub[:], s.identityECDH.PubKey().SerializeCompressed())
 
 	// Handle the routing action.
 	payload := fn.ElimEither(routingAction,
@@ -5977,7 +5982,7 @@ func (s *server) processOnionMessageLocally(ctx context.Context,
 		}
 
 		update := &onionmessage.OnionMessageUpdate{
-			Peer:                   selfPub2,
+			Peer:                   selfPub,
 			OnionBlob:              msg.OnionBlob,
 			CustomRecords:          customRecords,
 			ReplyPath:              payload.ReplyPath,

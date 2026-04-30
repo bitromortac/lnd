@@ -138,6 +138,17 @@ func (s *KeyRingSigner) VerifyEnvelopeData(offerHash [32]byte,
 	return nil
 }
 
+// PayerSecret returns the node secret that the payer keys of offer payments
+// are derived from.
+func (s *KeyRingSigner) PayerSecret() ([32]byte, error) {
+	privKey, err := s.derivePrivKey()
+	if err != nil {
+		return [32]byte{}, err
+	}
+
+	return PayerSecret(privKey), nil
+}
+
 // derivePrivKey extracts the raw private key from the key ring.
 func (s *KeyRingSigner) derivePrivKey() (*btcec.PrivateKey, error) {
 	privKey, err := s.keyRing.DerivePrivKey(

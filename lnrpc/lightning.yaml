@@ -173,3 +173,6 @@ http:
     - selector: lnrpc.Lightning.RequestInvoice
       post: "/v1/offers/invoice"
       body: "*"
+    - selector: lnrpc.Lightning.PayOffer
+      post: "/v1/offers/pay"
+      body: "*"

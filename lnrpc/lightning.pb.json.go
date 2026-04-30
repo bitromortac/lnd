@@ -1852,18 +1852,35 @@ func RegisterLightningJSONCallbacks(registry map[string]func(ctx context.Context
 		}
 
 		client := NewLightningClient(conn)
-		resp, err := client.PayOffer(ctx, req)
+		stream, err := client.PayOffer(ctx, req)
 		if err != nil {
 			callback("", err)
 			return
 		}
 
-		respBytes, err := marshaler.Marshal(resp)
-		if err != nil {
-			callback("", err)
-			return
-		}
-		callback(string(respBytes), nil)
+		go func() {
+			for {
+				select {
+				case <-stream.Context().Done():
+					callback("", stream.Context().Err())
+					return
+				default:
+				}
+
+				resp, err := stream.Recv()
+				if err != nil {
+					callback("", err)
+					return
+				}
+
+				respBytes, err := marshaler.Marshal(resp)
+				if err != nil {
+					callback("", err)
+					return
+				}
+				callback(string(respBytes), nil)
+			}
+		}()
 	}
 
 	registry["lnrpc.Lightning.ListAliases"] = func(ctx context.Context,

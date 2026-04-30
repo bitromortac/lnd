@@ -2249,6 +2249,48 @@
         ]
       }
     },
+    "/v1/offers/pay": {
+      "post": {
+        "summary": "lncli: `payoffer`\nPayOffer takes a BOLT 12 offer string, negotiates an invoice with the\noffer's issuer via onion message, validates the returned invoice, and\ndispatches an HTLC to complete the payment. Returns a stream of updates:\ninvoice_request_sent, invoice_received, and payment_result.",
+        "operationId": "Lightning_PayOffer",
+        "responses": {
+          "200": {
+            "description": "A successful response.(streaming responses)",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "result": {
+                  "$ref": "#/definitions/lnrpcPayOfferUpdate"
+                },
+                "error": {
+                  "$ref": "#/definitions/rpcStatus"
+                }
+              },
+              "title": "Stream result of lnrpcPayOfferUpdate"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/lnrpcPayOfferRequest"
+            }
+          }
+        ],
+        "tags": [
+          "Lightning"
+        ]
+      }
+    },
     "/v1/onionmessage": {
       "post": {
         "summary": "lncli: `sendonion`\nSendOnionMessage sends an onion message to a peer.",
@@ -2432,6 +2474,14 @@
             "in": "query",
             "required": false,
             "type": "boolean"
+          },
+          {
+            "name": "offer_hash",
+            "description": "If set, return only payments of the BOLT 12 offer with this 32-byte\noffer hash.",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "format": "byte"
           }
         ],
         "tags": [
@@ -6139,6 +6189,14 @@
         "blinded_path_config": {
           "$ref": "#/definitions/lnrpcBlindedPathConfig",
           "description": "Config values to use when creating blinded paths for this invoice. These\ncan be used to override the defaults config values provided in by the\nglobal config. This field is only used if is_blinded is true."
+        },
+        "is_bolt12": {
+          "type": "boolean",
+          "description": "True if this invoice was created via the BOLT 12 offer protocol.\nWhen true, bolt12_detail contains the BOLT 12-specific context.\nNote: Output only, don't specify for creating an invoice."
+        },
+        "bolt12_detail": {
+          "$ref": "#/definitions/lnrpcOfferInvoiceDetail",
+          "description": "BOLT 12-specific invoice context, populated only when is_bolt12 is\ntrue. Contains offer identity, payer identity, and negotiation\nparameters that have no BOLT 11 equivalent. Old callers can safely\nignore this field.\n\nA received BOLT 12 invoice is stored only when it is paid, and the\nsigned lni1... invoice is not kept after it is sent to the payer. So\npayment_request is empty for these invoices.\nNote: Output only, don't specify for creating an invoice."
         }
       }
     },
@@ -6700,6 +6758,26 @@
         }
       }
     },
+    "lnrpcOfferInvoiceDetail": {
+      "type": "object",
+      "properties": {
+        "offer_hash": {
+          "type": "string",
+          "format": "byte",
+          "description": "The 32-byte hash of the offer this invoice answers."
+        },
+        "invreq_payer_id": {
+          "type": "string",
+          "format": "byte",
+          "description": "The 33-byte compressed ephemeral payer pubkey from the invoice\nrequest (invreq_payer_id, TLV type 88)."
+        },
+        "quantity": {
+          "type": "string",
+          "format": "uint64",
+          "description": "The number of items requested (invreq_quantity, TLV type 86). Zero\nif the offer does not support a quantity."
+        }
+      }
+    },
     "lnrpcOnionMessageUpdate": {
       "type": "object",
       "properties": {
@@ -6961,7 +7039,54 @@
       ],
       "default": "SCRIPT_TYPE_PUBKEY_HASH"
     },
-    "lnrpcPayOfferResponse": {
+    "lnrpcPayOfferInvoiceReceived": {
+      "type": "object",
+      "properties": {
+        "invoice_string": {
+          "type": "string",
+          "description": "The bech32-encoded BOLT 12 invoice string (lni1...)."
+        },
+        "invoice_amount_msat": {
+          "type": "string",
+          "format": "uint64",
+          "description": "The invoice amount in millisatoshis."
+        },
+        "invoice_payment_hash": {
+          "type": "string",
+          "format": "byte",
+          "description": "The 32-byte payment hash from the invoice."
+        },
+        "offer": {
+          "$ref": "#/definitions/lnrpcDecodeOfferResponse",
+          "description": "The decoded offer fields."
+        }
+      }
+    },
+    "lnrpcPayOfferInvoiceRequestSent": {
+      "type": "object",
+      "properties": {
+        "offer": {
+          "$ref": "#/definitions/lnrpcDecodeOfferResponse",
+          "description": "The decoded offer fields."
+        },
+        "amount_msat": {
+          "type": "string",
+          "format": "uint64",
+          "description": "The amount being requested in millisatoshis."
+        },
+        "invreq_payer_id": {
+          "type": "string",
+          "format": "byte",
+          "description": "The 33-byte compressed ephemeral payer pubkey."
+        },
+        "idempotency_key": {
+          "type": "string",
+          "format": "byte",
+          "description": "The idempotency key of this payment. A retry with the same key\nreturns this payment instead of paying again."
+        }
+      }
+    },
+    "lnrpcPayOfferPaymentResult": {
       "type": "object",
       "properties": {
         "payment_preimage": {
@@ -6991,6 +7116,63 @@
         "offer": {
           "$ref": "#/definitions/lnrpcDecodeOfferResponse",
           "description": "The decoded offer fields from the invoice for convenience."
+        },
+        "idempotency_key": {
+          "type": "string",
+          "format": "byte",
+          "description": "The idempotency key of this payment."
+        }
+      }
+    },
+    "lnrpcPayOfferRequest": {
+      "type": "object",
+      "properties": {
+        "offer": {
+          "type": "string",
+          "description": "The bech32-encoded offer string (lno1...)."
+        },
+        "amount_msat": {
+          "type": "string",
+          "format": "uint64",
+          "description": "The amount in millisatoshis. Required when the offer does not\nspecify a fixed amount."
+        },
+        "quantity": {
+          "type": "string",
+          "format": "uint64",
+          "description": "The number of items to request. Required when the offer\nsupports quantity selection."
+        },
+        "payer_note": {
+          "type": "string",
+          "description": "An optional payer note included in the invoice request."
+        },
+        "timeout_seconds": {
+          "type": "string",
+          "format": "uint64",
+          "description": "Timeout in seconds to wait for the invoice reply during\nnegotiation. Defaults to 60 if unset or zero."
+        },
+        "fee_limit_msat": {
+          "type": "string",
+          "format": "int64",
+          "description": "Maximum fee in millisatoshis to pay for routing. If zero, a\ndefault percentage of the payment amount is used."
+        },
+        "idempotency_key": {
+          "type": "string",
+          "format": "byte",
+          "description": "The caller's idempotency key for this payment. A call with a key\nthat already has a payment returns that payment instead of paying\nagain, and a key used with other parameters is refused. If empty,\nthe node generates a random key and reports it in the updates."
+        }
+      }
+    },
+    "lnrpcPayOfferUpdate": {
+      "type": "object",
+      "properties": {
+        "invoice_request_sent": {
+          "$ref": "#/definitions/lnrpcPayOfferInvoiceRequestSent"
+        },
+        "invoice_received": {
+          "$ref": "#/definitions/lnrpcPayOfferInvoiceReceived"
+        },
+        "payment_result": {
+          "$ref": "#/definitions/lnrpcPayOfferPaymentResult"
         }
       }
     },
@@ -7154,6 +7336,11 @@
             "format": "byte"
           },
           "description": "The custom TLV records that were sent to the first hop as part of the HTLC\nwire message for this payment."
+        },
+        "offer_hash": {
+          "type": "string",
+          "format": "byte",
+          "description": "The 32-byte hash of the offer this BOLT 12 payment pays. Empty for\nBOLT 11 payments."
         }
       }
     },

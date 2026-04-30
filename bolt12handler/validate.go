@@ -116,6 +116,13 @@ func ValidateInvoiceRequestForOffer(ir *bolt12.InvoiceRequest,
 		return ErrOfferExpired
 	}
 
+	// lnd never issues an offer priced in a currency, and the expected
+	// amount below is in msat. Refuse such a request explicitly rather
+	// than compare a currency amount with msat.
+	if ir.OfferCurrency.IsSome() {
+		return ErrCurrencyNotSupported
+	}
+
 	// Validate quantity constraints.
 	hasInvreqQty := ir.InvreqQuantity.IsSome()
 	if ir.OfferQuantityMax.IsSome() {
@@ -137,9 +144,12 @@ func ValidateInvoiceRequestForOffer(ir *bolt12.InvoiceRequest,
 		return ErrMissingInvreqAmount
 	}
 
-	expectedAmount := uint64(ir.OfferAmount.ValOpt().UnwrapOr(0))
-	if hasInvreqQty {
-		expectedAmount *= uint64(ir.InvreqQuantity.ValOpt().UnwrapOr(0))
+	expectedAmount, err := expectedOfferAmount(
+		uint64(ir.OfferAmount.ValOpt().UnwrapOr(0)),
+		uint64(ir.InvreqQuantity.ValOpt().UnwrapOr(0)),
+	)
+	if err != nil {
+		return err
 	}
 
 	// TODO: Should we reject an invreq_amount far above the expected
