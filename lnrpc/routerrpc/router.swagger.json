@@ -1182,6 +1182,11 @@
             "format": "byte"
           },
           "description": "The custom TLV records that were sent to the first hop as part of the HTLC\nwire message for this payment."
+        },
+        "offer_id": {
+          "type": "string",
+          "format": "byte",
+          "description": "The 32-byte SHA256 offer ID for BOLT 12 payments. Empty for BOLT 11\npayments. Links this payment to the offer that initiated it."
         }
       }
     },

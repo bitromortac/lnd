@@ -9354,13 +9354,282 @@ func (r *rpcServer) RequestInvoice(ctx context.Context,
 
 // PayOffer takes a BOLT 12 offer, negotiates an invoice with the issuer via
 // onion message, validates the returned invoice, and dispatches an HTLC to
-// complete the payment. Returns the preimage on success.
-func (r *rpcServer) PayOffer(ctx context.Context,
-	req *lnrpc.PayOfferRequest) (*lnrpc.PayOfferResponse, error) {
+// complete the payment. Returns a stream of updates: invoice_request_sent,
+// invoice_received, and payment_result.
+//
+//nolint:funlen
+func (r *rpcServer) PayOffer(req *lnrpc.PayOfferRequest,
+	stream lnrpc.Lightning_PayOfferServer) error {
 
-	return nil, fmt.Errorf("PayOffer not yet implemented")
+	ctx := stream.Context()
+
+	// Phase 0: Decode and validate the offer.
+	offer, err := bolt12.DecodeOfferString(
+		req.Offer, time.Now(),
+		*r.server.cfg.ActiveNetParams.GenesisHash,
+	)
+	if err != nil {
+		return fmt.Errorf("decode offer: %w", err)
+	}
+
+	offerTLV, err := offer.Encode()
+	if err != nil {
+		return fmt.Errorf("encode offer for id: %w", err)
+	}
+	offerID := sha256.Sum256(offerTLV)
+
+	// Phase 1: Offer-level dedup.
+	hasNonFailed, err := r.server.controlTower.HasNonFailedForOffer(
+		ctx, offerID[:],
+	)
+	if err != nil {
+		return fmt.Errorf("check offer payments: %w", err)
+	}
+
+	if hasNonFailed && !req.Force {
+		count, totalMsat, countErr := r.server.controlTower.
+			CountPaymentsForOffer(ctx, offerID[:])
+		if countErr != nil {
+			return fmt.Errorf("count offer payments: %w",
+				countErr)
+		}
+
+		return fmt.Errorf("payment for this offer already "+
+			"exists (%d prior payments totaling %d msat), "+
+			"use --force to re-pay", count, totalMsat)
+	}
+
+	// Concurrent guard for the negotiation window.
+	if _, loaded := r.payOfferFlights.LoadOrStore(
+		offerID, struct{}{},
+	); loaded {
+		return fmt.Errorf("payment for this offer already " +
+			"in flight")
+	}
+	defer r.payOfferFlights.Delete(offerID)
+
+	// Phase 2: Build invoice request.
+	var opts []bolt12handler.RequestOption
+	if req.AmountMsat > 0 {
+		opts = append(
+			opts, bolt12handler.WithAmount(req.AmountMsat),
+		)
+	}
+	if req.Quantity > 0 {
+		opts = append(
+			opts, bolt12handler.WithQuantity(req.Quantity),
+		)
+	}
+	if req.PayerNote != "" {
+		opts = append(
+			opts,
+			bolt12handler.WithPayerNote(req.PayerNote),
+		)
+	}
+
+	ir, payerKey, err := bolt12handler.BuildInvoiceRequest(
+		offer, opts...,
+	)
+	if err != nil {
+		return fmt.Errorf("build invoice request: %w", err)
+	}
+
+	irBytes, err := ir.Encode()
+	if err != nil {
+		return fmt.Errorf("encode invoice request: %w", err)
+	}
+
+	replyPath, err := r.buildReplyPath()
+	if err != nil {
+		return fmt.Errorf("build reply path: %w", err)
+	}
+
+	forwardPath, err := r.buildOfferForwardPath(offer)
+	if err != nil {
+		return fmt.Errorf("build forward path: %w", err)
+	}
+
+	timeout := 60 * time.Second
+	if req.TimeoutSeconds > 0 {
+		timeout = time.Duration(req.TimeoutSeconds) * time.Second
+	}
+
+	// Subscribe before sending to avoid a race.
+	replyCtx, cancel := context.WithTimeout(ctx, timeout)
+	defer cancel()
+
+	replyCh := make(chan []byte, 1)
+	errCh := make(chan error, 1)
+
+	go func() {
+		invoiceBytes, waitErr := bolt12handler.WaitForInvoiceReply(
+			replyCtx, r.server.onionMessageServer,
+			timeout,
+		)
+		if waitErr != nil {
+			errCh <- waitErr
+			return
+		}
+		replyCh <- invoiceBytes
+	}()
+
+	if err := bolt12handler.SendInvoiceRequest(
+		ctx, irBytes, forwardPath, replyPath, r.server,
+	); err != nil {
+		cancel()
+
+		return fmt.Errorf("send invoice request: %w", err)
+	}
+
+	// Phase 2.5: Send invoice_request_sent update.
+	offerResp, err := marshalDecodeOfferResponse(offer, r.server.sciddirResolver)
+	if err != nil {
+		return fmt.Errorf("marshal offer: %w", err)
+	}
+
+	reqSentUpdate := &lnrpc.PayOfferUpdate{
+		Update: &lnrpc.PayOfferUpdate_InvoiceRequestSent{
+			InvoiceRequestSent: &lnrpc.PayOfferInvoiceRequestSent{
+				Offer:      offerResp,
+				AmountMsat: req.AmountMsat,
+			},
+		},
+	}
+	ir.InvreqPayerID.WhenSome(
+		func(rec tlv.RecordT[tlv.TlvType88, *btcec.PublicKey]) {
+			reqSentUpdate.GetInvoiceRequestSent().
+				InvreqPayerId = rec.Val.SerializeCompressed()
+		},
+	)
+	if err := stream.Send(reqSentUpdate); err != nil {
+		return fmt.Errorf("send invreq update: %w", err)
+	}
+
+	// Phase 3: Wait for reply, validate invoice.
+	var invoiceBytes []byte
+	select {
+	case invoiceBytes = <-replyCh:
+	case err := <-errCh:
+		return err
+	}
+
+	inv, err := bolt12.DecodeInvoice(invoiceBytes)
+	if err != nil {
+		return fmt.Errorf("decode invoice reply: %w", err)
+	}
+
+	ir, err = bolt12.DecodeInvoiceRequest(irBytes)
+	if err != nil {
+		return fmt.Errorf("re-decode request: %w", err)
+	}
+
+	if err := bolt12handler.ValidateInvoiceReply(
+		inv, ir, offer, *r.cfg.ActiveNetParams.GenesisHash,
+	); err != nil {
+		return fmt.Errorf("validate invoice: %w", err)
+	}
+
+	// Phase 3.5: Send invoice_received update.
+	invoiceStr, err := bolt12.EncodeInvoiceString(inv)
+	if err != nil {
+		return fmt.Errorf("encode invoice string: %w", err)
+	}
+
+	invRecvUpdate := &lnrpc.PayOfferUpdate{
+		Update: &lnrpc.PayOfferUpdate_InvoiceReceived{
+			InvoiceReceived: &lnrpc.PayOfferInvoiceReceived{
+				InvoiceString: invoiceStr,
+				Offer:         offerResp,
+			},
+		},
+	}
+	inv.InvoiceAmount.WhenSome(
+		func(rec tlv.RecordT[tlv.TlvType170, bolt12.TUint64]) {
+			invRecvUpdate.GetInvoiceReceived().
+				InvoiceAmountMsat = uint64(rec.Val)
+		},
+	)
+	inv.InvoicePaymentHash.WhenSome(
+		func(rec tlv.RecordT[tlv.TlvType168, [32]byte]) {
+			invRecvUpdate.GetInvoiceReceived().
+				InvoicePaymentHash = append(
+				[]byte(nil), rec.Val[:]...,
+			)
+		},
+	)
+	if err := stream.Send(invRecvUpdate); err != nil {
+		return fmt.Errorf("send invoice update: %w", err)
+	}
+
+	// Phase 3.6: Abort check — if the client disconnected after
+	// seeing the invoice, do not dispatch the HTLC.
+	if ctx.Err() != nil {
+		return ctx.Err()
+	}
+
+	// Phase 4: Persist to invoice request store.
+	if r.server.invReqStore != nil {
+		if err := r.server.invReqStore.Save(
+			ctx, offerID[:], irBytes, invoiceBytes,
+			payerKey.Serialize(),
+		); err != nil {
+			return fmt.Errorf("persist invreq: %w", err)
+		}
+	}
+
+	// Phase 5: Payment dispatch.
+	pathSet, err := bolt12handler.Bolt12InvoiceToBlindedPathSet(
+		inv, r.server.sciddirResolver,
+	)
+	if err != nil {
+		return fmt.Errorf("convert blinded paths: %w", err)
+	}
+
+	payment, err := bolt12handler.BuildLightningPayment(
+		inv, pathSet, invoiceStr, offerID[:], req.FeeLimitMsat,
+		req.TimeoutSeconds,
+	)
+	if err != nil {
+		return fmt.Errorf("build payment: %w", err)
+	}
+
+	preimage, _, routerErr := r.server.chanRouter.SendPayment(
+		ctx, payment,
+	)
+	if routerErr != nil {
+		return fmt.Errorf("payment failed: %w", routerErr)
+	}
+
+	// Phase 6: Send payment_result update.
+	payHash := payment.Identifier()
+	resultUpdate := &lnrpc.PayOfferUpdate{
+		Update: &lnrpc.PayOfferUpdate_PaymentResult{
+			PaymentResult: &lnrpc.PayOfferPaymentResult{
+				PaymentPreimage: preimage[:],
+				PaymentHash:     payHash[:],
+				InvoiceString:   invoiceStr,
+				Offer:           offerResp,
+			},
+		},
+	}
+	inv.InvoiceAmount.WhenSome(
+		func(rec tlv.RecordT[tlv.TlvType170, bolt12.TUint64]) {
+			resultUpdate.GetPaymentResult().AmountMsat =
+				uint64(rec.Val)
+		},
+	)
+	ir.InvreqPayerID.WhenSome(
+		func(rec tlv.RecordT[tlv.TlvType88, *btcec.PublicKey]) {
+			resultUpdate.GetPaymentResult().InvreqPayerId =
+				rec.Val.SerializeCompressed()
+		},
+	)
+
+	return stream.Send(resultUpdate)
 }
 
+// ListAliases returns the set of all aliases we have ever allocated along with
+// their base SCIDs and possibly a separate confirmed SCID in the case of
 // zero-conf.
 func (r *rpcServer) ListAliases(_ context.Context,
 	_ *lnrpc.ListAliasesRequest) (*lnrpc.ListAliasesResponse, error) {
