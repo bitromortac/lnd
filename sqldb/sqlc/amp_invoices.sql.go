@@ -138,7 +138,7 @@ SELECT
     a.set_id, 
     a.settle_index as amp_settle_index, 
     a.settled_at as amp_settled_at,
-    i.id, i.hash, i.preimage, i.settle_index, i.settled_at, i.memo, i.amount_msat, i.cltv_delta, i.expiry, i.payment_addr, i.payment_request, i.payment_request_hash, i.state, i.amount_paid_msat, i.is_amp, i.is_hodl, i.is_keysend, i.created_at, i.is_bolt12, i.offer_id, i.invoice_node_id, i.invreq_payer_id, i.invreq_quantity
+    i.id, i.hash, i.preimage, i.settle_index, i.settled_at, i.memo, i.amount_msat, i.cltv_delta, i.expiry, i.payment_addr, i.payment_request, i.payment_request_hash, i.state, i.amount_paid_msat, i.is_amp, i.is_hodl, i.is_keysend, i.created_at
 FROM amp_sub_invoices a
 INNER JOIN invoices i ON a.invoice_id = i.id
 WHERE (
@@ -182,6 +182,7 @@ type FetchSettledAMPSubInvoicesRow struct {
 	InvoiceNodeID      []byte
 	InvreqPayerID      []byte
 	InvreqQuantity     sql.NullInt64
+	OfferHash          []byte
 }
 
 func (q *Queries) FetchSettledAMPSubInvoices(ctx context.Context, arg FetchSettledAMPSubInvoicesParams) ([]FetchSettledAMPSubInvoicesRow, error) {
@@ -220,6 +221,7 @@ func (q *Queries) FetchSettledAMPSubInvoices(ctx context.Context, arg FetchSettl
 			&i.InvoiceNodeID,
 			&i.InvreqPayerID,
 			&i.InvreqQuantity,
+			&i.OfferHash,
 		); err != nil {
 			return nil, err
 		}

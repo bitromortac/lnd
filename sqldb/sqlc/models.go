@@ -163,6 +163,7 @@ type Invoice struct {
 	InvoiceNodeID      []byte
 	InvreqPayerID      []byte
 	InvreqQuantity     sql.NullInt64
+	OfferHash          []byte
 }
 
 type InvoiceEvent struct {

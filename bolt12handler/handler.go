@@ -238,6 +238,7 @@ func (h *Handler) notifyInvoice(result *InvoiceResult,
 		PaymentRequest: []byte(result.Encoded),
 		IsBolt12:       true,
 		OfferID:        fn.Some(offer.ID),
+		OfferHash:      offer.Hash[:],
 		InvreqPayerID:  payerIDBytes,
 	}
 
