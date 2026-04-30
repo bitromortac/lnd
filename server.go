@@ -376,6 +376,8 @@ type server struct {
 
 	controlTower routing.ControlTower
 
+	invReqStore bolt12handler.InvReqStore
+
 	authGossiper *discovery.AuthenticatedGossiper
 
 	localChanMgr *localchans.Manager
@@ -5915,8 +5917,8 @@ func (s *server) processOnionMessageLocally(ctx context.Context,
 		return fmt.Errorf("process self-routed onion: %w", err)
 	}
 
-	var selfPub2 [33]byte
-	copy(selfPub2[:], s.identityECDH.PubKey().SerializeCompressed())
+	var selfPub [33]byte
+	copy(selfPub[:], s.identityECDH.PubKey().SerializeCompressed())
 
 	// Handle the routing action.
 	payload := fn.ElimEither(routingAction,
@@ -5966,7 +5968,7 @@ func (s *server) processOnionMessageLocally(ctx context.Context,
 		}
 
 		update := &onionmessage.OnionMessageUpdate{
-			Peer:                   selfPub2,
+			Peer:                   selfPub,
 			OnionBlob:              msg.OnionBlob,
 			CustomRecords:          customRecords,
 			ReplyPath:              payload.ReplyPath,
