@@ -197,6 +197,7 @@ func (r FilterPaymentsRow) GetPaymentIntent() PaymentIntent {
 	return PaymentIntent{
 		IntentType:    r.IntentType.Int16,
 		IntentPayload: r.IntentPayload,
+		OfferID:       r.OfferID,
 	}
 }
 
@@ -219,6 +220,7 @@ func (r FetchPaymentRow) GetPaymentIntent() PaymentIntent {
 	return PaymentIntent{
 		IntentType:    r.IntentType.Int16,
 		IntentPayload: r.IntentPayload,
+		OfferID:       r.OfferID,
 	}
 }
 
@@ -239,6 +241,7 @@ func (r FetchPaymentsByIDsRow) GetPaymentIntent() PaymentIntent {
 	return PaymentIntent{
 		IntentType:    r.IntentType.Int16,
 		IntentPayload: r.IntentPayload,
+		OfferID:       r.OfferID,
 	}
 }
 

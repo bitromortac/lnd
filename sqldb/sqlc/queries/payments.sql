@@ -7,7 +7,8 @@
 SELECT
     sqlc.embed(p),
     i.intent_type AS "intent_type",
-    i.intent_payload AS "intent_payload"
+    i.intent_payload AS "intent_payload",
+    i.offer_id AS "offer_id"
 FROM payments p
 LEFT JOIN payment_intents i ON i.payment_id = p.id
 WHERE p.id > COALESCE(sqlc.narg('index_offset_get'), -1)
@@ -21,6 +22,10 @@ WHERE p.id > COALESCE(sqlc.narg('index_offset_get'), -1)
   AND (
       i.intent_type = sqlc.narg('intent_type') OR
       sqlc.narg('intent_type') IS NULL OR i.intent_type IS NULL
+  )
+  AND (
+      sqlc.narg('offer_id') IS NULL OR
+      i.offer_id = sqlc.narg('offer_id')
   )
 ORDER BY p.id ASC
 LIMIT @num_limit;
@@ -29,7 +34,8 @@ LIMIT @num_limit;
 SELECT
     sqlc.embed(p),
     i.intent_type AS "intent_type",
-    i.intent_payload AS "intent_payload"
+    i.intent_payload AS "intent_payload",
+    i.offer_id AS "offer_id"
 FROM payments p
 LEFT JOIN payment_intents i ON i.payment_id = p.id
 WHERE p.id > COALESCE(sqlc.narg('index_offset_get'), -1)
@@ -44,6 +50,10 @@ WHERE p.id > COALESCE(sqlc.narg('index_offset_get'), -1)
       i.intent_type = sqlc.narg('intent_type') OR
       sqlc.narg('intent_type') IS NULL OR i.intent_type IS NULL
   )
+  AND (
+      sqlc.narg('offer_id') IS NULL OR
+      i.offer_id = sqlc.narg('offer_id')
+  )
 ORDER BY p.id DESC
 LIMIT @num_limit;
 
@@ -51,7 +61,8 @@ LIMIT @num_limit;
 SELECT
     sqlc.embed(p),
     i.intent_type AS "intent_type",
-    i.intent_payload AS "intent_payload"
+    i.intent_payload AS "intent_payload",
+    i.offer_id AS "offer_id"
 FROM payments p
 LEFT JOIN payment_intents i ON i.payment_id = p.id
 WHERE p.payment_identifier = $1;
@@ -119,7 +130,8 @@ SELECT
     p.payment_identifier,
     p.fail_reason,
     pi.intent_type,
-    pi.intent_payload
+    pi.intent_payload,
+    pi.offer_id
 FROM payments p
 LEFT JOIN payment_intents pi ON pi.payment_id = p.id
 WHERE p.id IN (sqlc.slice('payment_ids')/*SLICE:payment_ids*/)

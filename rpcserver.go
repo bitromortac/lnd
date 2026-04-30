@@ -7054,6 +7054,7 @@ func (r *rpcServer) ListPayments(ctx context.Context,
 		CreationDateStart: int64(req.CreationDateStart),
 		CreationDateEnd:   int64(req.CreationDateEnd),
 		OmitHops:          req.OmitHops,
+		OfferID:           req.OfferId,
 	}
 
 	// If the maximum number of payments wasn't specified, we default to

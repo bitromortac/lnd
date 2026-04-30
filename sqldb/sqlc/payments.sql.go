@@ -515,7 +515,8 @@ const fetchPayment = `-- name: FetchPayment :one
 SELECT
     p.id, p.amount_msat, p.created_at, p.payment_identifier, p.fail_reason,
     i.intent_type AS "intent_type",
-    i.intent_payload AS "intent_payload"
+    i.intent_payload AS "intent_payload",
+    i.offer_id AS "offer_id"
 FROM payments p
 LEFT JOIN payment_intents i ON i.payment_id = p.id
 WHERE p.payment_identifier = $1
@@ -525,6 +526,7 @@ type FetchPaymentRow struct {
 	Payment       Payment
 	IntentType    sql.NullInt16
 	IntentPayload []byte
+	OfferID       []byte
 }
 
 func (q *Queries) FetchPayment(ctx context.Context, paymentIdentifier []byte) (FetchPaymentRow, error) {
@@ -538,6 +540,7 @@ func (q *Queries) FetchPayment(ctx context.Context, paymentIdentifier []byte) (F
 		&i.Payment.FailReason,
 		&i.IntentType,
 		&i.IntentPayload,
+		&i.OfferID,
 	)
 	return i, err
 }
@@ -646,7 +649,8 @@ SELECT
     p.payment_identifier,
     p.fail_reason,
     pi.intent_type,
-    pi.intent_payload
+    pi.intent_payload,
+    pi.offer_id
 FROM payments p
 LEFT JOIN payment_intents pi ON pi.payment_id = p.id
 WHERE p.id IN (/*SLICE:payment_ids*/?)
@@ -661,6 +665,7 @@ type FetchPaymentsByIDsRow struct {
 	FailReason        sql.NullInt32
 	IntentType        sql.NullInt16
 	IntentPayload     []byte
+	OfferID           []byte
 }
 
 // Batch fetch payment and intent data for a set of payment IDs.
@@ -693,6 +698,7 @@ func (q *Queries) FetchPaymentsByIDs(ctx context.Context, paymentIds []int64) ([
 			&i.FailReason,
 			&i.IntentType,
 			&i.IntentPayload,
+			&i.OfferID,
 		); err != nil {
 			return nil, err
 		}
@@ -881,7 +887,8 @@ const filterPayments = `-- name: FilterPayments :many
 SELECT
     p.id, p.amount_msat, p.created_at, p.payment_identifier, p.fail_reason,
     i.intent_type AS "intent_type",
-    i.intent_payload AS "intent_payload"
+    i.intent_payload AS "intent_payload",
+    i.offer_id AS "offer_id"
 FROM payments p
 LEFT JOIN payment_intents i ON i.payment_id = p.id
 WHERE p.id > COALESCE($1, -1)
@@ -896,8 +903,12 @@ WHERE p.id > COALESCE($1, -1)
       i.intent_type = $5 OR
       $5 IS NULL OR i.intent_type IS NULL
   )
+  AND (
+      $6 IS NULL OR
+      i.offer_id = $6
+  )
 ORDER BY p.id ASC
-LIMIT $6
+LIMIT $7
 `
 
 type FilterPaymentsParams struct {
@@ -906,6 +917,7 @@ type FilterPaymentsParams struct {
 	CreatedAfter   time.Time
 	CreatedBefore  time.Time
 	IntentType     sql.NullInt16
+	OfferID        interface{}
 	NumLimit       int32
 }
 
@@ -913,6 +925,7 @@ type FilterPaymentsRow struct {
 	Payment       Payment
 	IntentType    sql.NullInt16
 	IntentPayload []byte
+	OfferID       []byte
 }
 
 func (q *Queries) FilterPayments(ctx context.Context, arg FilterPaymentsParams) ([]FilterPaymentsRow, error) {
@@ -922,6 +935,7 @@ func (q *Queries) FilterPayments(ctx context.Context, arg FilterPaymentsParams) 
 		arg.CreatedAfter,
 		arg.CreatedBefore,
 		arg.IntentType,
+		arg.OfferID,
 		arg.NumLimit,
 	)
 	if err != nil {
@@ -939,6 +953,7 @@ func (q *Queries) FilterPayments(ctx context.Context, arg FilterPaymentsParams) 
 			&i.Payment.FailReason,
 			&i.IntentType,
 			&i.IntentPayload,
+			&i.OfferID,
 		); err != nil {
 			return nil, err
 		}
@@ -957,7 +972,8 @@ const filterPaymentsDesc = `-- name: FilterPaymentsDesc :many
 SELECT
     p.id, p.amount_msat, p.created_at, p.payment_identifier, p.fail_reason,
     i.intent_type AS "intent_type",
-    i.intent_payload AS "intent_payload"
+    i.intent_payload AS "intent_payload",
+    i.offer_id AS "offer_id"
 FROM payments p
 LEFT JOIN payment_intents i ON i.payment_id = p.id
 WHERE p.id > COALESCE($1, -1)
@@ -972,8 +988,12 @@ WHERE p.id > COALESCE($1, -1)
       i.intent_type = $5 OR
       $5 IS NULL OR i.intent_type IS NULL
   )
+  AND (
+      $6 IS NULL OR
+      i.offer_id = $6
+  )
 ORDER BY p.id DESC
-LIMIT $6
+LIMIT $7
 `
 
 type FilterPaymentsDescParams struct {
@@ -982,6 +1002,7 @@ type FilterPaymentsDescParams struct {
 	CreatedAfter   time.Time
 	CreatedBefore  time.Time
 	IntentType     sql.NullInt16
+	OfferID        interface{}
 	NumLimit       int32
 }
 
@@ -989,6 +1010,7 @@ type FilterPaymentsDescRow struct {
 	Payment       Payment
 	IntentType    sql.NullInt16
 	IntentPayload []byte
+	OfferID       []byte
 }
 
 func (q *Queries) FilterPaymentsDesc(ctx context.Context, arg FilterPaymentsDescParams) ([]FilterPaymentsDescRow, error) {
@@ -998,6 +1020,7 @@ func (q *Queries) FilterPaymentsDesc(ctx context.Context, arg FilterPaymentsDesc
 		arg.CreatedAfter,
 		arg.CreatedBefore,
 		arg.IntentType,
+		arg.OfferID,
 		arg.NumLimit,
 	)
 	if err != nil {
@@ -1015,6 +1038,7 @@ func (q *Queries) FilterPaymentsDesc(ctx context.Context, arg FilterPaymentsDesc
 			&i.Payment.FailReason,
 			&i.IntentType,
 			&i.IntentPayload,
+			&i.OfferID,
 		); err != nil {
 			return nil, err
 		}
