@@ -53,6 +53,7 @@ import (
 	"github.com/lightningnetwork/lnd/peernotifier"
 	"github.com/lightningnetwork/lnd/protofsm"
 	"github.com/lightningnetwork/lnd/routing"
+	"github.com/lightningnetwork/lnd/bolt12handler"
 	"github.com/lightningnetwork/lnd/routing/blindedpath"
 	"github.com/lightningnetwork/lnd/routing/localchans"
 	"github.com/lightningnetwork/lnd/rpcperms"
@@ -206,6 +207,10 @@ func SetupLoggers(root *build.SubLoggerManager, interceptor signal.Interceptor) 
 	AddSubLogger(root, lncfg.Subsystem, interceptor, lncfg.UseLogger)
 	AddSubLogger(
 		root, blindedpath.Subsystem, interceptor, blindedpath.UseLogger,
+	)
+	AddSubLogger(
+		root, bolt12handler.Subsystem, interceptor,
+		bolt12handler.UseLogger,
 	)
 	AddSubLogger(root, graphdb.Subsystem, interceptor, graphdb.UseLogger)
 	AddSubLogger(root, chainio.Subsystem, interceptor, chainio.UseLogger)

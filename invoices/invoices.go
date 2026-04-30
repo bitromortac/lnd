@@ -434,6 +434,12 @@ type Invoice struct {
 	// not tied to an offer.
 	OfferID *int64
 
+	// OfferIDHash is the 32-byte SHA256 hash of the TLV-encoded
+	// offer, denormalized from the offers table at insert time.
+	// This is the external identifier exposed in RPC responses.
+	// Nil for BOLT 11 invoices.
+	OfferIDHash []byte
+
 	// InvoiceNodeID is the 33-byte compressed pubkey that signed
 	// the BOLT 12 invoice (invoice_node_id, TLV type 176). Nil for
 	// BOLT 11.

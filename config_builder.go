@@ -52,6 +52,7 @@ import (
 	"github.com/lightningnetwork/lnd/lnwallet/rpcwallet"
 	"github.com/lightningnetwork/lnd/macaroons"
 	"github.com/lightningnetwork/lnd/msgmux"
+	"github.com/lightningnetwork/lnd/offers"
 	paymentsdb "github.com/lightningnetwork/lnd/payments/db"
 	paymentsmig1 "github.com/lightningnetwork/lnd/payments/db/migration1"
 	paymentsmig1sqlc "github.com/lightningnetwork/lnd/payments/db/migration1/sqlc"
@@ -971,6 +972,9 @@ type DatabaseInstances struct {
 	// be used for native SQL queries for tables that already support it.
 	// This may be nil if the use-native-sql flag was not set.
 	NativeSQLStore sqldb.DB
+
+	// OfferDB is the database that stores BOLT 12 offers.
+	OfferDB offers.Store
 }
 
 // DefaultDatabaseBuilder is a type that builds the default database backends
@@ -1302,6 +1306,17 @@ func (d *DefaultDatabaseBuilder) BuildDatabase(
 		)
 
 		dbs.InvoiceDB = sqlInvoiceDB
+
+		offerExecutor := sqldb.NewTransactionExecutor(
+			baseDB,
+			func(tx *sql.Tx) offers.SQLOfferQueries {
+				return baseDB.WithTx(tx)
+			},
+		)
+
+		dbs.OfferDB = offers.NewSQLStore(
+			offerExecutor, clock.NewDefaultClock(),
+		)
 
 		// Create the graph store.
 		graphExecutor := sqldb.NewTransactionExecutor(
