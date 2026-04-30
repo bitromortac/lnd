@@ -322,6 +322,7 @@ func makeInsertInvoiceParams(invoice *Invoice, paymentHash lntypes.Hash) (
 	}
 	params.InvoiceNodeID = invoice.InvoiceNodeID
 	params.InvreqPayerID = invoice.InvreqPayerID
+	params.OfferIDHash = invoice.OfferIDHash
 
 	return params, nil
 }
@@ -1884,6 +1885,7 @@ func unmarshalInvoice(row sqlc.Invoice) (*lntypes.Hash, *Invoice,
 		IsBolt12:      row.IsBolt12,
 		InvoiceNodeID: row.InvoiceNodeID,
 		InvreqPayerID: row.InvreqPayerID,
+		OfferIDHash:   row.OfferIDHash,
 	}
 
 	if row.OfferID.Valid {

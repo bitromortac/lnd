@@ -156,6 +156,11 @@ var (
 			Version:       22,
 			SchemaVersion: 19,
 		},
+		{
+			Name:          "000020_invoice_offer_id_hash",
+			Version:       23,
+			SchemaVersion: 20,
+		},
 	}, migrationAdditions...)
 
 	// ErrMigrationMismatch is returned when a migrated record does not
