@@ -574,6 +574,21 @@ service Lightning {
     */
     rpc CreateOffer (CreateOfferRequest) returns (CreateOfferResponse);
 
+    /* lncli: `decodeoffer`
+    DecodeOffer takes a bech32-encoded BOLT 12 offer string (lno1...) and
+    returns the decoded fields. This is a stateless utility analogous to
+    DecodePayReq for BOLT 11.
+    */
+    rpc DecodeOffer (DecodeOfferRequest) returns (DecodeOfferResponse);
+
+    /* lncli: `requestinvoice`
+    RequestInvoice takes a BOLT 12 offer string, constructs and signs an
+    invoice request, sends it to the offer's issuer via onion message,
+    waits for the invoice reply, validates it, and returns the decoded
+    BOLT 12 invoice. No payment is dispatched.
+    */
+    rpc RequestInvoice (RequestInvoiceRequest) returns (RequestInvoiceResponse);
+
     /* lncli: `listaliases`
     ListAliases returns the set of all aliases that have ever existed with
     their confirmed SCID (if it exists) and/or the base SCID (in the case of
@@ -732,6 +747,102 @@ message CreateOfferResponse {
     // The 32-byte offer ID (SHA256 of the TLV-encoded offer), hex
     // encoded.
     bytes offer_id = 2;
+}
+
+message DecodeOfferRequest {
+    // The bech32-encoded offer string (lno1...).
+    string offer = 1;
+}
+
+message DecodeOfferResponse {
+    // The 32-byte offer ID (SHA256 of the TLV-encoded offer).
+    bytes offer_id = 1;
+
+    // The UTF-8 description of the purpose of the payment.
+    string description = 2;
+
+    // The amount per item in millisatoshis. Zero if the payer chooses.
+    uint64 amount_msat = 3;
+
+    // Whether the offer specifies a fixed amount.
+    bool has_amount = 4;
+
+    // The offer issuer's free-form name or identifier.
+    string issuer = 5;
+
+    // Seconds since epoch after which the offer expires. Zero if no
+    // expiry.
+    uint64 absolute_expiry = 6;
+
+    // Whether the offer has an expiry.
+    bool has_expiry = 7;
+
+    // Maximum number of items per invoice. Zero means unlimited.
+    uint64 quantity_max = 8;
+
+    // Whether the offer supports quantity selection.
+    bool has_quantity_max = 9;
+
+    // The 33-byte compressed pubkey of the offer issuer. Empty when
+    // offer_paths is used instead.
+    bytes offer_issuer_id = 10;
+
+    // Blinded paths for reaching the offer issuer when
+    // offer_issuer_id is absent.
+    repeated BlindedPath offer_paths = 11;
+
+    // The raw feature bits advertised by the offer.
+    bytes features = 12;
+
+    // The chains this offer is valid for, as hex-encoded 32-byte
+    // chain hashes. Empty implies bitcoin only.
+    repeated string chains = 13;
+
+    // The currency for offer_amount (e.g. "USD"). Empty means the
+    // amount is denominated in the chain's native unit (msat for
+    // bitcoin).
+    string currency = 14;
+}
+
+message RequestInvoiceRequest {
+    // The bech32-encoded offer string (lno1...).
+    string offer = 1;
+
+    // The amount in millisatoshis. Required when the offer does not
+    // specify a fixed amount.
+    uint64 amount_msat = 2;
+
+    // The number of items to request. Required when the offer
+    // supports quantity selection.
+    uint64 quantity = 3;
+
+    // An optional payer note included in the invoice request.
+    string payer_note = 4;
+
+    // Timeout in seconds to wait for the invoice reply. Defaults to
+    // 30 if unset or zero.
+    uint64 timeout_seconds = 5;
+}
+
+message RequestInvoiceResponse {
+    // The bech32-encoded BOLT 12 invoice string (lni1...).
+    string invoice_string = 1;
+
+    // The 33-byte compressed pubkey that signed the invoice.
+    bytes invoice_node_id = 2;
+
+    // The invoice amount in millisatoshis.
+    uint64 invoice_amount_msat = 3;
+
+    // The 32-byte payment hash for the invoice.
+    bytes invoice_payment_hash = 4;
+
+    // The 33-byte compressed ephemeral payer pubkey from the
+    // invoice request.
+    bytes invreq_payer_id = 5;
+
+    // The decoded offer fields from the invoice for convenience.
+    DecodeOfferResponse offer = 6;
 }
 
 message Utxo {
