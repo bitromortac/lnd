@@ -168,3 +168,8 @@ http:
     - selector: lnrpc.Lightning.CreateOffer
       post: "/v1/offers"
       body: "*"
+    - selector: lnrpc.Lightning.DecodeOffer
+      get: "/v1/offers/decode/{offer}"
+    - selector: lnrpc.Lightning.RequestInvoice
+      post: "/v1/offers/invoice"
+      body: "*"
