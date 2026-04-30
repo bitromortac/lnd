@@ -412,9 +412,9 @@ type LightningClient interface {
 	// lncli: `payoffer`
 	// PayOffer takes a BOLT 12 offer string, negotiates an invoice with the
 	// offer's issuer via onion message, validates the returned invoice, and
-	// dispatches an HTLC to complete the payment. Returns the payment preimage
-	// on success.
-	PayOffer(ctx context.Context, in *PayOfferRequest, opts ...grpc.CallOption) (*PayOfferResponse, error)
+	// dispatches an HTLC to complete the payment. Returns a stream of updates:
+	// invoice_request_sent, invoice_received, and payment_result.
+	PayOffer(ctx context.Context, in *PayOfferRequest, opts ...grpc.CallOption) (Lightning_PayOfferClient, error)
 	// lncli: `listaliases`
 	// ListAliases returns the set of all aliases that have ever existed with
 	// their confirmed SCID (if it exists) and/or the base SCID (in the case of
@@ -1320,13 +1320,36 @@ func (c *lightningClient) RequestInvoice(ctx context.Context, in *RequestInvoice
 	return out, nil
 }
 
-func (c *lightningClient) PayOffer(ctx context.Context, in *PayOfferRequest, opts ...grpc.CallOption) (*PayOfferResponse, error) {
-	out := new(PayOfferResponse)
-	err := c.cc.Invoke(ctx, "/lnrpc.Lightning/PayOffer", in, out, opts...)
+func (c *lightningClient) PayOffer(ctx context.Context, in *PayOfferRequest, opts ...grpc.CallOption) (Lightning_PayOfferClient, error) {
+	stream, err := c.cc.NewStream(ctx, &Lightning_ServiceDesc.Streams[12], "/lnrpc.Lightning/PayOffer", opts...)
 	if err != nil {
 		return nil, err
 	}
-	return out, nil
+	x := &lightningPayOfferClient{stream}
+	if err := x.ClientStream.SendMsg(in); err != nil {
+		return nil, err
+	}
+	if err := x.ClientStream.CloseSend(); err != nil {
+		return nil, err
+	}
+	return x, nil
+}
+
+type Lightning_PayOfferClient interface {
+	Recv() (*PayOfferUpdate, error)
+	grpc.ClientStream
+}
+
+type lightningPayOfferClient struct {
+	grpc.ClientStream
+}
+
+func (x *lightningPayOfferClient) Recv() (*PayOfferUpdate, error) {
+	m := new(PayOfferUpdate)
+	if err := x.ClientStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
 }
 
 func (c *lightningClient) ListAliases(ctx context.Context, in *ListAliasesRequest, opts ...grpc.CallOption) (*ListAliasesResponse, error) {
@@ -1745,9 +1768,9 @@ type LightningServer interface {
 	// lncli: `payoffer`
 	// PayOffer takes a BOLT 12 offer string, negotiates an invoice with the
 	// offer's issuer via onion message, validates the returned invoice, and
-	// dispatches an HTLC to complete the payment. Returns the payment preimage
-	// on success.
-	PayOffer(context.Context, *PayOfferRequest) (*PayOfferResponse, error)
+	// dispatches an HTLC to complete the payment. Returns a stream of updates:
+	// invoice_request_sent, invoice_received, and payment_result.
+	PayOffer(*PayOfferRequest, Lightning_PayOfferServer) error
 	// lncli: `listaliases`
 	// ListAliases returns the set of all aliases that have ever existed with
 	// their confirmed SCID (if it exists) and/or the base SCID (in the case of
@@ -1968,8 +1991,8 @@ func (UnimplementedLightningServer) DecodeOffer(context.Context, *DecodeOfferReq
 func (UnimplementedLightningServer) RequestInvoice(context.Context, *RequestInvoiceRequest) (*RequestInvoiceResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method RequestInvoice not implemented")
 }
-func (UnimplementedLightningServer) PayOffer(context.Context, *PayOfferRequest) (*PayOfferResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method PayOffer not implemented")
+func (UnimplementedLightningServer) PayOffer(*PayOfferRequest, Lightning_PayOfferServer) error {
+	return status.Errorf(codes.Unimplemented, "method PayOffer not implemented")
 }
 func (UnimplementedLightningServer) ListAliases(context.Context, *ListAliasesRequest) (*ListAliasesResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ListAliases not implemented")
@@ -3260,22 +3283,25 @@ func _Lightning_RequestInvoice_Handler(srv interface{}, ctx context.Context, dec
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Lightning_PayOffer_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(PayOfferRequest)
-	if err := dec(in); err != nil {
-		return nil, err
+func _Lightning_PayOffer_Handler(srv interface{}, stream grpc.ServerStream) error {
+	m := new(PayOfferRequest)
+	if err := stream.RecvMsg(m); err != nil {
+		return err
 	}
-	if interceptor == nil {
-		return srv.(LightningServer).PayOffer(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/lnrpc.Lightning/PayOffer",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(LightningServer).PayOffer(ctx, req.(*PayOfferRequest))
-	}
-	return interceptor(ctx, in, info, handler)
+	return srv.(LightningServer).PayOffer(m, &lightningPayOfferServer{stream})
+}
+
+type Lightning_PayOfferServer interface {
+	Send(*PayOfferUpdate) error
+	grpc.ServerStream
+}
+
+type lightningPayOfferServer struct {
+	grpc.ServerStream
+}
+
+func (x *lightningPayOfferServer) Send(m *PayOfferUpdate) error {
+	return x.ServerStream.SendMsg(m)
 }
 
 func _Lightning_ListAliases_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
@@ -3546,10 +3572,6 @@ var Lightning_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _Lightning_RequestInvoice_Handler,
 		},
 		{
-			MethodName: "PayOffer",
-			Handler:    _Lightning_PayOffer_Handler,
-		},
-		{
 			MethodName: "ListAliases",
 			Handler:    _Lightning_ListAliases_Handler,
 		},
@@ -3619,6 +3641,11 @@ var Lightning_ServiceDesc = grpc.ServiceDesc{
 		{
 			StreamName:    "SubscribeOnionMessages",
 			Handler:       _Lightning_SubscribeOnionMessages_Handler,
+			ServerStreams: true,
+		},
+		{
+			StreamName:    "PayOffer",
+			Handler:       _Lightning_PayOffer_Handler,
 			ServerStreams: true,
 		},
 	},
