@@ -580,6 +580,30 @@ var allTestCases = []*lntest.TestCase{
 		TestFunc: testBolt12RequestInvoiceRPC,
 	},
 	{
+		Name:     "bolt12 pay offer",
+		TestFunc: testBolt12PayOffer,
+	},
+	{
+		Name:     "bolt12 pay offer no amount",
+		TestFunc: testBolt12PayOfferNoAmount,
+	},
+	{
+		Name:     "bolt12 pay offer multi-hop",
+		TestFunc: testBolt12PayOfferMultiHop,
+	},
+	{
+		Name:     "bolt12 pay offer blinded offer",
+		TestFunc: testBolt12PayOfferBlindedOffer,
+	},
+	{
+		Name:     "bolt12 pay offer dedup",
+		TestFunc: testBolt12PayOfferDedup,
+	},
+	{
+		Name:     "bolt12 pay offer stream events",
+		TestFunc: testBolt12PayOfferStreamEvents,
+	},
+	{
 		Name:     "sign verify message with addr",
 		TestFunc: testSignVerifyMessageWithAddr,
 	},
