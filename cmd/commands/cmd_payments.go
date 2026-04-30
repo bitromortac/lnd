@@ -1502,6 +1502,11 @@ var listPaymentsCommand = cli.Command{
 			Usage: "if set, omit hop-level route data to " +
 				"reduce query cost and response size",
 		},
+		cli.StringFlag{
+			Name: "offer_hash",
+			Usage: "hex-encoded 32-byte BOLT 12 offer hash " +
+				"to filter by",
+		},
 	},
 	Action: actionDecorator(listPayments),
 }
@@ -1520,6 +1525,19 @@ func listPayments(ctx *cli.Context) error {
 		CreationDateStart:  ctx.Uint64("creation_date_start"),
 		CreationDateEnd:    ctx.Uint64("creation_date_end"),
 		OmitHops:           ctx.Bool("omit_hops"),
+	}
+
+	if offerHashHex := ctx.String("offer_hash"); offerHashHex != "" {
+		offerHash, decErr := hex.DecodeString(offerHashHex)
+		if decErr != nil {
+			return fmt.Errorf("invalid offer_hash hex: %w",
+				decErr)
+		}
+		if len(offerHash) != 32 {
+			return fmt.Errorf("offer_hash must be 32 bytes, "+
+				"got %d", len(offerHash))
+		}
+		req.OfferHash = offerHash
 	}
 
 	payments, err := client.ListPayments(ctxc, req)

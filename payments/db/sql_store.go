@@ -714,6 +714,19 @@ func (s *SQLStore) QueryPayments(ctx context.Context, query Query) (Response,
 			totalCount = totalPayments
 		}
 
+		// The offer filter reads the BOLT 12 side table once and
+		// then skips every other payment of the page.
+		var offerPayments map[int64]struct{}
+		if len(query.OfferHash) > 0 {
+			var err error
+			offerPayments, err = offerPaymentIDs(
+				ctx, db, query.OfferHash,
+			)
+			if err != nil {
+				return err
+			}
+		}
+
 		// collectFunc extracts the payment ID from each payment row.
 		collectFunc := func(row sqlc.FilterPaymentsRow) (int64, error) {
 			return row.Payment.ID, nil
@@ -734,6 +747,13 @@ func (s *SQLStore) QueryPayments(ctx context.Context, query Query) (Response,
 		processPayment := func(ctx context.Context,
 			dbPayment sqlc.FilterPaymentsRow,
 			batchData *paymentsDetailsData) error {
+
+			if offerPayments != nil {
+				_, ok := offerPayments[dbPayment.Payment.ID]
+				if !ok {
+					return nil
+				}
+			}
 
 			// Build the payment from the pre-loaded batch data.
 			mpPayment, err := buildPaymentFromBatchData(

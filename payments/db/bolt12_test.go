@@ -194,3 +194,35 @@ func TestBolt12KeyDeletedPayment(t *testing.T) {
 	_, _, err = initBolt12Payment(t, db, info)
 	require.ErrorIs(t, err, ErrBolt12KeyConsumed)
 }
+
+// TestBolt12OfferFilter verifies that the offer filter returns the payments of
+// one offer, and that BOLT 12 payments show up without a filter.
+func TestBolt12OfferFilter(t *testing.T) {
+	t.Parallel()
+
+	db, _ := NewTestDB(t)
+
+	offerA := testBolt12Info(1, 0xaa, 1)
+	offerA2 := testBolt12Info(2, 0xaa, 1)
+	offerB := testBolt12Info(3, 0xbb, 1)
+
+	infos := []*Bolt12PaymentInfo{offerA, offerA2, offerB}
+	for i, info := range infos {
+		hash, preimage, err := initBolt12Payment(t, db, info)
+		require.NoError(t, err)
+		settleBolt12Payment(t, db, hash, preimage, uint64(i))
+	}
+
+	resp, err := db.QueryPayments(t.Context(), Query{
+		MaxPayments: 10,
+		OfferHash:   offerA.OfferHash[:],
+	})
+	require.NoError(t, err)
+	require.Len(t, resp.Payments, 2)
+
+	resp, err = db.QueryPayments(t.Context(), Query{
+		MaxPayments: 10,
+	})
+	require.NoError(t, err)
+	require.Len(t, resp.Payments, 3)
+}

@@ -48,6 +48,11 @@ type Query struct {
 	// OmitHops skips loading hop and hop-level custom record data for
 	// HTLC attempts when set to true.
 	OmitHops bool
+
+	// OfferHash, when set, returns only the BOLT 12 payments that answer
+	// the offer with this hash. Only an SQL store with the BOLT 12 tables
+	// supports it.
+	OfferHash []byte
 }
 
 // Response contains the result of a query to the payments database.
