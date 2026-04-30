@@ -592,10 +592,10 @@ service Lightning {
     /* lncli: `payoffer`
     PayOffer takes a BOLT 12 offer string, negotiates an invoice with the
     offer's issuer via onion message, validates the returned invoice, and
-    dispatches an HTLC to complete the payment. Returns the payment preimage
-    on success.
+    dispatches an HTLC to complete the payment. Returns a stream of updates:
+    invoice_request_sent, invoice_received, and payment_result.
     */
-    rpc PayOffer (PayOfferRequest) returns (PayOfferResponse);
+    rpc PayOffer (PayOfferRequest) returns (stream PayOfferUpdate);
 
     /* lncli: `listaliases`
     ListAliases returns the set of all aliases that have ever existed with
@@ -880,9 +880,54 @@ message PayOfferRequest {
     // Maximum fee in millisatoshis to pay for routing. If zero, a
     // default percentage of the payment amount is used.
     int64 fee_limit_msat = 6;
+
+    reserved 7;
+
+    // The caller's idempotency key for this payment. A call with a key
+    // that already has a payment returns that payment instead of paying
+    // again, and a key used with other parameters is refused. If empty,
+    // the node generates a random key and reports it in the updates.
+    bytes idempotency_key = 8;
 }
 
-message PayOfferResponse {
+message PayOfferUpdate {
+    oneof update {
+        PayOfferInvoiceRequestSent invoice_request_sent = 1;
+        PayOfferInvoiceReceived invoice_received = 2;
+        PayOfferPaymentResult payment_result = 3;
+    }
+}
+
+message PayOfferInvoiceRequestSent {
+    // The decoded offer fields.
+    DecodeOfferResponse offer = 1;
+
+    // The amount being requested in millisatoshis.
+    uint64 amount_msat = 2;
+
+    // The 33-byte compressed ephemeral payer pubkey.
+    bytes invreq_payer_id = 3;
+
+    // The idempotency key of this payment. A retry with the same key
+    // returns this payment instead of paying again.
+    bytes idempotency_key = 4;
+}
+
+message PayOfferInvoiceReceived {
+    // The bech32-encoded BOLT 12 invoice string (lni1...).
+    string invoice_string = 1;
+
+    // The invoice amount in millisatoshis.
+    uint64 invoice_amount_msat = 2;
+
+    // The 32-byte payment hash from the invoice.
+    bytes invoice_payment_hash = 3;
+
+    // The decoded offer fields.
+    DecodeOfferResponse offer = 4;
+}
+
+message PayOfferPaymentResult {
     // The 32-byte payment preimage proving settlement.
     bytes payment_preimage = 1;
 
@@ -901,6 +946,9 @@ message PayOfferResponse {
 
     // The decoded offer fields from the invoice for convenience.
     DecodeOfferResponse offer = 6;
+
+    // The idempotency key of this payment.
+    bytes idempotency_key = 7;
 }
 
 message Utxo {
@@ -4235,6 +4283,40 @@ message Invoice {
     global config. This field is only used if is_blinded is true.
     */
     BlindedPathConfig blinded_path_config = 30;
+
+    // True if this invoice was created via the BOLT 12 offer protocol.
+    // When true, bolt12_detail contains the BOLT 12-specific context.
+    // Note: Output only, don't specify for creating an invoice.
+    bool is_bolt12 = 31;
+
+    /*
+    BOLT 12-specific invoice context, populated only when is_bolt12 is
+    true. Contains offer identity, payer identity, and negotiation
+    parameters that have no BOLT 11 equivalent. Old callers can safely
+    ignore this field.
+
+    A received BOLT 12 invoice is stored only when it is paid, and the
+    signed lni1... invoice is not kept after it is sent to the payer. So
+    payment_request is empty for these invoices.
+    Note: Output only, don't specify for creating an invoice.
+    */
+    OfferInvoiceDetail bolt12_detail = 32;
+}
+
+message OfferInvoiceDetail {
+    // The 32-byte hash of the offer this invoice answers.
+    bytes offer_hash = 1;
+
+    // The 33-byte compressed pubkey that signed the BOLT 12 invoice.
+    bytes invoice_node_id = 2;
+
+    // The 33-byte compressed ephemeral payer pubkey from the invoice
+    // request (invreq_payer_id, TLV type 88).
+    bytes invreq_payer_id = 3;
+
+    // The number of items requested (invreq_quantity, TLV type 86). Zero
+    // if the offer does not support a quantity.
+    uint64 quantity = 4;
 }
 
 message BlindedPathConfig {
@@ -4573,6 +4655,12 @@ message Payment {
     wire message for this payment.
     */
     map<uint64, bytes> first_hop_custom_records = 17;
+
+    /*
+    The 32-byte hash of the offer this BOLT 12 payment pays. Empty for
+    BOLT 11 payments.
+    */
+    bytes offer_hash = 18;
 }
 
 message HTLCAttempt {
@@ -4654,6 +4742,10 @@ message ListPaymentsRequest {
     // If set, omit hop-level route data for HTLC attempts to reduce query
     // cost and response size.
     bool omit_hops = 8;
+
+    // If set, return only payments of the BOLT 12 offer with this 32-byte
+    // offer hash.
+    bytes offer_hash = 9;
 }
 
 message ListPaymentsResponse {
