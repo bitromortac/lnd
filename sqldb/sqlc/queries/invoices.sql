@@ -3,10 +3,10 @@ INSERT INTO invoices (
     hash, preimage, memo, amount_msat, cltv_delta, expiry, payment_addr,
     payment_request, payment_request_hash, state, amount_paid_msat, is_amp,
     is_hodl, is_keysend, created_at, is_bolt12, offer_id, invoice_node_id,
-    invreq_payer_id
+    invreq_payer_id, offer_id_hash
 ) VALUES (
     $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15,
-    $16, $17, $18, $19
+    $16, $17, $18, $19, $20
 ) RETURNING id;
 
 -- name: InsertMigratedInvoice :one
