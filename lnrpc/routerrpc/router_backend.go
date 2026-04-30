@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	math "math"
+	"strings"
 	"time"
 
 	"github.com/btcsuite/btcd/btcec/v2"
@@ -15,6 +16,7 @@ import (
 	"github.com/btcsuite/btcd/chaincfg/v2"
 	"github.com/btcsuite/btcd/wire/v2"
 	sphinx "github.com/lightningnetwork/lightning-onion"
+	"github.com/lightningnetwork/lnd/bolt12"
 	"github.com/lightningnetwork/lnd/channeldb"
 	"github.com/lightningnetwork/lnd/clock"
 	"github.com/lightningnetwork/lnd/feature"
@@ -1845,7 +1847,49 @@ func (r *RouterBackend) MarshallPayment(payment *paymentsdb.MPPayment) (
 		PaymentIndex:          payment.SequenceNum,
 		FailureReason:         failureReason,
 		FirstHopCustomRecords: payment.Info.FirstHopCustomRecords,
+		OfferHash: paymentOfferHash(
+			payment.Info.PaymentRequest,
+		),
 	}, nil
+}
+
+// paymentOfferHash returns the hash of the offer a BOLT 12 payment answers. A
+// BOLT 12 payment stores its lni1 invoice as the payment request, and the
+// invoice mirrors the offer, so the hash comes from the invoice and needs no
+// own column. It is nil for any other payment.
+func paymentOfferHash(paymentRequest []byte) []byte {
+	if !strings.HasPrefix(string(paymentRequest), bolt12.HRPInvoice+"1") {
+		return nil
+	}
+
+	// The invoice was validated before the payment started, so it is only
+	// decoded here.
+	inv, err := bolt12.DecodeInvoiceStringUnvalidated(
+		string(paymentRequest),
+	)
+	if err != nil {
+		return nil
+	}
+
+	return invoiceOfferHash(inv)
+}
+
+// invoiceOfferHash returns the hash of the offer an invoice answers, or nil
+// when it answers an invoice request without an offer. Such an invoice still
+// carries offer-range fields, for example offer_description, so its offer
+// hash would name an offer that does not exist. An offer always has
+// offer_issuer_id or offer_paths, and a request without an offer has neither.
+func invoiceOfferHash(inv *bolt12.Invoice) []byte {
+	if !inv.OfferIssuerID.IsSome() && !inv.OfferPaths.IsSome() {
+		return nil
+	}
+
+	hash, err := bolt12.OfferHash(inv)
+	if err != nil {
+		return nil
+	}
+
+	return hash[:]
 }
 
 // convertPaymentStatus converts a channeldb.PaymentStatus to the type expected

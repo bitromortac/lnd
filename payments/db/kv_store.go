@@ -1064,6 +1064,11 @@ func fetchFailedHtlcKeys(bucket kvdb.RBucket) ([][]byte, error) {
 func (p *KVStore) QueryPayments(_ context.Context,
 	query Query) (Response, error) {
 
+	// The offer filter reads the BOLT 12 tables of the native SQL store.
+	if len(query.OfferHash) > 0 {
+		return Response{}, ErrBolt12NotSupported
+	}
+
 	var resp Response
 
 	if err := kvdb.View(p.db, func(tx kvdb.RTx) error {

@@ -1826,6 +1826,7 @@
     "/v1/invoices/subscribe": {
       "get": {
         "summary": "SubscribeInvoices returns a uni-directional stream (server -\u003e client) for\nnotifying the client of newly added/settled invoices. The caller can\noptionally specify the add_index and/or the settle_index. If the add_index\nis specified, then we'll first start by sending add invoice events for all\ninvoices with an add_index greater than the specified value. If the\nsettle_index is specified, then next, we'll send out all settle events for\ninvoices with a settle_index greater than the specified value. One or both\nof these fields can be set. If no fields are set, then we'll only send out\nthe latest add/settle events.",
+        "description": "NOTE: BOLT 12 invoice creation events are fire-and-forget. Connected\nsubscribers see the Open-state event when an invoice request is handled,\nbut these events are NOT replayable to late-joining subscribers because no\ndatabase row exists until the payment settles. Applications that subscribe,\ndisconnect, and reconnect will not see unsettled BOLT 12 invoices. Settled\nBOLT 12 invoices are replayed normally via settle_index.",
         "operationId": "Lightning_SubscribeInvoices",
         "responses": {
           "200": {

@@ -167,3 +167,23 @@ func (s *SQLStore) FetchBolt12Payment(ctx context.Context,
 
 	return record, nil
 }
+
+// offerPaymentIDs returns the IDs of the payments that answer the given offer.
+func offerPaymentIDs(ctx context.Context, db SQLQueries,
+	offerHash []byte) (map[int64]struct{}, error) {
+
+	rows, err := db.FetchBolt12PaymentIDsByOffer(ctx, offerHash)
+	if err != nil {
+		return nil, fmt.Errorf("unable to fetch offer payments: %w",
+			err)
+	}
+
+	ids := make(map[int64]struct{}, len(rows))
+	for _, row := range rows {
+		if row.Valid {
+			ids[row.Int64] = struct{}{}
+		}
+	}
+
+	return ids, nil
+}
