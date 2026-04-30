@@ -297,6 +297,13 @@ service Lightning {
     invoices with a settle_index greater than the specified value. One or both
     of these fields can be set. If no fields are set, then we'll only send out
     the latest add/settle events.
+
+    NOTE: BOLT 12 invoice creation events are fire-and-forget. Connected
+    subscribers see the Open-state event when an invoice request is handled,
+    but these events are NOT replayable to late-joining subscribers because no
+    database row exists until the payment settles. Applications that subscribe,
+    disconnect, and reconnect will not see unsettled BOLT 12 invoices. Settled
+    BOLT 12 invoices are replayed normally via settle_index.
     */
     rpc SubscribeInvoices (InvoiceSubscription) returns (stream Invoice);
 

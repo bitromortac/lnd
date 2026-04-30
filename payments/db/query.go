@@ -48,6 +48,10 @@ type Query struct {
 	// OmitHops skips loading hop and hop-level custom record data for
 	// HTLC attempts when set to true.
 	OmitHops bool
+
+	// OfferHash filters payments to only those linked to this BOLT 12
+	// offer hash (32-byte SHA256 hash). Nil means no filter.
+	OfferHash []byte
 }
 
 // Response contains the result of a query to the payments database.

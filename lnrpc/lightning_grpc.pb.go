@@ -220,6 +220,13 @@ type LightningClient interface {
 	//invoices with a settle_index greater than the specified value. One or both
 	//of these fields can be set. If no fields are set, then we'll only send out
 	//the latest add/settle events.
+	//
+	//NOTE: BOLT 12 invoice creation events are fire-and-forget. Connected
+	//subscribers see the Open-state event when an invoice request is handled,
+	//but these events are NOT replayable to late-joining subscribers because no
+	//database row exists until the payment settles. Applications that subscribe,
+	//disconnect, and reconnect will not see unsettled BOLT 12 invoices. Settled
+	//BOLT 12 invoices are replayed normally via settle_index.
 	SubscribeInvoices(ctx context.Context, in *InvoiceSubscription, opts ...grpc.CallOption) (Lightning_SubscribeInvoicesClient, error)
 	// lncli: `deletecanceledinvoice`
 	//DeleteCanceledInvoice removes a canceled invoice from the database. If the
@@ -1589,6 +1596,13 @@ type LightningServer interface {
 	//invoices with a settle_index greater than the specified value. One or both
 	//of these fields can be set. If no fields are set, then we'll only send out
 	//the latest add/settle events.
+	//
+	//NOTE: BOLT 12 invoice creation events are fire-and-forget. Connected
+	//subscribers see the Open-state event when an invoice request is handled,
+	//but these events are NOT replayable to late-joining subscribers because no
+	//database row exists until the payment settles. Applications that subscribe,
+	//disconnect, and reconnect will not see unsettled BOLT 12 invoices. Settled
+	//BOLT 12 invoices are replayed normally via settle_index.
 	SubscribeInvoices(*InvoiceSubscription, Lightning_SubscribeInvoicesServer) error
 	// lncli: `deletecanceledinvoice`
 	//DeleteCanceledInvoice removes a canceled invoice from the database. If the
