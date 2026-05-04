@@ -2,6 +2,7 @@ package bolt12
 
 import (
 	"math"
+	"strings"
 	"testing"
 	"time"
 
@@ -2771,6 +2772,186 @@ func TestValidateInvoiceErrorWrite(t *testing.T) {
 				return
 			}
 			require.ErrorIs(t, err, tc.wantErr)
+		})
+	}
+}
+func TestValidateOfferReadVectors(t *testing.T) {
+	t.Parallel()
+
+	vectors := loadOffersVectors(t)
+
+	// Far-future time so expiry checks don't interfere with
+	// structural tests.
+	now := farFutureNow()
+
+	for _, tc := range vectors {
+		t.Run(tc.Description, func(t *testing.T) {
+			t.Parallel()
+
+			_, tlvBytes, bech32Err := Decode(tc.Bolt12)
+			if bech32Err != nil {
+				if !tc.Valid {
+					return
+				}
+				require.NoError(t, bech32Err)
+			}
+
+			offer, decodeErr := decodeOffer(tlvBytes)
+			if decodeErr != nil {
+				if !tc.Valid {
+					return
+				}
+				require.NoError(t, decodeErr)
+			}
+
+			// Pick a chain that matches what the vector
+			// declares so the chain-membership check does
+			// not falsely reject testnet/regtest fixtures.
+			activeChain := bitcoinMainnetGenesisHash
+			if c := getOfferChains(offer); len(c) > 0 {
+				activeChain = c[0]
+			}
+
+			valErr := ValidateOfferRead(offer, now, activeChain)
+
+			if tc.Valid {
+				require.NoError(t, valErr,
+					"valid offer should pass: %s",
+					tc.Description)
+			} else {
+				require.Error(t, valErr,
+					"invalid offer should fail: %s",
+					tc.Description)
+			}
+		})
+	}
+}
+
+// TestValidateOfferReadExpiry verifies the expiry check.
+func TestValidateOfferReadExpiry(t *testing.T) {
+	t.Parallel()
+
+	// The "with expiry" vector has expiry 2035-01-01
+	// (0x7a4297d8 = 2051222488).
+	offerStr := "lno1pgx9getnwss8vetrw3hhyucwq3ay997czcss9mk" +
+		"8y3wkklfvevcrszlmu23kfrxh49px20665dqwmn4p72pk" +
+		"sese"
+
+	_, tlvBytes, err := Decode(offerStr)
+	require.NoError(t, err)
+
+	offer, err := decodeOffer(tlvBytes)
+	require.NoError(t, err)
+
+	// Before expiry — should pass.
+	before := time.Date(2034, 6, 1, 0, 0, 0, 0, time.UTC)
+	require.NoError(t, ValidateOfferRead(offer, before, bitcoinMainnetGenesisHash))
+
+	// After expiry — should fail.
+	after := time.Date(2036, 1, 1, 0, 0, 0, 0, time.UTC)
+	require.ErrorIs(t, ValidateOfferRead(offer, after, bitcoinMainnetGenesisHash),
+		ErrOfferExpired)
+}
+
+// TestValidateOfferReadFeatures verifies unknown even feature rejection
+// using the vector from offers-test.json.
+func TestValidateOfferReadFeatures(t *testing.T) {
+	t.Parallel()
+
+	vec := findTestVector(t, "Contains unknown feature 122")
+
+	_, tlvBytes, err := Decode(vec.Bolt12)
+	require.NoError(t, err)
+
+	offer, err := decodeOffer(tlvBytes)
+	require.NoError(t, err)
+
+	err = ValidateOfferRead(
+		offer, farFutureNow(), bitcoinMainnetGenesisHash,
+	)
+	require.ErrorIs(t, err, ErrUnknownEvenFeature)
+}
+
+// TestValidateOfferReadOutOfRange checks type range enforcement using
+// vectors from offers-test.json.
+func TestValidateOfferReadOutOfRange(t *testing.T) {
+	t.Parallel()
+
+	cases := []string{
+		"Contains type >= 80",
+		"Contains type > 1999999999",
+		"Contains unknown even type (1000000002)",
+	}
+
+	now := farFutureNow()
+
+	for _, desc := range cases {
+		t.Run(desc, func(t *testing.T) {
+			t.Parallel()
+
+			vec := findTestVector(t, desc)
+
+			_, tlvBytes, err := Decode(vec.Bolt12)
+			require.NoError(t, err)
+
+			offer, decErr := decodeOffer(tlvBytes)
+			if decErr != nil {
+				// Decode failure for out-of-range types
+				// is acceptable — the message is
+				// rejected either way.
+				return
+			}
+
+			err = ValidateOfferRead(offer, now, bitcoinMainnetGenesisHash)
+			require.Error(t, err)
+			require.True(t,
+				strings.Contains(err.Error(), "range") ||
+					strings.Contains(err.Error(), "even"),
+				"expected range or feature error, got: %v",
+				err)
+		})
+	}
+}
+
+// TestValidateOfferReadMissingFields checks structural requirements
+// using vectors from offers-test.json.
+func TestValidateOfferReadMissingFields(t *testing.T) {
+	t.Parallel()
+
+	now := farFutureNow()
+
+	tests := []struct {
+		desc string
+		err  error
+	}{
+		{
+			desc: "Missing offer_description, but has offer_amount",
+			err:  ErrMissingDescription,
+		},
+		{
+			desc: "Missing offer_amount with offer_currency",
+			err:  ErrCurrencyWithoutAmount,
+		},
+		{
+			desc: "Missing offer_issuer_id and no offer_path",
+			err:  ErrNoIssuerIdentity,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.desc, func(t *testing.T) {
+			t.Parallel()
+
+			vec := findTestVector(t, tc.desc)
+
+			_, b, err := Decode(vec.Bolt12)
+			require.NoError(t, err)
+
+			o, err := decodeOffer(b)
+			require.NoError(t, err)
+
+			require.ErrorIs(t,
+				ValidateOfferRead(o, now, bitcoinMainnetGenesisHash), tc.err)
 		})
 	}
 }
