@@ -90,6 +90,9 @@ var (
 	// 4217 code.
 	ErrInvalidCurrency = errors.New("invalid offer_currency")
 
+	// ErrInvalidPubKey is returned when a point field is not a valid
+	// compressed public key.
+	ErrInvalidPubKey = errors.New("invalid public key")
 	// ErrMissingAmount is returned when neither offer_amount nor
 	// invreq_amount is present.
 	ErrMissingAmount = errors.New("missing amount field")
@@ -775,12 +778,7 @@ func ValidateInvoiceRequestRead(ir *InvoiceRequest,
 
 	// - MUST reject the invoice request if signature is not correct as
 	//   detailed in Signature Calculation using the invreq_payer_id.
-	// TODO(bolt12): implement signature verification.
-	if !ir.Signature.IsSome() {
-		return ErrMissingSignature
-	}
-
-	return nil
+	return VerifyInvoiceRequest(ir)
 }
 
 // getInvoiceRequestOfferChains returns the chains an invoice request's mirrored
@@ -1078,6 +1076,14 @@ func ValidateOfferRead(o *Offer, now time.Time, activeChain [32]byte,
 // bitcoinMainnetGenesisHash is the genesis hash for Bitcoin mainnet, used as
 // the default when offer_chains is absent per the spec.
 var bitcoinMainnetGenesisHash = [32]byte(*chaincfg.MainNetParams.GenesisHash)
+
+// BitcoinMainnetGenesisHash returns the Bitcoin mainnet genesis hash, the
+// default chain a BOLT 12 message targets when its chain field is omitted.
+// Callers building an invoice request pass it (or another chain's genesis) as
+// the chain to pay on.
+func BitcoinMainnetGenesisHash() [32]byte {
+	return bitcoinMainnetGenesisHash
+}
 
 // getOfferChains returns the chains an offer is valid for. If offer_chains is
 // absent, the spec defaults to Bitcoin mainnet.

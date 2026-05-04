@@ -690,35 +690,108 @@ func addAmountAndDescription(o *Offer) {
 	)
 }
 
-// validInvoiceRequest is the spec-minimal happy-path invoice request that
-// each table row mutates to isolate the rule under test.
+// ar33 converts a 33-byte slice into a fixed-size array, panicking if
+// the source is mis-sized. Used in tests for the now-typed pubkey
+// fields.
+func ar33(b []byte) [33]byte {
+	var a [33]byte
+	if n := copy(a[:], b); n != 33 {
+		panic("ar33: expected 33 bytes")
+	}
+	return a
+}
+
 func validInvoiceRequest(t *testing.T) *InvoiceRequest {
 	t.Helper()
 
-	ir := &InvoiceRequest{}
+	priv, pub := bobKey()
+
+	ir := &InvoiceRequest{
+		OfferDescription: tlv.SomeRecordT(
+			tlv.NewPrimitiveRecord[tlv.TlvType10](tlv.Blob("description")),
+		),
+		InvreqPayerID: tlv.SomeRecordT(
+			tlv.NewPrimitiveRecord[tlv.TlvType88](pub),
+		),
+		InvreqMetadata: tlv.SomeRecordT(
+			tlv.NewPrimitiveRecord[tlv.TlvType0](
+				tlv.Blob("metadata"),
+			),
+		),
+		InvreqAmount: tlv.SomeRecordT(
+			tlv.NewRecordT[tlv.TlvType82, TUint64](
+				TUint64(1000),
+			),
+		),
+	}
+
+	encoded, err := ir.Encode()
+	require.NoError(t, err)
+
+	decoded, err := DecodeInvoiceRequest(encoded)
+	require.NoError(t, err)
+
+	sig, err := SignInvoiceRequest(decoded, priv)
+	require.NoError(t, err)
+	decoded.Signature = tlv.SomeRecordT(
+		tlv.NewPrimitiveRecord[tlv.TlvType240, [64]byte](sig),
+	)
+
+	return decoded
+}
+
+// TestValidateInvoiceRequestRead exercises the happy path: a
+// freshly signed, decoded invoice request must pass reader
+// validation. The negative cases live in
+// TestValidateInvoiceRequestReadSentinels below, which strips one
+// required field per row from a known-good request.
+func TestValidateInvoiceRequestRead(t *testing.T) {
+	t.Parallel()
 
 	privKey, err := btcec.NewPrivateKey()
 	require.NoError(t, err)
 
-	ir.InvreqPayerID = tlv.SomeRecordT(
-		tlv.NewPrimitiveRecord[tlv.TlvType88](privKey.PubKey()),
-	)
-
-	ir.InvreqMetadata = tlv.SomeRecordT(
-		tlv.NewPrimitiveRecord[tlv.TlvType0](
-			[]byte("metadata"),
+	ir := &InvoiceRequest{
+		OfferDescription: tlv.SomeRecordT(
+			tlv.NewPrimitiveRecord[tlv.TlvType10](tlv.Blob("description")),
 		),
+		InvreqPayerID: tlv.SomeRecordT(
+			tlv.NewPrimitiveRecord[tlv.TlvType88](
+				privKey.PubKey(),
+			),
+		),
+		InvreqMetadata: tlv.SomeRecordT(
+			tlv.NewPrimitiveRecord[tlv.TlvType0](
+				[]byte("metadata"),
+			),
+		),
+		InvreqAmount: tlv.SomeRecordT(
+			tlv.NewRecordT[tlv.TlvType82, TUint64](1000),
+		),
+	}
+
+	encoded, err := ir.Encode()
+	require.NoError(t, err)
+
+	irDecoded, err := DecodeInvoiceRequest(encoded)
+	require.NoError(t, err)
+
+	sig, err := SignInvoiceRequest(irDecoded, privKey)
+	require.NoError(t, err)
+
+	irDecoded.Signature = tlv.SomeRecordT(
+		tlv.NewPrimitiveRecord[tlv.TlvType240, [64]byte](sig),
 	)
 
-	ir.InvreqAmount = tlv.SomeRecordT(
-		tlv.NewRecordT[tlv.TlvType82, TUint64](1000),
-	)
+	err = ValidateInvoiceRequestRead(irDecoded, bitcoinMainnetGenesisHash, nil)
+	require.NoError(t, err)
 
-	ir.Signature = tlv.SomeRecordT(
-		tlv.NewPrimitiveRecord[tlv.TlvType240]([64]byte{0x01}),
-	)
-
-	return ir
+	// Test missing signature
+	irNoSig := *irDecoded
+	irNoSig.Signature = tlv.OptionalRecordT[tlv.TlvType240, [64]byte]{}
+	err = ValidateInvoiceRequestRead(&irNoSig, bitcoinMainnetGenesisHash, nil)
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "missing signature")
 }
 
 // TestValidateInvoiceRequestWrite pins the BOLT 12 writer-side MUSTs so a
@@ -1458,10 +1531,11 @@ func TestValidateInvoiceRequestReadSentinels(t *testing.T) {
 			tc.mutate(ir)
 
 			if tc.name == "known even feature bit accepted" {
+				priv, _ := bobKey()
+				sig, err := SignInvoiceRequest(ir, priv)
+				require.NoError(t, err)
 				ir.Signature = tlv.SomeRecordT(
-					tlv.NewPrimitiveRecord[tlv.TlvType240](
-						[64]byte{0x01},
-					),
+					tlv.NewPrimitiveRecord[tlv.TlvType240](sig),
 				)
 			}
 
@@ -2775,6 +2849,7 @@ func TestValidateInvoiceErrorWrite(t *testing.T) {
 		})
 	}
 }
+
 func TestValidateOfferReadVectors(t *testing.T) {
 	t.Parallel()
 
@@ -2812,7 +2887,7 @@ func TestValidateOfferReadVectors(t *testing.T) {
 				activeChain = c[0]
 			}
 
-			valErr := ValidateOfferRead(offer, now, activeChain)
+			valErr := ValidateOfferRead(offer, now, activeChain, nil)
 
 			if tc.Valid {
 				require.NoError(t, valErr,
@@ -2845,11 +2920,11 @@ func TestValidateOfferReadExpiry(t *testing.T) {
 
 	// Before expiry — should pass.
 	before := time.Date(2034, 6, 1, 0, 0, 0, 0, time.UTC)
-	require.NoError(t, ValidateOfferRead(offer, before, bitcoinMainnetGenesisHash))
+	require.NoError(t, ValidateOfferRead(offer, before, bitcoinMainnetGenesisHash, nil))
 
 	// After expiry — should fail.
 	after := time.Date(2036, 1, 1, 0, 0, 0, 0, time.UTC)
-	require.ErrorIs(t, ValidateOfferRead(offer, after, bitcoinMainnetGenesisHash),
+	require.ErrorIs(t, ValidateOfferRead(offer, after, bitcoinMainnetGenesisHash, nil),
 		ErrOfferExpired)
 }
 
@@ -2867,7 +2942,7 @@ func TestValidateOfferReadFeatures(t *testing.T) {
 	require.NoError(t, err)
 
 	err = ValidateOfferRead(
-		offer, farFutureNow(), bitcoinMainnetGenesisHash,
+		offer, farFutureNow(), bitcoinMainnetGenesisHash, nil,
 	)
 	require.ErrorIs(t, err, ErrUnknownEvenFeature)
 }
@@ -2902,7 +2977,7 @@ func TestValidateOfferReadOutOfRange(t *testing.T) {
 				return
 			}
 
-			err = ValidateOfferRead(offer, now, bitcoinMainnetGenesisHash)
+			err = ValidateOfferRead(offer, now, bitcoinMainnetGenesisHash, nil)
 			require.Error(t, err)
 			require.True(t,
 				strings.Contains(err.Error(), "range") ||
@@ -2951,7 +3026,7 @@ func TestValidateOfferReadMissingFields(t *testing.T) {
 			require.NoError(t, err)
 
 			require.ErrorIs(t,
-				ValidateOfferRead(o, now, bitcoinMainnetGenesisHash), tc.err)
+				ValidateOfferRead(o, now, bitcoinMainnetGenesisHash, nil), tc.err)
 		})
 	}
 }
