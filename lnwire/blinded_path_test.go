@@ -2,6 +2,7 @@ package lnwire
 
 import (
 	"bytes"
+	"errors"
 	"testing"
 
 	"github.com/btcsuite/btcd/btcec/v2"
@@ -411,4 +412,97 @@ func TestEncodeBlindedPathsRejects(t *testing.T) {
 			}
 		})
 	}
+}
+
+// stubResolver satisfies IntroNodeResolver with caller-supplied behaviour so
+// each ToSphinx case can pin the dispatch outcome without a graph dependency.
+type stubResolver struct {
+	pub *btcec.PublicKey
+	err error
+}
+
+func (s stubResolver) ResolveSciddir(byte, [scidLen]byte) (*btcec.PublicKey,
+	error) {
+
+	return s.pub, s.err
+}
+
+// TestToSphinxResolverDispatch pins that ToSphinx routes pubkey intros
+// through btcec.ParsePubKey and sciddir intros through the resolver, and
+// surfaces the resolver's typed sentinel for unknown SCIDs.
+func TestToSphinxResolverDispatch(t *testing.T) {
+	t.Parallel()
+
+	pubIntro, expectedPub := validPubkeyIntro(t)
+	sciddirIntro, err := NewSciddirIntro(0x00, [8]byte{1, 2, 3, 4, 5, 6, 7, 8})
+	require.NoError(t, err)
+	resolvedPriv, err := btcec.NewPrivateKey()
+	require.NoError(t, err)
+	resolvedPub := resolvedPriv.PubKey()
+
+	hop := BlindedHop{
+		BlindedNodeID: validBlindingPoint(t),
+		EncryptedData: []byte{0xaa, 0xbb},
+	}
+
+	t.Run("pubkey intro bypasses resolver", func(t *testing.T) {
+		t.Parallel()
+
+		path := &BlindedPath{
+			IntroductionNode: pubIntro,
+			BlindingPoint:    validBlindingPoint(t),
+			Hops:             []BlindedHop{hop},
+		}
+
+		// A nil resolver must still work for pubkey intros — the
+		// resolver is only consulted on the sciddir branch.
+		got, err := path.ToSphinx(nil)
+		require.NoError(t, err)
+		require.True(t, expectedPub.IsEqual(got.IntroductionPoint))
+		require.Len(t, got.BlindedHops, 1)
+	})
+
+	t.Run("sciddir intro consults resolver", func(t *testing.T) {
+		t.Parallel()
+
+		path := &BlindedPath{
+			IntroductionNode: sciddirIntro,
+			BlindingPoint:    validBlindingPoint(t),
+			Hops:             []BlindedHop{hop},
+		}
+
+		got, err := path.ToSphinx(stubResolver{pub: resolvedPub})
+		require.NoError(t, err)
+		require.True(t, resolvedPub.IsEqual(got.IntroductionPoint))
+	})
+
+	t.Run("sciddir without resolver errors", func(t *testing.T) {
+		t.Parallel()
+
+		path := &BlindedPath{
+			IntroductionNode: sciddirIntro,
+			BlindingPoint:    validBlindingPoint(t),
+			Hops:             []BlindedHop{hop},
+		}
+
+		_, err := path.ToSphinx(nil)
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "requires a resolver")
+	})
+
+	t.Run("unknown sciddir surfaces sentinel", func(t *testing.T) {
+		t.Parallel()
+
+		path := &BlindedPath{
+			IntroductionNode: sciddirIntro,
+			BlindingPoint:    validBlindingPoint(t),
+			Hops:             []BlindedHop{hop},
+		}
+
+		_, err := path.ToSphinx(stubResolver{
+			err: ErrUnknownSciddir,
+		})
+		require.Error(t, err)
+		require.True(t, errors.Is(err, ErrUnknownSciddir))
+	})
 }
