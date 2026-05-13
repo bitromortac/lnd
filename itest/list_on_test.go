@@ -572,6 +572,14 @@ var allTestCases = []*lntest.TestCase{
 		TestFunc: testBolt12InvoiceRequest,
 	},
 	{
+		Name:     "decode offer",
+		TestFunc: testDecodeOffer,
+	},
+	{
+		Name:     "bolt12 request invoice rpc",
+		TestFunc: testBolt12RequestInvoiceRPC,
+	},
+	{
 		Name:     "sign verify message with addr",
 		TestFunc: testSignVerifyMessageWithAddr,
 	},

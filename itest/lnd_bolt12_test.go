@@ -371,3 +371,141 @@ func testBolt12InvoiceRequest(ht *lntest.HarnessTest) {
 		ht.Fatal("Bob did not receive invoice reply")
 	}
 }
+
+// testDecodeOffer verifies the DecodeOffer RPC returns correct fields for an
+// offer created by the same node.
+func testDecodeOffer(ht *lntest.HarnessTest) {
+	alice := ht.NewNode("Alice", nil)
+
+	ctxt, cancel := context.WithTimeout(
+		ht.Context(), lntest.DefaultTimeout,
+	)
+	defer cancel()
+
+	// Create an offer.
+	offerResp, err := alice.RPC.LN.CreateOffer(
+		ctxt, &lnrpc.CreateOfferRequest{
+			Description: "decode test",
+			AmountMsat:  42000,
+		},
+	)
+	if err != nil && strings.Contains(
+		err.Error(), "offer store not initialized",
+	) {
+
+		ht.Skipf(
+			"offer store requires --dbbackend=sqlite --nativesql",
+		)
+	}
+	require.NoError(ht, err, "CreateOffer")
+
+	// Decode the offer.
+	decoded := alice.RPC.DecodeOffer(
+		&lnrpc.DecodeOfferRequest{
+			Offer: offerResp.Offer,
+		},
+	)
+
+	require.Equal(ht, "decode test", decoded.Description)
+	require.True(ht, decoded.HasAmount)
+	require.Equal(ht, uint64(42000), decoded.AmountMsat)
+	require.Equal(
+		ht, alice.PubKey[:], decoded.OfferIssuerId,
+	)
+	require.Equal(ht, offerResp.OfferId, decoded.OfferId)
+	require.False(ht, decoded.HasExpiry)
+	require.False(ht, decoded.HasQuantityMax)
+
+	ht.Log("DecodeOffer verified successfully")
+}
+
+// testBolt12RequestInvoiceRPC tests the full sender-side flow using the
+// RequestInvoice RPC: Bob requests an invoice from Alice's offer and receives a
+// validated BOLT 12 invoice.
+func testBolt12RequestInvoiceRPC(ht *lntest.HarnessTest) {
+	alice := ht.NewNode("Alice", nil)
+	bob := ht.NewNode("Bob", nil)
+
+	ht.EnsureConnected(alice, bob)
+
+	// Onion message ingress is gated on the sender and receiver sharing at
+	// least one fully open channel as the Sybil-resistance layer on top of
+	// the byte-granular rate limiter, so open a channel before exchanging
+	// invoice request / invoice messages.
+	ht.FundCoins(btcutil.SatoshiPerBitcoin, bob)
+	chanPoint := ht.OpenChannel(
+		bob, alice, lntest.OpenChannelParams{Amt: 500_000},
+	)
+	defer ht.CloseChannel(bob, chanPoint)
+
+	ctxt, cancel := context.WithTimeout(
+		ht.Context(), lntest.DefaultTimeout,
+	)
+	defer cancel()
+
+	// Alice creates an offer.
+	offerResp, err := alice.RPC.LN.CreateOffer(
+		ctxt, &lnrpc.CreateOfferRequest{
+			Description: "rpc test coffee",
+			AmountMsat:  75000,
+		},
+	)
+	if err != nil && strings.Contains(
+		err.Error(), "offer store not initialized",
+	) {
+
+		ht.Skipf(
+			"offer store requires --dbbackend=sqlite --nativesql",
+		)
+	}
+	require.NoError(ht, err, "CreateOffer")
+	ht.Logf("Alice offer: %s", offerResp.Offer)
+
+	// Bob requests an invoice for Alice's offer.
+	invoiceResp := bob.RPC.RequestInvoice(
+		&lnrpc.RequestInvoiceRequest{
+			Offer:          offerResp.Offer,
+			TimeoutSeconds: 30,
+		},
+	)
+	require.NotEmpty(ht, invoiceResp.InvoiceString)
+	require.Equal(
+		ht, alice.PubKey[:], invoiceResp.InvoiceNodeId,
+		"invoice_node_id should match Alice",
+	)
+	require.Equal(
+		ht, uint64(75000), invoiceResp.InvoiceAmountMsat,
+		"invoice amount should match offer",
+	)
+	require.Len(
+		ht, invoiceResp.InvoicePaymentHash, 32,
+		"payment hash should be 32 bytes",
+	)
+	require.Len(
+		ht, invoiceResp.InvreqPayerId, 33,
+		"payer ID should be 33 bytes",
+	)
+
+	// Verify the embedded offer fields.
+	require.NotNil(ht, invoiceResp.Offer)
+	require.Equal(
+		ht, "rpc test coffee",
+		invoiceResp.Offer.Description,
+	)
+	require.Equal(
+		ht, uint64(75000),
+		invoiceResp.Offer.AmountMsat,
+	)
+
+	// Verify the invoice string decodes.
+	inv, decErr := bolt12.DecodeInvoiceString(
+		invoiceResp.InvoiceString, time.Now(),
+		*harnessNetParams.GenesisHash,
+	)
+	require.NoError(ht, decErr, "decode invoice string")
+	require.NoError(
+		ht, bolt12.VerifyInvoice(inv), "verify invoice signature",
+	)
+
+	ht.Log("RequestInvoice RPC verified successfully")
+}
