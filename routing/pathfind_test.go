@@ -890,6 +890,12 @@ func TestPathFinding(t *testing.T) {
 		name: "route to self",
 		fn:   runRouteToSelf,
 	}, {
+		name: "multi origin",
+		fn:   runMultiOrigin,
+	}, {
+		name: "multi origin cheapest path",
+		fn:   runMultiOriginCheapestPath,
+	}, {
 		name: "with metadata",
 		fn:   runFindPathWithMetadata,
 	}, {
@@ -3073,6 +3079,283 @@ func runRouteToSelf(t *testing.T, useCache bool) {
 	ctx.assertPath(path, []uint64{1, 3, 2})
 }
 
+// findPathWithOrigin invokes findPath against the test graph with an arbitrary
+// origin. Tests that need to assert which origin was settled drive the search
+// through this helper rather than the ctx.findPath shorthand, which always
+// constructs a single-self origin.
+func findPathWithOrigin(t *testing.T, ctx *pathFindingTestContext,
+	origin RouteOrigin, target route.Vertex,
+	amt lnwire.MilliSatoshi) (route.Vertex, []*unifiedEdge, error) {
+
+	t.Helper()
+
+	var (
+		source route.Vertex
+		path   []*unifiedEdge
+	)
+	err := ctx.v1Graph.GraphSession(
+		t.Context(),
+		func(graph graphdb.NodeTraverser) error {
+			var err error
+			source, path, _, err = findPath(
+				&graphParams{
+					bandwidthHints: ctx.bandwidthHints,
+					graph:          graph,
+				},
+				&ctx.restrictParams,
+				&ctx.pathFindingConfig,
+				ctx.source, origin, target, amt, 0, 0,
+			)
+
+			return err
+		}, func() {
+			path = nil
+		},
+	)
+
+	return source, path, err
+}
+
+// runMultiOrigin covers the multi-origin termination logic: which origin
+// wins when several are available, fallback when one drops out, the
+// target-in-origin-set case, and the multi-origin path skipping the
+// local-balance pre-check for self.
+func runMultiOrigin(t *testing.T, useCache bool) {
+	// Diamond graph with two possible origins gw1 and gw2, both reaching
+	// dest via a one-hop intermediary. Origins are fee-exempt, so cost
+	// differs by the intermediary's base fee: alice (500) is cheaper
+	// than bob (2000).
+	testChannels := []*testChannel{
+		symmetricTestChannel("gw1", "alice", 100000,
+			&testChannelPolicy{
+				Expiry:      144,
+				FeeBaseMsat: 500,
+			}, 1,
+		),
+		symmetricTestChannel("gw2", "bob", 100000,
+			&testChannelPolicy{
+				Expiry:      144,
+				FeeBaseMsat: 500,
+			}, 2,
+		),
+		symmetricTestChannel("alice", "dest", 100000,
+			&testChannelPolicy{
+				Expiry:      144,
+				FeeBaseMsat: 500,
+			}, 3,
+		),
+		symmetricTestChannel("bob", "dest", 100000,
+			&testChannelPolicy{
+				Expiry:      144,
+				FeeBaseMsat: 2000,
+			}, 4,
+		),
+	}
+
+	ctx := newPathFindingTestContext(t, useCache, testChannels, "proxy")
+
+	gw1 := ctx.keyFromAlias("gw1")
+	gw2 := ctx.keyFromAlias("gw2")
+	target := ctx.keyFromAlias("dest")
+	paymentAmt := lnwire.NewMSatFromSatoshis(100)
+
+	cases := []struct {
+		name       string
+		origin     RouteOrigin
+		wantSource route.Vertex
+		wantHops   []string
+	}{{
+		// Both gateways available: pick gw1 (alice is cheaper).
+		name:       "cheaper origin wins",
+		origin:     NewRouteOrigin(gw1, gw2),
+		wantSource: gw1,
+		wantHops:   []string{"alice", "dest"},
+	}, {
+		// gw1 unavailable: fall back to gw2.
+		name:       "single available origin",
+		origin:     NewRouteOrigin(gw2),
+		wantSource: gw2,
+		wantHops:   []string{"bob", "dest"},
+	}, {
+		// Target is one of the origins: another origin still wins on
+		// direct cost; the cycle through target is more expensive.
+		name:       "target in origin set picks other origin",
+		origin:     NewRouteOrigin(gw1, target),
+		wantSource: gw1,
+		wantHops:   []string{"alice", "dest"},
+	}, {
+		// Self in origin set without viable channels of its own.
+		// Single-origin mode would bail at findPath's local-balance
+		// pre-check. Multi-origin skips the check, so the search
+		// proceeds and another origin wins.
+		name:       "self in origin set falls through to other origin",
+		origin:     NewRouteOrigin(ctx.source, gw1),
+		wantSource: gw1,
+		wantHops:   []string{"alice", "dest"},
+	}}
+
+	for _, tc := range cases {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			source, path, err := findPathWithOrigin(
+				t, ctx, tc.origin, target, paymentAmt,
+			)
+			require.NoError(t, err)
+			require.Equal(t, tc.wantSource, source)
+			assertExpectedPath(
+				t, ctx.testGraphInstance.aliasMap, path,
+				tc.wantHops...,
+			)
+		})
+	}
+}
+
+// runMultiOriginCheapestPath proves that early termination at the first
+// popped origin yields the globally cheapest path. Runs a multi-origin search
+// once, then runs one search per origin in isolation, and asserts the
+// multi-origin pick matches the cheapest single-origin result. Catches any
+// regression where the heap-order argument fails (e.g., a non-monotone weight
+// or a relaxation bug that lets a costlier origin pop first).
+func runMultiOriginCheapestPath(t *testing.T, useCache bool) {
+	// Three gateways with intermediaries of varying base fees. The
+	// cheapest path is not the one with the fewest hops: gw1's two-hop
+	// path (100+100+100) is cheaper than gw2's one-hop path (5000+5000).
+	testChannels := []*testChannel{
+		symmetricTestChannel("gw1", "cheap1", 100000,
+			&testChannelPolicy{
+				Expiry:      144,
+				FeeBaseMsat: 100,
+			}, 1,
+		),
+		symmetricTestChannel("cheap1", "cheap2", 100000,
+			&testChannelPolicy{
+				Expiry:      144,
+				FeeBaseMsat: 100,
+			}, 2,
+		),
+		symmetricTestChannel("cheap2", "dest", 100000,
+			&testChannelPolicy{
+				Expiry:      144,
+				FeeBaseMsat: 100,
+			}, 3,
+		),
+		symmetricTestChannel("gw2", "expensive", 100000,
+			&testChannelPolicy{
+				Expiry:      144,
+				FeeBaseMsat: 5000,
+			}, 4,
+		),
+		symmetricTestChannel("expensive", "dest", 100000,
+			&testChannelPolicy{
+				Expiry:      144,
+				FeeBaseMsat: 5000,
+			}, 5,
+		),
+		symmetricTestChannel("gw3", "medium1", 100000,
+			&testChannelPolicy{
+				Expiry:      144,
+				FeeBaseMsat: 800,
+			}, 6,
+		),
+		symmetricTestChannel("medium1", "medium2", 100000,
+			&testChannelPolicy{
+				Expiry:      144,
+				FeeBaseMsat: 800,
+			}, 7,
+		),
+		symmetricTestChannel("medium2", "dest", 100000,
+			&testChannelPolicy{
+				Expiry:      144,
+				FeeBaseMsat: 800,
+			}, 8,
+		),
+	}
+
+	ctx := newPathFindingTestContext(t, useCache, testChannels, "proxy")
+
+	gw1 := ctx.keyFromAlias("gw1")
+	gw2 := ctx.keyFromAlias("gw2")
+	gw3 := ctx.keyFromAlias("gw3")
+	target := ctx.keyFromAlias("dest")
+	paymentAmt := lnwire.NewMSatFromSatoshis(1000)
+
+	const (
+		startingHeight = 100
+		finalHopCLTV   = 1
+	)
+
+	buildRoute := func(source route.Vertex,
+		path []*unifiedEdge) *route.Route {
+
+		r, err := newRoute(
+			source, path, startingHeight,
+			finalHopParams{
+				amt:       paymentAmt,
+				cltvDelta: finalHopCLTV,
+				records:   nil,
+			}, nil,
+		)
+		require.NoError(t, err)
+
+		return r
+	}
+
+	multiSource, multiPath, err := findPathWithOrigin(
+		t, ctx, NewRouteOrigin(gw1, gw2, gw3), target, paymentAmt,
+	)
+	require.NoError(t, err)
+	multiRoute := buildRoute(multiSource, multiPath)
+
+	gateways := []struct {
+		name   string
+		vertex route.Vertex
+	}{
+		{"gw1", gw1}, {"gw2", gw2}, {"gw3", gw3},
+	}
+
+	type singleResult struct {
+		name   string
+		vertex route.Vertex
+		fees   lnwire.MilliSatoshi
+	}
+
+	var results []singleResult
+	for _, gw := range gateways {
+		src, path, err := findPathWithOrigin(
+			t, ctx, NewRouteOrigin(gw.vertex), target, paymentAmt,
+		)
+		require.NoError(t, err, "single-origin failed for %s", gw.name)
+
+		r := buildRoute(src, path)
+		results = append(results, singleResult{
+			name:   gw.name,
+			vertex: gw.vertex,
+			fees:   r.TotalFees(),
+		})
+	}
+
+	cheapest := results[0]
+	for _, r := range results[1:] {
+		if r.fees < cheapest.fees {
+			cheapest = r
+		}
+	}
+
+	require.Equal(t, cheapest.vertex, multiSource,
+		"multi-origin picked %v but cheapest single is %s (fees: "+
+			"multi=%v, gw1=%v, gw2=%v, gw3=%v)",
+		multiSource, cheapest.name, multiRoute.TotalFees(),
+		results[0].fees, results[1].fees, results[2].fees,
+	)
+	require.Equal(t, cheapest.fees, multiRoute.TotalFees())
+
+	require.Equal(t, gw1, multiSource, "expected gw1 as cheapest origin")
+	assertExpectedPath(
+		t, ctx.testGraphInstance.aliasMap, multiPath,
+		"cheap1", "cheap2", "dest",
+	)
+}
+
 // runInboundFees tests whether correct routes are built when inbound fees
 // apply.
 func runInboundFees(t *testing.T, useCache bool) {
@@ -3334,7 +3617,7 @@ func dbFindPath(graph *graphdb.VersionedGraph,
 				graph:           graph,
 			},
 			r, cfg, sourceNode.PubKeyBytes,
-			source, target, amt,
+			NewRouteOrigin(source), target, amt,
 			timePref, finalHtlcExpiry,
 		)
 

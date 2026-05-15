@@ -44,6 +44,12 @@ type SessionSource struct {
 	// PathFindingConfig defines global parameters that control the
 	// trade-off in path finding between fees and probability.
 	PathFindingConfig PathFindingConfig
+
+	// Origin is the set of vertices a route may originate from. The zero
+	// value is a sentinel: NewPaymentSession substitutes
+	// NewRouteOrigin(SourceNode.PubKeyBytes) so standard callers get the
+	// legacy single-self behaviour without naming it.
+	Origin RouteOrigin
 }
 
 // NewPaymentSession creates a new payment session backed by the latest prune
@@ -62,8 +68,13 @@ func (m *SessionSource) NewPaymentSession(p *LightningPayment,
 		)
 	}
 
+	origin := m.Origin
+	if !origin.isMulti && origin.single == (route.Vertex{}) {
+		origin = NewRouteOrigin(m.SourceNode.PubKeyBytes)
+	}
+
 	session, err := newPaymentSession(
-		p, m.SourceNode.PubKeyBytes, getBandwidthHints,
+		p, m.SourceNode.PubKeyBytes, origin, getBandwidthHints,
 		m.GraphSessionFactory, m.MissionControl, m.PathFindingConfig,
 	)
 	if err != nil {

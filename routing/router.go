@@ -477,6 +477,12 @@ type RouteRequest struct {
 	// parameters used to reach a target node blinded paths. This field is
 	// mutually exclusive with the Target field.
 	BlindedPathSet *BlindedPaymentPathSet
+
+	// Origin is the set of vertices a route may originate from. The zero
+	// value is a sentinel: FindRoute substitutes NewRouteOrigin(Source)
+	// so standard callers retain the single-source semantic without
+	// naming it. When Origin is set explicitly, Source is ignored.
+	Origin RouteOrigin
 }
 
 // RouteHints is an alias type for a set of route hints, with the source node
@@ -600,6 +606,11 @@ func (r *ChannelRouter) FindRoute(req *RouteRequest) (*route.Route, float64,
 		return nil, 0, errors.New("time preference out of range")
 	}
 
+	origin := req.Origin
+	if !origin.isMulti && origin.single == (route.Vertex{}) {
+		origin = NewRouteOrigin(req.Source)
+	}
+
 	source, path, probability, err := findPath(
 		&graphParams{
 			additionalEdges: req.RouteHints,
@@ -607,7 +618,7 @@ func (r *ChannelRouter) FindRoute(req *RouteRequest) (*route.Route, float64,
 			graph:           r.cfg.RoutingGraph,
 		},
 		req.Restrictions, &r.cfg.PathFindingConfig,
-		r.cfg.SelfNode, req.Source, req.Target, req.Amount,
+		r.cfg.SelfNode, origin, req.Target, req.Amount,
 		req.TimePreference, finalHtlcExpiry,
 	)
 	if err != nil {

@@ -118,6 +118,7 @@ func TestUpdateAdditionalEdge(t *testing.T) {
 	// Create the paymentsession.
 	session, err := newPaymentSession(
 		payment, route.Vertex{},
+		NewRouteOrigin(route.Vertex{}),
 		func(Graph) (bandwidthHints, error) {
 			return &mockBandwidthHints{}, nil
 		},
@@ -196,6 +197,7 @@ func TestRequestRoute(t *testing.T) {
 
 	session, err := newPaymentSession(
 		payment, route.Vertex{},
+		NewRouteOrigin(route.Vertex{}),
 		func(Graph) (bandwidthHints, error) {
 			return &mockBandwidthHints{}, nil
 		},
@@ -209,8 +211,8 @@ func TestRequestRoute(t *testing.T) {
 
 	// Override pathfinder with a mock.
 	session.pathFinder = func(_ *graphParams, r *RestrictParams,
-		_ *PathFindingConfig, self, _, _ route.Vertex,
-		_ lnwire.MilliSatoshi, _ float64,
+		_ *PathFindingConfig, self route.Vertex, _ RouteOrigin,
+		_ route.Vertex, _ lnwire.MilliSatoshi, _ float64,
 		_ int32) (route.Vertex, []*unifiedEdge, float64, error) {
 
 		// We expect find path to receive a cltv limit excluding the
@@ -251,6 +253,73 @@ func TestRequestRoute(t *testing.T) {
 		t.Fatalf("unexpected total time lock of %v",
 			route.TotalTimeLock)
 	}
+}
+
+// TestRequestRouteWithOrigin verifies that a payment session built with a
+// custom RouteOrigin forwards that origin to the pathfinder and stamps the
+// resulting Route's SourcePubKey from whatever vertex the pathfinder settled
+// on, rather than from the session's local selfNode.
+func TestRequestRouteWithOrigin(t *testing.T) {
+	t.Parallel()
+
+	// selfNode is the local coordinator. gatewayNode is the remote
+	// dispatcher the origin will select. They are distinct so the test
+	// can prove the route's SourcePubKey comes from the pathfinder's
+	// return value, not from selfNode.
+	selfNode := route.Vertex{0xaa}
+	gatewayNode := route.Vertex{0xbb}
+
+	payment := &LightningPayment{
+		Amount:   1000,
+		FeeLimit: 1000,
+	}
+
+	var paymentHash [32]byte
+	require.NoError(t, payment.SetPaymentHash(paymentHash))
+
+	mockPath := []*unifiedEdge{{
+		policy: &models.CachedEdgePolicy{
+			ToNodePubKey: func() route.Vertex {
+				return route.Vertex{0xcc}
+			},
+			ToNodeFeatures: lnwire.NewFeatureVector(nil, nil),
+		},
+	}}
+
+	session, err := newPaymentSession(
+		payment, selfNode, NewRouteOrigin(gatewayNode),
+		func(Graph) (bandwidthHints, error) {
+			return &mockBandwidthHints{}, nil
+		},
+		&sessionGraph{},
+		&MissionControl{},
+		PathFindingConfig{},
+	)
+	require.NoError(t, err)
+
+	// The pathfinder mock asserts the origin it receives matches the
+	// gateway and returns the gateway as the settled source.
+	session.pathFinder = func(_ *graphParams, _ *RestrictParams,
+		_ *PathFindingConfig, self route.Vertex, origin RouteOrigin,
+		_ route.Vertex, _ lnwire.MilliSatoshi, _ float64,
+		_ int32) (route.Vertex, []*unifiedEdge, float64, error) {
+
+		require.Equal(t, selfNode, self)
+		require.True(t, origin.Contains(gatewayNode))
+		require.False(t, origin.Contains(selfNode))
+
+		return gatewayNode, mockPath, 1.0, nil
+	}
+
+	rt, err := session.RequestRoute(
+		payment.Amount, payment.FeeLimit, 0, 10,
+		lnwire.CustomRecords{
+			lnwire.MinCustomRecordsTlvType + 123: []byte{1, 2, 3},
+		},
+	)
+	require.NoError(t, err)
+	require.Equal(t, gatewayNode, rt.SourcePubKey,
+		"SourcePubKey should be the gateway, not selfNode")
 }
 
 type sessionGraph struct {

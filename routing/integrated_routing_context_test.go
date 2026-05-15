@@ -209,7 +209,9 @@ func (c *integratedRoutingContext) testPayment(maxParts uint32,
 	}
 
 	session, err := newPaymentSession(
-		&payment, c.graph.source.pubkey, getBandwidthHints,
+		&payment, c.graph.source.pubkey,
+		NewRouteOrigin(c.graph.source.pubkey),
+		getBandwidthHints,
 		c.graph, mc, c.pathFindingCfg,
 	)
 	if err != nil {

@@ -51,11 +51,13 @@ const (
 )
 
 // pathFinder defines the interface of a path finding algorithm. The first
-// return value is the source vertex of the computed path.
+// return value is the source vertex the algorithm settled on, which equals
+// the single configured origin for standard callers and the cheapest reachable
+// gateway for multi-origin callers.
 type pathFinder = func(g *graphParams, r *RestrictParams,
-	cfg *PathFindingConfig, self, source, target route.Vertex,
-	amt lnwire.MilliSatoshi, timePref float64, finalHtlcExpiry int32) (
-	route.Vertex, []*unifiedEdge, float64, error)
+	cfg *PathFindingConfig, self route.Vertex, origin RouteOrigin,
+	target route.Vertex, amt lnwire.MilliSatoshi, timePref float64,
+	finalHtlcExpiry int32) (route.Vertex, []*unifiedEdge, float64, error)
 
 // RouteOrigin describes the set of vertices a route may originate from. When
 // the target belongs to the set, findPath also permits circular routes through
@@ -642,9 +644,9 @@ func getOutgoingBalance(node route.Vertex, outgoingChans map[uint64]struct{},
 // path and accurately check the amount to forward at every node against the
 // available bandwidth.
 func findPath(g *graphParams, r *RestrictParams, cfg *PathFindingConfig,
-	self, source, target route.Vertex, amt lnwire.MilliSatoshi,
-	timePref float64, finalHtlcExpiry int32) (route.Vertex, []*unifiedEdge,
-	float64, error) {
+	self route.Vertex, origin RouteOrigin, target route.Vertex,
+	amt lnwire.MilliSatoshi, timePref float64, finalHtlcExpiry int32) (
+	route.Vertex, []*unifiedEdge, float64, error) {
 
 	// Pathfinding can be a significant portion of the total payment
 	// latency, especially on low-powered devices. Log several metrics to
@@ -705,9 +707,11 @@ func findPath(g *graphParams, r *RestrictParams, cfg *PathFindingConfig,
 		}
 	}
 
-	// If we are routing from ourselves, check that we have enough local
-	// balance available.
-	if source == self {
+	// The local-balance pre-check is authoritative only when self is the
+	// sole dispatcher. For multi-origin we cannot observe remote origins'
+	// outgoing balance, so we skip the check and let Dijkstra's per-edge
+	// bandwidth filter discover viability across all origins.
+	if !origin.isMulti && origin.single == self {
 		max, total, err := getOutgoingBalance(
 			self, outgoingChanMap, g.bandwidthHints, g.graph,
 		)
@@ -715,8 +719,6 @@ func findPath(g *graphParams, r *RestrictParams, cfg *PathFindingConfig,
 			return route.Vertex{}, nil, 0, err
 		}
 
-		// If the total outgoing balance isn't sufficient, it will be
-		// impossible to complete the payment.
 		if total < amt {
 			log.Warnf("Not enough outbound balance to send "+
 				"htlc of amount: %v, only have local "+
@@ -725,8 +727,10 @@ func findPath(g *graphParams, r *RestrictParams, cfg *PathFindingConfig,
 			return route.Vertex{}, nil, 0, errInsufficientBalance
 		}
 
-		// If there is only not enough capacity on a single route, it
-		// may still be possible to complete the payment by splitting.
+		// A single channel may still be too narrow even if total
+		// balance suffices. MPP splitting at a higher layer can still
+		// rescue this case, but findPath itself reports no single
+		// path.
 		if max < amt {
 			return route.Vertex{}, nil, 0, errNoPathFound
 		}
@@ -827,6 +831,11 @@ func findPath(g *graphParams, r *RestrictParams, cfg *PathFindingConfig,
 
 		edgesExpanded++
 
+		// fromIsOrigin is consulted twice below for fee and payload
+		// accounting. Hoisting it once amortises the map lookup for
+		// multi-origin and the vertex compare for single-origin.
+		fromIsOrigin := origin.Contains(fromVertex)
+
 		// Calculate inbound fee charged by "to" node. The exit hop
 		// doesn't charge inbound fees. If the "to" node is the exit
 		// hop, its inbound fees have already been set to zero by
@@ -900,7 +909,7 @@ func findPath(g *graphParams, r *RestrictParams, cfg *PathFindingConfig,
 			outboundFee   int64
 		)
 
-		if fromVertex != source {
+		if !fromIsOrigin {
 			outboundFee = int64(
 				edge.policy.ComputeFee(amountToSend),
 			)
@@ -999,7 +1008,7 @@ func findPath(g *graphParams, r *RestrictParams, cfg *PathFindingConfig,
 		// little inaccuracy here because we are over estimating by
 		// 1 hop.
 		var payloadSize uint64
-		if fromVertex != source {
+		if !fromIsOrigin {
 			// In case the unifiedEdge does not have a payload size
 			// function supplied we request a graceful shutdown
 			// because this should never happen.
@@ -1094,7 +1103,13 @@ func findPath(g *graphParams, r *RestrictParams, cfg *PathFindingConfig,
 		return fromFeatures, nil
 	}
 
-	routeToSelf := source == target
+	// Circular routes through the target are permitted exactly when the
+	// target is one of our origins. For a single-origin self-payment this
+	// collapses to the legacy rebalance condition. For multi-origin
+	// callers whose set includes the target, the min-heap then chooses
+	// between a direct path from a different origin and a cycle through
+	// the target, selecting whichever costs less.
+	allowCircular := origin.Contains(target)
 	for {
 		nodesVisited++
 
@@ -1147,7 +1162,7 @@ func findPath(g *graphParams, r *RestrictParams, cfg *PathFindingConfig,
 			// creating a cycle. Only when we intend to route to
 			// self, we allow this cycle to form. In that case we'll
 			// also break out of the search loop below.
-			if !routeToSelf && fromNode == target {
+			if !allowCircular && fromNode == target {
 				continue
 			}
 
@@ -1191,12 +1206,19 @@ func findPath(g *graphParams, r *RestrictParams, cfg *PathFindingConfig,
 		// from the heap.
 		partialPath = heap.Pop(&nodeHeap).(*nodeWithDist)
 
-		// If we've reached our source (or we don't have any incoming
-		// edges), then we're done here and can exit the graph
-		// traversal early.
-		if partialPath.node == source {
+		// If we've reached a valid origin (or we don't have any
+		// incoming edges), then we're done here and can exit the
+		// graph traversal early.
+		if origin.Contains(partialPath.node) {
 			break
 		}
+	}
+
+	// The loop exits either when it settles on an origin or when the heap
+	// empties. The latter means no origin was reachable.
+	source := partialPath.node
+	if !origin.Contains(source) {
+		return route.Vertex{}, nil, 0, errNoPathFound
 	}
 
 	// Use the distance map to unravel the forward path from source to
@@ -1239,8 +1261,8 @@ func findPath(g *graphParams, r *RestrictParams, cfg *PathFindingConfig,
 	// findPath, and avoid using ChannelEdgePolicy altogether.
 	pathEdges[len(pathEdges)-1].policy.ToNodeFeatures = features
 
-	log.Debugf("Found route: probability=%v, hops=%v, fee=%v",
-		distance[source].probability, len(pathEdges),
+	log.Debugf("Found route: source=%v, probability=%v, hops=%v, fee=%v",
+		source, distance[source].probability, len(pathEdges),
 		distance[source].netAmountReceived-amt)
 
 	return source, pathEdges, distance[source].probability, nil

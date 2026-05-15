@@ -193,12 +193,19 @@ type paymentSession struct {
 	// will happen and this value remains unused.
 	minShardAmt lnwire.MilliSatoshi
 
+	// origin is the set of vertices the path finder may originate from.
+	// SessionSource resolves the zero-value defaulting before constructing
+	// the session, so by this point the field always carries a valid
+	// origin set.
+	origin RouteOrigin
+
 	// log is a payment session-specific logger.
 	log btclog.Logger
 }
 
 // newPaymentSession instantiates a new payment session.
 func newPaymentSession(p *LightningPayment, selfNode route.Vertex,
+	origin RouteOrigin,
 	getBandwidthHints func(Graph) (bandwidthHints, error),
 	graphSessFactory GraphSessionFactory,
 	missionControl MissionControlQuerier,
@@ -233,6 +240,7 @@ func newPaymentSession(p *LightningPayment, selfNode route.Vertex,
 		pathFindingConfig: pathFindingConfig,
 		missionControl:    missionControl,
 		minShardAmt:       DefaultShardMinAmt,
+		origin:            origin,
 		log:               log.WithPrefix(logPrefix),
 	}, nil
 }
@@ -334,7 +342,7 @@ func (p *paymentSession) RequestRoute(maxAmt, feeLimit lnwire.MilliSatoshi,
 				graph:           graph,
 			},
 			restrictions, &p.pathFindingConfig,
-			p.selfNode, p.selfNode, p.payment.Target,
+			p.selfNode, p.origin, p.payment.Target,
 			maxAmt, p.payment.TimePref, finalHtlcExpiry,
 		)
 		if err != nil {
