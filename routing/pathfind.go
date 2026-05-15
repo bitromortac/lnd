@@ -57,6 +57,46 @@ type pathFinder = func(g *graphParams, r *RestrictParams,
 	amt lnwire.MilliSatoshi, timePref float64, finalHtlcExpiry int32) (
 	route.Vertex, []*unifiedEdge, float64, error)
 
+// RouteOrigin describes the set of vertices a route may originate from. When
+// the target belongs to the set, findPath also permits circular routes through
+// the origin and lets cost decide between direct and cyclic completions. Build
+// via NewRouteOrigin. The zero value matches only the zero vertex and is the
+// sentinel that session and router constructors detect to inject their
+// defaults.
+type RouteOrigin struct {
+	single  route.Vertex
+	multi   map[route.Vertex]struct{}
+	isMulti bool
+}
+
+// NewRouteOrigin returns a RouteOrigin matching any of the supplied vertices.
+// At least one vertex is required so the no-dispatcher case fails at the
+// construction site rather than reaching findPath as errNoPathFound.
+func NewRouteOrigin(first route.Vertex, rest ...route.Vertex) RouteOrigin {
+	if len(rest) == 0 {
+		return RouteOrigin{single: first}
+	}
+
+	set := make(map[route.Vertex]struct{}, 1+len(rest))
+	set[first] = struct{}{}
+	for _, v := range rest {
+		set[v] = struct{}{}
+	}
+
+	return RouteOrigin{multi: set, isMulti: true}
+}
+
+// Contains reports whether v is one of the origins.
+func (o *RouteOrigin) Contains(v route.Vertex) bool {
+	if !o.isMulti {
+		return v == o.single
+	}
+
+	_, ok := o.multi[v]
+
+	return ok
+}
+
 var (
 	// DefaultEstimator is the default estimator used for computing
 	// probabilities in pathfinding.

@@ -4098,3 +4098,62 @@ func TestFindBlindedPaths(t *testing.T) {
 		"eve,bob,frank,alice,dave",
 	})
 }
+
+// TestNewRouteOrigin pins the contract of the RouteOrigin constructor: which
+// inputs Contains accepts, how duplicates collapse, and what the zero value
+// matches when a caller skips the constructor.
+func TestNewRouteOrigin(t *testing.T) {
+	t.Parallel()
+
+	v1 := route.Vertex{0x01}
+	v2 := route.Vertex{0x02}
+	v3 := route.Vertex{0x03}
+	other := route.Vertex{0xff}
+
+	t.Run("single vertex", func(t *testing.T) {
+		t.Parallel()
+
+		o := NewRouteOrigin(v1)
+		require.False(t, o.isMulti, "single-vertex origin must not "+
+			"take the multi path")
+		require.Equal(t, v1, o.single)
+		require.True(t, o.Contains(v1))
+		require.False(t, o.Contains(other))
+	})
+
+	t.Run("multi vertex", func(t *testing.T) {
+		t.Parallel()
+
+		o := NewRouteOrigin(v1, v2, v3)
+		require.True(t, o.isMulti)
+		require.True(t, o.Contains(v1))
+		require.True(t, o.Contains(v2))
+		require.True(t, o.Contains(v3))
+		require.False(t, o.Contains(other))
+	})
+
+	t.Run("duplicates deduplicated", func(t *testing.T) {
+		t.Parallel()
+
+		o := NewRouteOrigin(v1, v1, v2)
+		require.True(t, o.isMulti)
+		require.Len(t, o.multi, 2)
+		require.True(t, o.Contains(v1))
+		require.True(t, o.Contains(v2))
+	})
+
+	t.Run("zero value behaves as single zero vertex", func(t *testing.T) {
+		t.Parallel()
+
+		// The zero value is well-defined but semantically inert: it
+		// behaves as NewRouteOrigin(route.Vertex{}). Session and
+		// router constructors explicitly default the field via
+		// NewRouteOrigin(<real source>) so this state never reaches
+		// findPath in production.
+		var o RouteOrigin
+
+		require.False(t, o.isMulti)
+		require.False(t, o.Contains(v1))
+		require.True(t, o.Contains(route.Vertex{}))
+	})
+}
