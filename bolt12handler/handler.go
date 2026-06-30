@@ -110,7 +110,7 @@ func (h *Handler) HandleInvoiceRequest(ctx context.Context, invreqBytes []byte,
 
 	// Run generic structural and signature validation.
 	if err := bolt12.ValidateInvoiceRequestRead(
-		ir, h.activeChain,
+		ir, h.activeChain, bolt12.Bolt12Features,
 	); err != nil {
 		return fmt.Errorf("validate invoice request: %w", err)
 	}
