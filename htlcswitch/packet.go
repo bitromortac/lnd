@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/lightningnetwork/lnd/channeldb"
+	"github.com/lightningnetwork/lnd/fn/v2"
 	"github.com/lightningnetwork/lnd/graph/db/models"
 	"github.com/lightningnetwork/lnd/htlcswitch/hop"
 	"github.com/lightningnetwork/lnd/lnwire"
@@ -20,6 +21,9 @@ type htlcPacket struct {
 	// outgoingChanID is the ID of the channel that we have offered or will
 	// offer an outgoing HTLC on.
 	outgoingChanID lnwire.ShortChannelID
+
+	// outgoingHop is the next hop requested by the onion.
+	outgoingHop fn.Either[lnwire.ShortChannelID, [33]byte]
 
 	// incomingHTLCID is the ID of the HTLC that we have received from the peer
 	// on the incoming channel.
