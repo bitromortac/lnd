@@ -100,6 +100,16 @@ func (r *forwardInterceptor) onIntercept(
 		InWireCustomRecords:     htlc.InWireCustomRecords,
 	}
 
+	// A node-ID forward has no requested outgoing channel. Expose the
+	// requested pubkey and report the reserved NodeIDForwardSCID sentinel
+	// rather than the zero SCID, which a client would otherwise read as the
+	// exit hop.
+	htlc.OutgoingNodeID.WhenSome(func(nodeID [33]byte) {
+		interceptionRequest.OutgoingRequestedNodeId = nodeID[:]
+		interceptionRequest.OutgoingRequestedChanId =
+			htlcswitch.NodeIDForwardSCID.ToUint64()
+	})
+
 	return r.stream.Send(interceptionRequest)
 }
 
