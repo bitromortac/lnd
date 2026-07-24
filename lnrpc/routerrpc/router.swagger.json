@@ -1572,7 +1572,7 @@
         "outgoing_requested_chan_id": {
           "type": "string",
           "format": "uint64",
-          "description": "The requested outgoing channel id for this forwarded htlc. Because of\nnon-strict forwarding, this isn't necessarily the channel over which the\npacket will be forwarded eventually. A different channel to the same peer\nmay be selected as well."
+          "description": "The requested outgoing channel id for this forwarded htlc. Because of\nnon-strict forwarding, this isn't necessarily the channel over which the\npacket will be forwarded eventually. A different channel to the same peer\nmay be selected as well. This is set to a sentinel value (all bits set)\nif the outgoing_requested_node_id is specified for blinded routes."
         },
         "outgoing_amount_msat": {
           "type": "string",
@@ -1609,6 +1609,11 @@
             "format": "byte"
           },
           "description": "The custom records of the peer's incoming p2p wire message."
+        },
+        "outgoing_requested_node_id": {
+          "type": "string",
+          "format": "byte",
+          "description": "The requested outgoing next hop for a blinded route that identifies it by\nnode id (next_node_id) rather than by channel: the next hop's compressed\npublic key. It is empty for the common channel-id case. When set,\noutgoing_requested_chan_id carries a reserved sentinel value and lnd\nselects an actual outgoing channel to this peer via non-strict\nforwarding."
         }
       }
     },
