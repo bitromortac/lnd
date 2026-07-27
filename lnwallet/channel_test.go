@@ -9565,19 +9565,23 @@ func TestReceiveRevocationSerializationFailure(t *testing.T) {
 	_, _, err = bobChannel.ReceiveRevocation(aliceRevocation)
 	require.Error(t, err)
 
-	// In the un-fixed code, in-memory state is prematurely mutated despite DB failure.
+	// Verify that in-memory state was NOT corrupted/advanced on DB failure.
+	require.Equal(
+		t, preRemoteCurrent,
+		bobChannel.channelState.RemoteCurrentRevocation,
+		"RemoteCurrentRevocation should not mutate on DB failure",
+	)
+
+	// Now disable DB failure and retry ReceiveRevocation, which should succeed cleanly.
+	mockStore.failAdvanceTail = false
+	_, _, err = bobChannel.ReceiveRevocation(aliceRevocation)
+	require.NoError(t, err)
+
+	// Verify that state was advanced cleanly after successful DB write.
 	require.NotEqual(
 		t, preRemoteCurrent,
 		bobChannel.channelState.RemoteCurrentRevocation,
-		"RemoteCurrentRevocation incorrectly mutated on DB failure",
-	)
-
-	// Retrying ReceiveRevocation fails because RevocationStore was already updated.
-	mockStore.failAdvanceTail = false
-	_, _, err = bobChannel.ReceiveRevocation(aliceRevocation)
-	require.ErrorContains(
-		t, err, "hash isn't derivable",
-		"retry fails due to corrupted in-memory shachain store",
+		"RemoteCurrentRevocation should advance after successful DB write",
 	)
 }
 

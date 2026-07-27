@@ -5796,6 +5796,9 @@ func (lc *LightningChannel) RevokeCurrentCommitment() (*lnwire.RevokeAndAck,
 		lc.commitChains.Local.tail().height,
 		lc.currentHeight+1)
 
+	preCurrentHeight := lc.currentHeight
+	revokedCommitment := lc.commitChains.Local.tail()
+
 	// Advance our tail, as we've revoked our previous state.
 	lc.commitChains.Local.advanceTail()
 	lc.currentHeight++
@@ -5814,6 +5817,8 @@ func (lc *LightningChannel) RevokeCurrentCommitment() (*lnwire.RevokeAndAck,
 		newCommitment, unsignedAckedUpdates,
 	)
 	if err != nil {
+		lc.commitChains.Local.commitments.PushFront(revokedCommitment)
+		lc.currentHeight = preCurrentHeight
 		return nil, nil, nil, err
 	}
 
@@ -5889,6 +5894,16 @@ func (lc *LightningChannel) ReceiveRevocation(revMsg *lnwire.RevokeAndAck) (
 	lc.Lock()
 	defer lc.Unlock()
 
+	// Save pre-transition state snapshots in case the database transaction fails.
+	var preStoreBuf bytes.Buffer
+	if err := lc.channelState.RevocationStore.Encode(&preStoreBuf); err != nil {
+		return nil, nil, err
+	}
+	preStoreBytes := preStoreBuf.Bytes()
+
+	preRemoteCurrent := lc.channelState.RemoteCurrentRevocation
+	preRemoteNext := lc.channelState.RemoteNextRevocation
+
 	// Ensure that the new pre-image can be placed in preimage store.
 	store := lc.channelState.RevocationStore
 	revocation, err := chainhash.NewHash(revMsg.Revocation[:])
@@ -5898,6 +5913,13 @@ func (lc *LightningChannel) ReceiveRevocation(revMsg *lnwire.RevokeAndAck) (
 	if err := store.AddNextEntry(revocation); err != nil {
 		return nil, nil, err
 	}
+
+	type pendingFwd struct {
+		pd        *paymentDescriptor
+		sourceRef *channeldb.AddRef
+		destRef   *channeldb.SettleFailRef
+	}
+	var pendingFwds []pendingFwd
 
 	// Verify that if we use the commitment point computed based off of the
 	// revealed secret to derive a revocation key with our revocation base
@@ -5978,16 +6000,16 @@ func (lc *LightningChannel) ReceiveRevocation(revMsg *lnwire.RevokeAndAck) (
 		// restart.
 		switch {
 		case pd.isAdd() && committedAdd && shouldFwdAdd:
-			// Construct a reference specifying the location that
-			// this forwarded Add will be written in the forwarding
-			// package constructed at this remote height.
-			pd.SourceRef = &channeldb.AddRef{
+			sourceRef := &channeldb.AddRef{
 				Height: remoteChainTail,
 				Index:  addIndex,
 			}
 			addIndex++
 
-			pd.isForwarded = true
+			pendingFwds = append(pendingFwds, pendingFwd{
+				pd:        pd,
+				sourceRef: sourceRef,
+			})
 
 			// At this point we put the update into our list of
 			// updates that we will eventually put into the
@@ -5997,17 +6019,17 @@ func (lc *LightningChannel) ReceiveRevocation(revMsg *lnwire.RevokeAndAck) (
 			)
 
 		case !pd.isAdd() && committedRmv && shouldFwdRmv:
-			// Construct a reference specifying the location that
-			// this forwarded Settle/Fail will be written in the
-			// forwarding package constructed at this remote height.
-			pd.DestRef = &channeldb.SettleFailRef{
+			destRef := &channeldb.SettleFailRef{
 				Source: source,
 				Height: remoteChainTail,
 				Index:  settleFailIndex,
 			}
 			settleFailIndex++
 
-			pd.isForwarded = true
+			pendingFwds = append(pendingFwds, pendingFwd{
+				pd:      pd,
+				destRef: destRef,
+			})
 
 			// At this point we put the update into our list of
 			// updates that we will eventually put into the
@@ -6055,6 +6077,7 @@ func (lc *LightningChannel) ReceiveRevocation(revMsg *lnwire.RevokeAndAck) (
 
 	// Now that we have a new verification nonce from them, we can refresh
 	// our remote musig2 session which allows us to create another state.
+	var nextMusigSession *MusigSession
 	if lc.channelState.ChanType.IsTaproot() {
 		fundingTxid := lc.channelState.FundingOutpoint.Hash
 		localNonce, err := extractRevokeAndAckNonce(
@@ -6071,7 +6094,7 @@ func (lc *LightningChannel) ReceiveRevocation(revMsg *lnwire.RevokeAndAck) (
 			return nil, nil, err
 		}
 
-		lc.musigSessions.RemoteSession = session
+		nextMusigSession = session
 	}
 
 	// At this point, the revocation has been accepted, and we've rotated
@@ -6084,7 +6107,29 @@ func (lc *LightningChannel) ReceiveRevocation(revMsg *lnwire.RevokeAndAck) (
 		ourOutputIndex, theirOutputIndex,
 	)
 	if err != nil {
+		lc.channelState.RemoteCurrentRevocation = preRemoteCurrent
+		lc.channelState.RemoteNextRevocation = preRemoteNext
+		if restoredStore, restoreErr := shachain.NewRevocationStoreFromBytes(
+			bytes.NewReader(preStoreBytes),
+		); restoreErr == nil {
+			lc.channelState.RevocationStore = restoredStore
+		}
+
 		return nil, nil, err
+	}
+
+	if nextMusigSession != nil && lc.musigSessions != nil {
+		lc.musigSessions.RemoteSession = nextMusigSession
+	}
+
+	for _, fwd := range pendingFwds {
+		fwd.pd.isForwarded = true
+		if fwd.sourceRef != nil {
+			fwd.pd.SourceRef = fwd.sourceRef
+		}
+		if fwd.destRef != nil {
+			fwd.pd.DestRef = fwd.destRef
+		}
 	}
 
 	// Since they revoked the current lowest height in their commitment
