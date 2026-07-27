@@ -9511,6 +9511,76 @@ func TestChannelUnsignedAckedFailure(t *testing.T) {
 	require.NoError(t, err)
 }
 
+type mockFailingStore struct {
+	chanstate.Store
+	failAdvanceTail bool
+}
+
+func (m *mockFailingStore) AdvanceCommitChainTail(channel *chanstate.OpenChannel,
+	fwdPkg *chanstate.FwdPkg, updates []chanstate.LogUpdate,
+	ourOutputIndex, theirOutputIndex uint32) error {
+
+	if m.failAdvanceTail {
+		return errors.New("serialization failure")
+	}
+
+	return m.Store.AdvanceCommitChainTail(
+		channel, fwdPkg, updates, ourOutputIndex, theirOutputIndex,
+	)
+}
+
+// TestReceiveRevocationSerializationFailure tests the behavior when
+// AdvanceCommitChainTail fails due to a database error during ReceiveRevocation.
+func TestReceiveRevocationSerializationFailure(t *testing.T) {
+	t.Parallel()
+
+	aliceChannel, bobChannel, err := CreateTestChannels(
+		t, channeldb.SingleFunderTweaklessBit,
+	)
+	require.NoError(t, err)
+
+	htlc, _ := createHTLC(0, lnwire.MilliSatoshi(500000))
+	addAndReceiveHTLC(t, aliceChannel, bobChannel, htlc, nil)
+
+	// Force state transition so Alice owes a revocation.
+	bobCommit, err := bobChannel.SignNextCommitment(ctxb)
+	require.NoError(t, err)
+	err = aliceChannel.ReceiveNewCommitment(bobCommit.CommitSigs)
+	require.NoError(t, err)
+
+	aliceRevocation, _, _, err := aliceChannel.RevokeCurrentCommitment()
+	require.NoError(t, err)
+
+	// Wrap Bob's channel store with mockFailingStore.
+	mockStore := &mockFailingStore{
+		Store:           bobChannel.channelState.Db,
+		failAdvanceTail: true,
+	}
+	bobChannel.channelState.Db = mockStore
+
+	// Record Bob's remote revocation keys before ReceiveRevocation.
+	preRemoteCurrent := bobChannel.channelState.RemoteCurrentRevocation
+
+	// Attempt ReceiveRevocation, which fails due to DB error.
+	_, _, err = bobChannel.ReceiveRevocation(aliceRevocation)
+	require.Error(t, err)
+
+	// In the un-fixed code, in-memory state is prematurely mutated despite DB failure.
+	require.NotEqual(
+		t, preRemoteCurrent,
+		bobChannel.channelState.RemoteCurrentRevocation,
+		"RemoteCurrentRevocation incorrectly mutated on DB failure",
+	)
+
+	// Retrying ReceiveRevocation fails because RevocationStore was already updated.
+	mockStore.failAdvanceTail = false
+	_, _, err = bobChannel.ReceiveRevocation(aliceRevocation)
+	require.ErrorContains(
+		t, err, "hash isn't derivable",
+		"retry fails due to corrupted in-memory shachain store",
+	)
+}
+
 // TestChannelLocalUnsignedUpdatesFailure checks that updates from the local
 // log are restored if the remote hasn't sent us a signature covering them.
 //
