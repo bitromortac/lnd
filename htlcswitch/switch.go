@@ -2906,8 +2906,10 @@ func (s *Switch) handlePacketAdd(packet *htlcPacket,
 			return s.failAddPacket(packet, linkError)
 		}
 
-		// NOTE: we fetch all links to the target peer, which could
-		// include the incoming channel, leading to a circular route.
+		// NOTE: for the SCID path, we fetch all links to the target
+		// peer. If parallel channels exist to the incoming peer, the
+		// candidate set may include the incoming channel even when a
+		// different SCID was requested.
 		targetPeer := targetLink.PeerPubKey()
 		interfaceLinks, _ = s.getLinks(targetPeer)
 		s.indexMtx.RUnlock()

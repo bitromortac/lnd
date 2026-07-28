@@ -2121,6 +2121,97 @@ func TestNodeIDNonStrictRoutingAllLinksCircular(t *testing.T) {
 	}
 }
 
+// TestSCIDNonStrictRoutingParallelChannels documents that when non-strict
+// forwarding expands candidates for an SCID forward to a peer with parallel
+// channels, the candidate set fetched by getLinks includes the incoming link.
+// If non-strict selection picks the incoming channel, the HTLC can land on the
+// incoming link despite checkCircularForward passing for the requested outgoing
+// SCID.
+func TestSCIDNonStrictRoutingParallelChannels(t *testing.T) {
+	t.Parallel()
+
+	bobPeer, err := newMockServer(
+		t, "bob", testStartingHeight, nil, testDefaultDelta,
+	)
+	require.NoError(t, err, "unable to create bob server")
+
+	s, err := initSwitchWithTempDB(t, testStartingHeight)
+	require.NoError(t, err, "unable to init switch")
+	require.NoError(t, s.Start(), "unable to start switch")
+	defer func() { _ = s.Stop() }()
+
+	s.cfg.AllowCircularRoute = false
+
+	incomingChanID, incomingScid := genID()
+	outgoingChanID, outgoingScid := genID()
+
+	incomingLink := newMockChannelLink(
+		s, incomingChanID, incomingScid, emptyScid, bobPeer,
+		true, false, false, false,
+	)
+	outgoingLink := newMockChannelLink(
+		s, outgoingChanID, outgoingScid, emptyScid, bobPeer,
+		true, false, false, false,
+	)
+	require.NoError(t, s.AddLink(incomingLink), "unable to add incoming")
+	require.NoError(t, s.AddLink(outgoingLink), "unable to add outgoing")
+
+	// Send multiple HTLCs targeting outgoingScid to observe non-strict
+	// forwarding candidate selection across parallel channels.
+	const numHTLCs = 20
+	var forwardedToIncoming bool
+
+	for i := range numHTLCs {
+		var hash [sha256.Size]byte
+		hash[0] = byte(i)
+
+		packet := &htlcPacket{
+			incomingChanID: incomingLink.ShortChanID(),
+			incomingHTLCID: uint64(i),
+			outgoingChanID: outgoingLink.ShortChanID(),
+			outgoingHop: hop.NewChannelNextHop(
+				outgoingLink.ShortChanID(),
+			),
+			htlc: &lnwire.UpdateAddHTLC{
+				PaymentHash: hash,
+				Amount:      1,
+			},
+			obfuscator: NewMockObfuscator(),
+		}
+
+		require.NoError(t, s.ForwardPackets(nil, packet))
+
+		select {
+		case p := <-outgoingLink.packets:
+			require.Nil(t, p.linkFailure)
+			require.Equal(
+				t, outgoingLink.ShortChanID(), p.outgoingChanID,
+			)
+
+		case p := <-incomingLink.packets:
+			// Non-strict candidate expansion fetched all links to
+			// bobPeer, including incomingLink. When non-strict
+			// selection picks incomingLink, the HTLC is forwarded
+			// over the incoming channel even though circular check
+			// passed for requested outgoingScid.
+			forwardedToIncoming = true
+			require.Equal(
+				t, incomingLink.ShortChanID(), p.outgoingChanID,
+			)
+
+		case <-time.After(time.Second):
+			t.Fatal("timeout waiting for switch packet")
+		}
+	}
+
+	require.True(
+		t, forwardedToIncoming,
+		"expected at least one non-strict candidate selection to "+
+			"land on the incoming channel (note that this test "+
+			"can fail probabilistically 1 in 2^20 or ~10^6 times)",
+	)
+}
+
 // TestCheckCircularForward tests the error returned by checkCircularForward
 // in cases where we allow and disallow same channel circular forwards.
 func TestCheckCircularForward(t *testing.T) {
