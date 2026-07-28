@@ -368,6 +368,11 @@ func (r *mockHopIterator) EncodeNextHop(w io.Writer) error {
 }
 
 func encodeFwdInfo(w io.Writer, f *hop.ForwardingInfo) error {
+	if f.NextHop.IsRight() {
+		return fmt.Errorf("mock serialization does not support " +
+			"node-ID next hop")
+	}
+
 	nextHop := f.NextHopChannel().UnwrapOr(hop.Exit)
 	if err := binary.Write(w, binary.BigEndian, nextHop); err != nil {
 		return err
