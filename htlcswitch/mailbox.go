@@ -737,6 +737,8 @@ func (m *memoryMailBox) FailAdd(pkt *htlcPacket) {
 	failPkt := &htlcPacket{
 		incomingChanID: pkt.incomingChanID,
 		incomingHTLCID: pkt.incomingHTLCID,
+		outgoingChanID: pkt.outgoingChanID,
+		outgoingHop:    pkt.outgoingHop,
 		circuit:        pkt.circuit,
 		sourceRef:      pkt.sourceRef,
 		hasSource:      true,

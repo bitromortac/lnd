@@ -11,6 +11,7 @@ import (
 	"github.com/lightningnetwork/lnd/channeldb"
 	"github.com/lightningnetwork/lnd/chanstate"
 	"github.com/lightningnetwork/lnd/clock"
+	"github.com/lightningnetwork/lnd/fn/v2"
 	"github.com/lightningnetwork/lnd/lnmock"
 	"github.com/lightningnetwork/lnd/lnwallet/chainfee"
 	"github.com/lightningnetwork/lnd/lnwire"
@@ -277,6 +278,17 @@ func (c *mailboxContext) sendAdds(start, num int) []*htlcPacket {
 				ID: uint64(start + i),
 			},
 		}
+		if i%2 == 0 {
+			pkt.outgoingHop = fn.NewLeft[
+				lnwire.ShortChannelID, [33]byte,
+			](pkt.outgoingChanID)
+		} else {
+			var nodeID [33]byte
+			prand.Read(nodeID[:])
+			pkt.outgoingHop = fn.NewRight[
+				lnwire.ShortChannelID, [33]byte,
+			](nodeID)
+		}
 		sentPackets[i] = pkt
 
 		err := c.mailbox.AddPacket(pkt)
@@ -314,6 +326,14 @@ func (c *mailboxContext) checkFails(adds []*htlcPacket) {
 		select {
 		case fail := <-c.forwards:
 			if add.inKey() == fail.inKey() {
+				require.Equal(
+					c.t, add.outgoingChanID,
+					fail.outgoingChanID,
+				)
+				require.Equal(
+					c.t, add.outgoingHop,
+					fail.outgoingHop,
+				)
 				continue
 			}
 			c.t.Fatalf("inkey mismatch #%d, add: %v vs fail: %v",
