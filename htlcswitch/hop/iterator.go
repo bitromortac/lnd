@@ -334,25 +334,15 @@ func deriveBlindedRouteForwardingInfo(r *sphinxHopIterator,
 	var nextHop fn.Either[lnwire.ShortChannelID, [33]byte]
 	switch {
 	case routeData.ShortChannelID.IsSome():
-		scid, err := routeData.ShortChannelID.UnwrapOrErr(
-			fmt.Errorf("next SCID not set for non-final blinded " +
-				"hop"),
+		scid := routeData.ShortChannelID.UnwrapOr(
+			routeData.ShortChannelID.Zero(),
 		)
-		if err != nil {
-			return nil, routeRole, err
-		}
-
 		nextHop = NewChannelNextHop(scid.Val)
 
 	case routeData.NextNodeID.IsSome():
-		nodeID, err := routeData.NextNodeID.UnwrapOrErr(
-			fmt.Errorf("next node ID not set for non-final " +
-				"blinded hop"),
+		nodeID := routeData.NextNodeID.UnwrapOr(
+			routeData.NextNodeID.Zero(),
 		)
-		if err != nil {
-			return nil, routeRole, err
-		}
-
 		var pubKey [33]byte
 		copy(pubKey[:], nodeID.Val.SerializeCompressed())
 
