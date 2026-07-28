@@ -2,6 +2,7 @@ package htlcswitch
 
 import (
 	"testing"
+	"time"
 
 	"github.com/lightningnetwork/lnd/htlcswitch/hop"
 	"github.com/lightningnetwork/lnd/lnwire"
@@ -62,5 +63,77 @@ func TestGetEventType(t *testing.T) {
 
 			require.Equal(t, tc.want, getEventType(tc.pkt))
 		})
+	}
+}
+
+// TestGetEventTypeNodeIDReconstructedPackets asserts that node-ID forward
+// packets reconstructed via failAddPacket and interceptedForward.resolve
+// preserve outgoingHop and are correctly classified as HtlcEventTypeForward by
+// getEventType.
+func TestGetEventTypeNodeIDReconstructedPackets(t *testing.T) {
+	t.Parallel()
+
+	var nodeID [33]byte
+	nodeID[0] = 0x02
+
+	inChanID := lnwire.NewShortChanIDFromInt(1)
+	chanID := lnwire.ChannelID{1}
+
+	// Create a switch with a mailOrchestrator and mailbox.
+	s := &Switch{
+		mailOrchestrator: newMailOrchestrator(&mailOrchConfig{}),
+	}
+	mailbox := s.mailOrchestrator.GetOrCreateMailBox(chanID, inChanID)
+	s.mailOrchestrator.BindLiveShortChanID(mailbox, chanID, inChanID)
+
+	// 1. Verify failAddPacket reconstruction.
+	origPkt := &htlcPacket{
+		incomingChanID: inChanID,
+		incomingHTLCID: 42,
+		outgoingChanID: hop.Exit,
+		outgoingHop:    hop.NewNodeNextHop(nodeID),
+		obfuscator:     NewMockObfuscator(),
+	}
+	linkErr := NewLinkError(&lnwire.FailUnknownNextPeer{})
+
+	err := s.failAddPacket(origPkt, linkErr)
+	require.Equal(t, linkErr, err)
+
+	select {
+	case failPkt := <-mailbox.PacketOutBox():
+		require.True(t, failPkt.outgoingHop.IsRight())
+		require.Equal(
+			t, HtlcEventTypeForward, getEventType(failPkt),
+			"failAddPacket must classify as forward",
+		)
+	case <-time.After(time.Second):
+		t.Fatal("failAddPacket did not deliver packet to mailbox")
+	}
+
+	// 2. Verify interceptedForward.resolve reconstruction.
+	resolvePkt := &htlcPacket{
+		incomingChanID: inChanID,
+		incomingHTLCID: 43,
+		outgoingChanID: hop.Exit,
+		outgoingHop:    hop.NewNodeNextHop(nodeID),
+		obfuscator:     NewMockObfuscator(),
+	}
+	fwd := &interceptedForward{
+		htlcSwitch: s,
+		packet:     resolvePkt,
+	}
+
+	err = fwd.resolve(&lnwire.UpdateFailHTLC{})
+	require.NoError(t, err)
+
+	select {
+	case resPkt := <-mailbox.PacketOutBox():
+		require.True(t, resPkt.outgoingHop.IsRight())
+		require.Equal(
+			t, HtlcEventTypeForward, getEventType(resPkt),
+			"interceptedForward.resolve must classify as forward",
+		)
+	case <-time.After(time.Second):
+		t.Fatal("resolve did not deliver packet to mailbox")
 	}
 }
