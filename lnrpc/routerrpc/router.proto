@@ -956,12 +956,16 @@ message ForwardHtlcInterceptRequest {
     // The custom records of the peer's incoming p2p wire message.
     map<uint64, bytes> in_wire_custom_records = 11;
 
-    // The requested outgoing next hop for a blinded route that identifies it by
-    // node id (next_node_id) rather than by channel: the next hop's compressed
-    // public key. It is empty for the common channel-id case. When set,
-    // outgoing_requested_chan_id carries a reserved sentinel value and lnd
-    // selects an actual outgoing channel to this peer via non-strict
-    // forwarding.
+    // The requested outgoing node for a blinded forward. When non-empty, this
+    // field contains exactly one 33-byte compressed public key and
+    // outgoing_requested_chan_id is set to 18446744073709551615
+    // (0xffffffffffffffff). Clients MUST NOT interpret that value as an actual
+    // channel ID; the presence of this field identifies a node-addressed forward.
+    //
+    // The possible next-hop representations are:
+    //   node ID empty, channel ID 0: final receive;
+    //   node ID empty, ordinary channel ID: channel-addressed forward;
+    //   node ID present, channel ID MaxUint64: node-addressed forward.
     bytes outgoing_requested_node_id = 12;
 }
 
