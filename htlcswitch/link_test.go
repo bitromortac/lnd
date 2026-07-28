@@ -6425,7 +6425,9 @@ func TestCheckHtlcForwardAuxShaperChannel(t *testing.T) {
 
 		updateScid = sid
 
-		return nil
+		return &lnwire.ChannelUpdate1{
+			ShortChannelID: sid,
+		}
 	}
 
 	testChannel, _, err := createTestChannel(
@@ -6487,6 +6489,14 @@ func TestCheckHtlcForwardAuxShaperChannel(t *testing.T) {
 		t, requested, updateScid,
 		"channel_update must reference the requested SCID, not the "+
 			"real channel SCID",
+	)
+
+	wireErr := result.WireMessage()
+	failAmt, ok := wireErr.(*lnwire.FailAmountBelowMinimum)
+	require.True(t, ok, "expected FailAmountBelowMinimum failure")
+	require.Equal(
+		t, requested, failAmt.Update.ShortChannelID,
+		"failure update must carry the requested SCID",
 	)
 }
 
