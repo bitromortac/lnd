@@ -102,8 +102,9 @@ func (r *forwardInterceptor) onIntercept(
 
 	// A node-ID forward has no requested outgoing channel. Expose the
 	// requested pubkey and report the reserved NodeIDForwardSCID sentinel
-	// rather than the zero SCID, which a client would otherwise read as the
-	// exit hop.
+	// rather than a zero SCID. Older un-upgraded protobuf clients do not
+	// know about outgoing_requested_node_id and would otherwise interpret
+	// a zero SCID as an exit hop.
 	htlc.OutgoingNodeID.WhenSome(func(nodeID [33]byte) {
 		interceptionRequest.OutgoingRequestedNodeId = nodeID[:]
 		interceptionRequest.OutgoingRequestedChanId =
