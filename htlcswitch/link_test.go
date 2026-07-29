@@ -6385,6 +6385,7 @@ type recordingAuxShaper struct {
 	gotCID lnwire.ShortChannelID
 }
 
+// ShouldHandleTraffic records the short channel ID passed to the shaper.
 func (a *recordingAuxShaper) ShouldHandleTraffic(cid lnwire.ShortChannelID,
 	_, _ fn.Option[tlv.Blob]) (bool, error) {
 
@@ -6393,6 +6394,7 @@ func (a *recordingAuxShaper) ShouldHandleTraffic(cid lnwire.ShortChannelID,
 	return false, nil
 }
 
+// IsCustomHTLC returns false as recordingAuxShaper handles standard HTLCs.
 func (a *recordingAuxShaper) IsCustomHTLC(_ lnwire.CustomRecords) bool {
 	return false
 }
