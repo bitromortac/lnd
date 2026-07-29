@@ -107,7 +107,7 @@ func (r *forwardInterceptor) onIntercept(
 	htlc.OutgoingNodeID.WhenSome(func(nodeID [33]byte) {
 		interceptionRequest.OutgoingRequestedNodeId = nodeID[:]
 		interceptionRequest.OutgoingRequestedChanId =
-			htlcswitch.NodeIDForwardSCID.ToUint64()
+			htlcswitch.NodeIDForwardSCID
 	})
 
 	return r.stream.Send(interceptionRequest)

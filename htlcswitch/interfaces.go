@@ -388,7 +388,7 @@ type ForwardInterceptor func(InterceptedPacket) error
 // that can never match a real or alias channel, so a client switching on a zero
 // SCID to detect the exit hop does not read the forward as a final receive. The
 // pubkey is in InterceptedPacket.OutgoingNodeID.
-var NodeIDForwardSCID = lnwire.NewShortChanIDFromInt(^uint64(0))
+const NodeIDForwardSCID uint64 = ^uint64(0)
 
 // InterceptedPacket contains the relevant information for the interceptor about
 // an HTLC.
