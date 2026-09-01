@@ -118,3 +118,27 @@ func TestKeyRingSignerECDH(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, want, secret)
 }
+
+// TestKeyRingSignerSignEnvelope verifies that the key ring signer signs an
+// envelope under the node key, so VerifyEnvelope accepts it.
+func TestKeyRingSignerSignEnvelope(t *testing.T) {
+	t.Parallel()
+
+	nodeKey := testKey(t)
+
+	var offerHash [32]byte
+	offerHash[0] = 0xCD
+	data := &InvoiceEnvelopeData{Amount: 1000}
+
+	signed, err := SignEnvelope(testKeyRingSigner(nodeKey), offerHash, data)
+	require.NoError(t, err)
+
+	got, err := VerifyEnvelope(nodeKey.PubKey(), signed)
+	require.NoError(t, err)
+	require.Equal(t, data.Amount, got.Amount)
+
+	// A signature over another offer hash must fail.
+	signed.OfferHash[0] = 0xCE
+	_, err = VerifyEnvelope(nodeKey.PubKey(), signed)
+	require.Error(t, err)
+}

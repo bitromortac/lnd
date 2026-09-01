@@ -130,7 +130,7 @@ func (h *Handler) HandleInvoiceRequest(ctx context.Context, invreqBytes []byte,
 		PathBuilder:    h.paymentPathBuilder,
 		Clock:          clock.NewDefaultClock(),
 		FinalCLTVDelta: h.finalCLTVDelta,
-	}, ir)
+	}, ir, offer.Hash)
 	if err != nil {
 		return fmt.Errorf("generate invoice: %w", err)
 	}
