@@ -922,7 +922,7 @@ func newServer(ctx context.Context, cfg *Config, listenAddrs []net.Addr,
 			cc.KeyRing, nodeKeyDesc.KeyLocator,
 			nodeKeyECDH.PubKey(),
 		)
-		replier := bolt12handler.NewServerOnionReplier(s)
+		replier := bolt12handler.NewServerOnionReplier(s, nil)
 		s.bolt12Handler = bolt12handler.NewHandler(
 			s.offerStore, s.invoices, replier, signer,
 			nil, *s.cfg.ActiveNetParams.GenesisHash,
