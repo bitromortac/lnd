@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/lightningnetwork/lnd/clock"
+	"github.com/lightningnetwork/lnd/fn/v2"
 	"github.com/lightningnetwork/lnd/graph/db/models"
 	"github.com/lightningnetwork/lnd/lntypes"
 	"github.com/lightningnetwork/lnd/lnwire"
@@ -310,6 +311,18 @@ func makeInsertInvoiceParams(invoice *Invoice, paymentHash lntypes.Hash) (
 	// Some non MPP payments may have the default (invalid) value.
 	if invoice.Terms.PaymentAddr != BlankPayAddr {
 		params.PaymentAddr = invoice.Terms.PaymentAddr[:]
+	}
+
+	// BOLT 12 fields.
+	params.IsBolt12 = invoice.IsBolt12
+	invoice.OfferID.WhenSome(func(id int64) {
+		params.OfferID = sqldb.SQLInt64(id)
+	})
+	params.InvreqPayerID = invoice.InvreqPayerID
+	if invoice.InvreqQuantity > 0 {
+		params.InvreqQuantity = sqldb.SQLInt64(
+			int64(invoice.InvreqQuantity),
+		)
 	}
 
 	return params, nil
@@ -1864,12 +1877,22 @@ func unmarshalInvoice(row sqlc.Invoice) (*lntypes.Hash, *Invoice,
 			Value:           lnwire.MilliSatoshi(row.AmountMsat),
 			PaymentAddr:     paymentAddr,
 		},
-		AddIndex:    uint64(row.ID),
-		State:       ContractState(row.State),
-		AmtPaid:     lnwire.MilliSatoshi(row.AmountPaidMsat),
-		Htlcs:       make(map[models.CircuitKey]*InvoiceHTLC),
-		AMPState:    AMPInvoiceState{},
-		HodlInvoice: row.IsHodl,
+		AddIndex:      uint64(row.ID),
+		State:         ContractState(row.State),
+		AmtPaid:       lnwire.MilliSatoshi(row.AmountPaidMsat),
+		Htlcs:         make(map[models.CircuitKey]*InvoiceHTLC),
+		AMPState:      AMPInvoiceState{},
+		HodlInvoice:   row.IsHodl,
+		IsBolt12:      row.IsBolt12,
+		InvreqPayerID: row.InvreqPayerID,
+	}
+
+	if row.OfferID.Valid {
+		invoice.OfferID = fn.Some(row.OfferID.Int64)
+	}
+
+	if row.InvreqQuantity.Valid {
+		invoice.InvreqQuantity = uint64(row.InvreqQuantity.Int64)
 	}
 
 	return &hash, invoice, nil
