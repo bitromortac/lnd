@@ -79,6 +79,11 @@ type RegistryConfig struct {
 	// HtlcInterceptor is an interface that allows the invoice registry to
 	// let clients intercept invoices before they are settled.
 	HtlcInterceptor HtlcInterceptor
+
+	// Bolt12Reconstructor reconstructs BOLT 12 invoices from signed
+	// envelopes at HTLC time. When nil, stateless reconstruction is
+	// disabled.
+	Bolt12Reconstructor Bolt12Reconstructor
 }
 
 // htlcReleaseEvent describes an htlc auto-release event. It is used to release
@@ -289,6 +294,11 @@ type invoiceEvent struct {
 	hash    lntypes.Hash
 	invoice *Invoice
 	setID   *[32]byte
+
+	// silentAddIndex is the add index of a row that the registry inserted
+	// without an Open event. When it is set, the event only moves the
+	// add index of the clients and sends no notification.
+	silentAddIndex uint64
 }
 
 // tickAt returns a channel that ticks at the specified time. If the time has
@@ -320,6 +330,12 @@ func (i *InvoiceRegistry) invoiceEventLoop() {
 		// A sub-systems has just modified the invoice state, so we'll
 		// dispatch notifications to all registered clients.
 		case event := <-i.invoiceEvents:
+			if event.silentAddIndex != 0 {
+				i.skipAddIndex(event.silentAddIndex)
+
+				continue
+			}
+
 			// For backwards compatibility, do not notify all
 			// invoice subscribers of cancel and accept events.
 			state := event.invoice.State
@@ -380,6 +396,29 @@ func (i *InvoiceRegistry) dispatchToSingleClients(event *invoiceEvent) {
 		}
 
 		client.notify(event)
+	}
+}
+
+// skipAddIndex moves the add index of each all-invoice client to the given add
+// index when the client is one index behind it. The registry inserts a
+// reconstructed BOLT 12 invoice without an Open event, because the handler
+// already sent one, so without this step the next Open event looks like a
+// missed update. A client with a larger gap keeps it, so a real miss still
+// shows.
+func (i *InvoiceRegistry) skipAddIndex(addIndex uint64) {
+	clients := i.copyClients()
+	for _, client := range clients {
+		select {
+		case <-client.backlogDelivered:
+			// The backlog sets the add index of the client, so wait
+			// for it as the dispatch does.
+		case <-i.quit:
+			return
+		}
+
+		if client.addIndex+1 == addIndex {
+			client.addIndex = addIndex
+		}
 	}
 }
 
@@ -763,6 +802,37 @@ func (i *InvoiceRegistry) cancelSingleHtlc(invoiceRef InvoiceRef,
 		i.notifyHodlSubscribers(resolution)
 	}
 
+	// Clean up reconstructed BOLT 12 invoices after MPP timeout. If all
+	// accepted HTLCs have been canceled and the invoice is still Open,
+	// delete the row instead of leaving it as an orphan. This closes the
+	// residual DoS surface from partial MPP attacks.
+	if invoice.IsBolt12 && invoice.State == ContractOpen {
+		acceptedHTLCs := invoice.HTLCSet(nil, HtlcStateAccepted)
+		if len(acceptedHTLCs) == 0 {
+			log.Debugf("Deleting BOLT 12 invoice with no "+
+				"remaining accepted HTLCs, hash=%v",
+				invoiceRef)
+
+			payAddr := invoice.Terms.PaymentAddr
+			payHash := invoiceRef.PayHash()
+			delRef := InvoiceDeleteRef{
+				PayHash:     *payHash,
+				PayAddr:     &payAddr,
+				AddIndex:    invoice.AddIndex,
+				SettleIndex: invoice.SettleIndex,
+			}
+
+			delErr := i.idb.DeleteInvoice(
+				context.Background(),
+				[]InvoiceDeleteRef{delRef},
+			)
+			if delErr != nil {
+				log.Errorf("Failed to delete BOLT 12 "+
+					"invoice: %v", delErr)
+			}
+		}
+	}
+
 	return nil
 }
 
@@ -943,6 +1013,7 @@ func (i *InvoiceRegistry) NotifyExitHopHtlc(rHash lntypes.Hash,
 		metadata:             payload.Metadata(),
 		pathID:               payload.PathID(),
 		totalAmtMsat:         payload.TotalAmtMsat(),
+		invoiceEnvelope:      payload.InvoiceEnvelope(),
 	}
 
 	switch {
@@ -1035,10 +1106,67 @@ func (i *InvoiceRegistry) notifyExitHopHtlcLocked(
 
 	// Look up the current invoice state to detect replays and provide
 	// existing HTLCs to the interceptor.
+	//
+	// reconstructedBolt12 records that this HTLC triggered a stateless
+	// BOLT 12 reconstruction, so the row can be removed if the interceptor
+	// rejects it.
+	var reconstructedBolt12 bool
 	existingInvoice, err := i.idb.LookupInvoice(
 		context.Background(), invoiceRef,
 	)
 	switch {
+	case (errors.Is(err, ErrInvoiceNotFound) ||
+		errors.Is(err, ErrNoInvoicesCreated) ||
+		errors.Is(err, ErrInvRefEquivocation)) &&
+		ctx.invoiceEnvelope != nil &&
+		ctx.pathID != nil &&
+		i.cfg.Bolt12Reconstructor != nil:
+
+		// Stateless BOLT 12 reconstruction. This runs under
+		// i.Lock(), so concurrent shards for the same payment
+		// hash are serialized. The first shard reconstructs and
+		// INSERTs. Subsequent shards find the row via
+		// LookupInvoice on the normal path above.
+		log.Debugf("Attempting stateless BOLT 12 reconstruction "+
+			"for hash=%v", ctx.hash)
+
+		reconstructed, rErr := i.cfg.Bolt12Reconstructor.
+			ReconstructInvoice(
+				context.Background(), ctx.invoiceEnvelope,
+				*ctx.pathID, ctx.hash,
+			)
+		if rErr != nil {
+			log.Debugf("BOLT 12 reconstruction failed: %v",
+				rErr)
+
+			return NewFailResolution(
+				ctx.circuitKey, ctx.currentHeight,
+				ResultInvoiceNotFound,
+			), nil, nil
+		}
+
+		// First shard: INSERT the reconstructed invoice. The handler
+		// sent the Open event when it issued the invoice, so the insert
+		// sends none. It only moves the add index of the clients past
+		// the new row.
+		addIndex, addErr := i.idb.AddInvoice(
+			context.Background(), reconstructed, ctx.hash,
+		)
+		if addErr != nil {
+			log.Errorf("Failed to insert reconstructed "+
+				"invoice: %v", addErr)
+
+			return NewFailResolution(
+				ctx.circuitKey, ctx.currentHeight,
+				ResultInvoiceNotFound,
+			), nil, nil
+		}
+
+		i.notifySilentAddIndex(addIndex)
+
+		existingInvoice = *reconstructed
+		reconstructedBolt12 = true
+
 	case errors.Is(err, ErrInvoiceNotFound) ||
 		errors.Is(err, ErrNoInvoicesCreated) ||
 		errors.Is(err, ErrInvRefEquivocation):
@@ -1067,12 +1195,39 @@ func (i *InvoiceRegistry) notifyExitHopHtlcLocked(
 		return nil, nil, err
 	}
 
+	// A later HTLC of an open BOLT 12 invoice is refused when its offer
+	// was disabled after the first HTLC arrived. An invoice without an
+	// offer has nothing to disable. The reconstruction above
+	// already checked the offer for the first HTLC. No HTLC of the set
+	// has settled, so the set times out, and the invoice is then removed.
+	if !isReplayed && !reconstructedBolt12 && existingInvoice.IsBolt12 &&
+		len(existingInvoice.OfferHash) > 0 &&
+		existingInvoice.State == ContractOpen &&
+		i.cfg.Bolt12Reconstructor != nil {
+
+		err := i.cfg.Bolt12Reconstructor.CheckOfferActive(
+			context.Background(), existingInvoice.OfferHash,
+		)
+		if err != nil {
+			log.Debugf("Refusing HTLC for BOLT 12 invoice "+
+				"hash=%v: %v", ctx.hash, err)
+
+			return NewFailResolution(
+				ctx.circuitKey, ctx.currentHeight,
+				ResultInvoiceNotOpen,
+			), nil, nil
+		}
+	}
+
 	resolution := replayResolution
 	invoice := &existingInvoice
 	var updateSubscribers bool
+
+	// cancelSet is read after the update as well, to remove a
+	// reconstructed BOLT 12 invoice the interceptor rejected.
+	var cancelSet bool
 	if !isReplayed {
 		setID := (*SetID)(ctx.setID())
-		var cancelSet bool
 
 		// Let the settlement interceptor's client manipulate the
 		// settlement process.
@@ -1358,6 +1513,32 @@ func (i *InvoiceRegistry) notifyExitHopHtlcLocked(
 		i.notifyClients(ctx.hash, invoice, setID)
 	}
 
+	// Clean up reconstructed BOLT 12 invoices that were rejected by the
+	// interceptor. Without this, the INSERT from reconstruction leaves an
+	// orphaned Open-state row that can never settle.
+	if reconstructedBolt12 && cancelSet && invoice != nil &&
+		invoice.State == ContractOpen {
+
+		log.Debugf("Deleting reconstructed BOLT 12 invoice "+
+			"rejected by interceptor, hash=%v", ctx.hash)
+
+		payAddr := invoice.Terms.PaymentAddr
+		delRef := InvoiceDeleteRef{
+			PayHash:     ctx.hash,
+			PayAddr:     &payAddr,
+			AddIndex:    invoice.AddIndex,
+			SettleIndex: invoice.SettleIndex,
+		}
+
+		delErr := i.idb.DeleteInvoice(
+			context.Background(), []InvoiceDeleteRef{delRef},
+		)
+		if delErr != nil {
+			log.Errorf("Failed to delete reconstructed BOLT 12 "+
+				"invoice: %v", delErr)
+		}
+	}
+
 	return resolution, invoiceToExpire, nil
 }
 
@@ -1576,9 +1757,19 @@ func (i *InvoiceRegistry) notifyClients(hash lntypes.Hash,
 	}
 }
 
+// notifySilentAddIndex makes the event loop move the add index of the clients
+// past a row that the registry inserted without an Open event.
+func (i *InvoiceRegistry) notifySilentAddIndex(addIndex uint64) {
+	select {
+	case i.invoiceEvents <- &invoiceEvent{silentAddIndex: addIndex}:
+	case <-i.quit:
+	}
+}
+
 // NotifyNewBolt12Invoice sends an Open event for a new BOLT 12 invoice to the
-// connected subscribers. The invoice has no database row, so a subscriber that
-// connects later does not get the event.
+// connected subscribers. The invoice has no database row until the receiver
+// rebuilds it from the signed envelope when a payment settles, so a subscriber
+// that connects later does not get the event.
 func (i *InvoiceRegistry) NotifyNewBolt12Invoice(hash lntypes.Hash,
 	invoice *Invoice) {
 

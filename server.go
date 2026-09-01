@@ -938,6 +938,15 @@ func newServer(ctx context.Context, cfg *Config, listenAddrs []net.Addr,
 			return nil, err
 		}
 		s.bolt12Replier = replier
+
+		// Wire the stateless BOLT 12 invoice reconstructor into
+		// the invoice registry for settlement-time reconstruction.
+		registryConfig.Bolt12Reconstructor =
+			bolt12handler.NewReconstructor(
+				signer.NodePubKey(), s.offerStore,
+				*s.cfg.ActiveNetParams.GenesisHash,
+				uint16(cfg.Bitcoin.TimeLockDelta),
+			)
 	}
 
 	s.htlcNotifier = htlcswitch.NewHtlcNotifier(time.Now)
