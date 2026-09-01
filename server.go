@@ -30,6 +30,7 @@ import (
 	"github.com/lightningnetwork/lnd/actor"
 	"github.com/lightningnetwork/lnd/aliasmgr"
 	"github.com/lightningnetwork/lnd/autopilot"
+	"github.com/lightningnetwork/lnd/bolt12handler"
 	"github.com/lightningnetwork/lnd/brontide"
 	"github.com/lightningnetwork/lnd/chainio"
 	"github.com/lightningnetwork/lnd/chainreg"
@@ -69,12 +70,14 @@ import (
 	"github.com/lightningnetwork/lnd/lnwire"
 	"github.com/lightningnetwork/lnd/nat"
 	"github.com/lightningnetwork/lnd/netann"
+	"github.com/lightningnetwork/lnd/offers"
 	"github.com/lightningnetwork/lnd/onionmessage"
 	paymentsdb "github.com/lightningnetwork/lnd/payments/db"
 	"github.com/lightningnetwork/lnd/peer"
 	"github.com/lightningnetwork/lnd/peernotifier"
 	"github.com/lightningnetwork/lnd/pool"
 	"github.com/lightningnetwork/lnd/queue"
+	"github.com/lightningnetwork/lnd/record"
 	"github.com/lightningnetwork/lnd/routing"
 	"github.com/lightningnetwork/lnd/routing/localchans"
 	"github.com/lightningnetwork/lnd/routing/route"
@@ -455,6 +458,17 @@ type server struct {
 	// limiting is disabled (e.g. when onion messaging itself is
 	// turned off).
 	onionLimiter onionmessage.IngressLimiter
+
+	// bolt12Handler handles incoming BOLT 12 invoice requests and
+	// generates signed invoices in response.
+	bolt12Handler *bolt12handler.Handler
+
+	// bolt12Replier sends invoice replies via onion messages. Stored
+	// separately for deferred route-finder wiring.
+	bolt12Replier *bolt12handler.ServerOnionReplier
+
+	// offerStore persists and queries BOLT 12 offers.
+	offerStore offers.Store
 
 	// txPublisher is a publisher with fee-bumping capability.
 	txPublisher *sweep.TxPublisher
@@ -850,6 +864,8 @@ func newServer(ctx context.Context, cfg *Config, listenAddrs []net.Addr,
 
 		onionMessageServer: subscribe.NewServer(),
 
+		offerStore: dbs.OfferDB,
+
 		actorSystem: actor.NewActorSystem(),
 
 		tlsManager: tlsManager,
@@ -873,6 +889,21 @@ func newServer(ctx context.Context, cfg *Config, listenAddrs []net.Addr,
 	s.invoices = invoices.NewRegistry(
 		dbs.InvoiceDB, expiryWatcher, &registryConfig,
 	)
+
+	// Initialize the BOLT 12 handler if the offer store is
+	// available (requires native SQL).
+	if s.offerStore != nil {
+		signer := bolt12handler.NewKeyRingSigner(
+			cc.KeyRing, nodeKeyDesc.KeyLocator,
+			nodeKeyECDH.PubKey(),
+		)
+		replier := bolt12handler.NewServerOnionReplier(s)
+		s.bolt12Handler = bolt12handler.NewHandler(
+			s.offerStore, s.invoices, replier, signer,
+			nil, *s.cfg.ActiveNetParams.GenesisHash,
+		)
+		s.bolt12Replier = replier
+	}
 
 	s.htlcNotifier = htlcswitch.NewHtlcNotifier(time.Now)
 
@@ -2321,6 +2352,13 @@ func (s *server) Start(ctx context.Context) error {
 		if err := s.onionMessageServer.Start(); err != nil {
 			startErr = err
 			return
+		}
+
+		// Start the BOLT 12 invoice request handler if
+		// available.
+		if s.bolt12Handler != nil {
+			s.wg.Add(1)
+			go s.bolt12InvoiceRequestLoop()
 		}
 
 		if s.hostAnn != nil {
@@ -4473,6 +4511,73 @@ func (s *server) SubscribeOnionMessages() (*subscribe.Client, error) {
 	return s.onionMessageServer.Subscribe()
 }
 
+// bolt12InvoiceRequestLoop subscribes to onion message updates and
+// dispatches invoice requests (TLV type 64) to the BOLT 12 handler.
+func (s *server) bolt12InvoiceRequestLoop() {
+	defer s.wg.Done()
+
+	client, err := s.onionMessageServer.Subscribe()
+	if err != nil {
+		srvrLog.Errorf("Failed to subscribe to onion messages "+
+			"for BOLT 12 handling: %v", err)
+
+		return
+	}
+	defer client.Cancel()
+
+	for {
+		select {
+		case update, ok := <-client.Updates():
+			if !ok {
+				return
+			}
+
+			msg, isBolt12 := update.(*onionmessage.OnionMessageUpdate)
+			if !isBolt12 {
+				continue
+			}
+
+			// Check for an invoice request payload
+			// (TLV type 64).
+			invreqBytes, hasInvreq := msg.CustomRecords[uint64(lnwire.InvoiceRequestNamespaceType)]
+			if !hasInvreq {
+				continue
+			}
+
+			ctx := context.Background()
+
+			// Convert the reply path from lnwire to sphinx form.
+			// Only pubkey-form introduction nodes are accepted:
+			// resolving the sciddir form needs a channel-graph
+			// lookup that is not wired up yet.
+			var sphinxReplyPath *sphinx.BlindedPath
+			if msg.ReplyPath != nil {
+				var convErr error
+				sphinxReplyPath, convErr =
+					msg.ReplyPath.ToSphinx(nil)
+				if convErr != nil {
+					srvrLog.Warnf("Failed to convert "+
+						"BOLT 12 reply path: %v",
+						convErr)
+
+					continue
+				}
+			}
+
+			if handleErr := s.bolt12Handler.HandleInvoiceRequest(
+				ctx, invreqBytes, sphinxReplyPath,
+			); handleErr != nil {
+				srvrLog.Warnf("Failed to handle BOLT "+
+					"12 invoice request: %v",
+					handleErr)
+			}
+
+		case <-s.quit:
+			return
+		}
+	}
+}
+
 // notifyOpenChannelPeerEvent updates the access manager's maps and then calls
 // the channelNotifier's NotifyOpenChannelEvent.
 func (s *server) notifyOpenChannelPeerEvent(op wire.OutPoint,
@@ -5567,10 +5672,25 @@ func (s *server) SendCustomMessage(ctx context.Context, peerPub [33]byte,
 }
 
 // SendOnionMessage sends a custom message to the peer with the specified
-// pubkey.
-// TODO(gijs): change this message to include path finding.
+// pubkey. If the peer is our own node (self-routing), the message is
+// processed locally through the onion message pipeline instead.
 func (s *server) SendOnionMessage(ctx context.Context, peerPub [33]byte,
 	pathKey *btcec.PublicKey, onion []byte) error {
+
+	msg := lnwire.NewOnionMessage(pathKey, onion)
+
+	// Detect self-routing: when the destination is our own node, process
+	// the onion message locally instead of sending to a peer. This
+	// happens when we are the introduction node of a blinded path (e.g.,
+	// offer_paths or reply paths where the intro node is ourselves).
+	var selfPub [33]byte
+	copy(selfPub[:], s.identityECDH.PubKey().SerializeCompressed())
+	if peerPub == selfPub {
+		srvrLog.Infof("Self-routing onion message, processing " +
+			"locally")
+
+		return s.processOnionMessageLocally(ctx, msg)
+	}
 
 	peer, err := s.FindPeerByPubStr(string(peerPub[:]))
 	if err != nil {
@@ -5589,11 +5709,95 @@ func (s *server) SendOnionMessage(ctx context.Context, peerPub [33]byte,
 		return ctx.Err()
 	}
 
-	msg := lnwire.NewOnionMessage(pathKey, onion)
-
 	// Send the message as low-priority. For now we assume that all
 	// application-defined message are low priority.
 	return peer.SendMessageLazy(true, msg)
+}
+
+// processOnionMessageLocally processes an onion message as if it were received
+// from a peer. This is used for self-routing when we are the introduction
+// node of a blinded path.
+func (s *server) processOnionMessageLocally(ctx context.Context,
+	msg *lnwire.OnionMessage) error {
+
+	resolver := onionmessage.NewGraphNodeResolver(
+		s.graphDB, s.identityECDH.PubKey(),
+	)
+
+	routingActionResult := onionmessage.ProcessOnionMessage(
+		ctx, s.sphinxOnionMsg, resolver, msg,
+	)
+
+	routingAction, err := routingActionResult.Unpack()
+	if err != nil {
+		return fmt.Errorf("process self-routed onion: %w", err)
+	}
+
+	var selfPub2 [33]byte
+	copy(selfPub2[:], s.identityECDH.PubKey().SerializeCompressed())
+
+	// Handle the routing action.
+	payload := fn.ElimEither(routingAction,
+		func(fwd onionmessage.ForwardAction) *lnwire.OnionMessagePayload {
+			srvrLog.Infof("Self-routed onion: forwarding to "+
+				"next hop %x",
+				fwd.NextNodeID.SerializeCompressed()[:6])
+
+			nextMsg := lnwire.NewOnionMessage(
+				fwd.NextPathKey, fwd.NextPacket,
+			)
+
+			var nextPub [33]byte
+			copy(
+				nextPub[:],
+				fwd.NextNodeID.SerializeCompressed(),
+			)
+
+			if sendErr := s.SendToPeer(
+				nextPub, nextMsg,
+			); sendErr != nil {
+				srvrLog.Errorf("Failed to forward "+
+					"self-routed onion: %v", sendErr)
+			}
+
+			return fwd.Payload
+		},
+		func(dlvr onionmessage.DeliverAction) *lnwire.OnionMessagePayload {
+			srvrLog.Infof("Self-routed onion: delivering " +
+				"to self")
+
+			return dlvr.Payload
+		},
+	)
+
+	// Dispatch the update to subscribers.
+	if payload != nil {
+		customRecords := make(record.CustomSet)
+		for _, v := range payload.FinalHopTLVs {
+			customRecords[uint64(v.TLVType)] = v.Value
+		}
+
+		update := &onionmessage.OnionMessageUpdate{
+			Peer:                   selfPub2,
+			OnionBlob:              msg.OnionBlob,
+			CustomRecords:          customRecords,
+			ReplyPath:              payload.ReplyPath,
+			EncryptedRecipientData: payload.EncryptedData,
+		}
+		copy(
+			update.PathKey[:],
+			msg.PathKey.SerializeCompressed(),
+		)
+
+		if sendErr := s.onionMessageServer.SendUpdate(
+			update,
+		); sendErr != nil {
+			return fmt.Errorf("dispatch self-routed update: "+
+				"%w", sendErr)
+		}
+	}
+
+	return nil
 }
 
 // SendToPeer sends an onion message to the peer identified by the given
