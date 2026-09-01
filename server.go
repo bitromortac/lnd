@@ -920,7 +920,7 @@ func newServer(ctx context.Context, cfg *Config, listenAddrs []net.Addr,
 			cc.KeyRing, nodeKeyDesc.KeyLocator,
 			nodeKeyECDH.PubKey(),
 		)
-		replier := bolt12handler.NewServerOnionReplier(s)
+		replier := bolt12handler.NewServerOnionReplier(s, nil)
 
 		// Use the final CLTV delta of BOLT 11 invoices.
 		s.bolt12Handler, err = bolt12handler.NewHandler(

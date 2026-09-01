@@ -62,7 +62,7 @@ func TestServerOnionReplierPathChecks(t *testing.T) {
 			t.Parallel()
 
 			sender := &mockOnionSender{}
-			replier := NewServerOnionReplier(sender)
+			replier := NewServerOnionReplier(sender, nil)
 
 			err := replier.SendInvoiceReply(
 				t.Context(), invoiceBytes, tc.path,
