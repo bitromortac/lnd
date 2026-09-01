@@ -106,8 +106,10 @@ func (h *Handler) HandleInvoiceRequest(ctx context.Context, invreqBytes []byte,
 		return fmt.Errorf("validate against offer: %w", err)
 	}
 
-	// Generate the invoice from the validated request.
-	result, err := GenerateInvoice(ir, h.signer, h.paymentPathBuilder)
+	// Generate the invoice with the offer hash for envelope signing.
+	result, err := GenerateInvoice(
+		ir, h.signer, h.paymentPathBuilder, offer.Hash,
+	)
 	if err != nil {
 		return fmt.Errorf("generate invoice: %w", err)
 	}

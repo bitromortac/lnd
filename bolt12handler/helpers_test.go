@@ -1,7 +1,10 @@
 package bolt12handler
 
 import (
+	"fmt"
 	"testing"
+
+	"github.com/btcsuite/btcd/btcec/v2/schnorr"
 
 	"github.com/btcsuite/btcd/btcec/v2"
 	"github.com/btcsuite/btcd/chaincfg/v2"
@@ -117,4 +120,45 @@ func (s *privKeySigner) NodePubKey() *btcec.PublicKey {
 // NOTE: This is part of the NodeSigner interface.
 func (s *privKeySigner) SignInvoice(inv *bolt12.Invoice) ([64]byte, error) {
 	return bolt12.SignInvoice(inv, s.privKey)
+}
+
+// SignEnvelopeData signs envelope data using a BIP-340 tagged hash:
+// tagged_hash("bolt12/envelope", offerHash || data).
+//
+// NOTE: This is part of the NodeSigner interface.
+func (s *privKeySigner) SignEnvelopeData(offerHash [32]byte,
+	data []byte) ([64]byte, error) {
+
+	digest := envelopeDigest(offerHash, data)
+
+	sig, err := schnorr.Sign(s.privKey, digest[:])
+	if err != nil {
+		return [64]byte{}, fmt.Errorf("sign envelope: %w", err)
+	}
+
+	var result [64]byte
+	copy(result[:], sig.Serialize())
+
+	return result, nil
+}
+
+// VerifyEnvelopeData verifies a tagged-hash signature over envelope data using
+// the node's public key.
+//
+// NOTE: This is part of the NodeSigner interface.
+func (s *privKeySigner) VerifyEnvelopeData(offerHash [32]byte,
+	data []byte, sig [64]byte) error {
+
+	digest := envelopeDigest(offerHash, data)
+
+	parsedSig, err := schnorr.ParseSignature(sig[:])
+	if err != nil {
+		return fmt.Errorf("parse signature: %w", err)
+	}
+
+	if !parsedSig.Verify(digest[:], s.privKey.PubKey()) {
+		return fmt.Errorf("envelope signature verification failed")
+	}
+
+	return nil
 }

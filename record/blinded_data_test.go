@@ -154,7 +154,7 @@ func TestBlindedDataFinalHopEncoding(t *testing.T) {
 			}
 
 			encodedData := NewFinalHopBlindedRouteData(
-				constraints, test.pathID,
+				constraints, test.pathID, nil,
 			)
 
 			encoded, err := EncodeBlindedRouteData(encodedData)

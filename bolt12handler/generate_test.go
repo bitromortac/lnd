@@ -28,7 +28,9 @@ func TestGenerateInvoice_HappyPath(t *testing.T) {
 
 	ir := testInvoiceRequest(t, offer, payerKey, 10000)
 
-	result, err := GenerateInvoice(ir, newPrivKeySigner(nodeKey), nil)
+	result, err := GenerateInvoice(
+		ir, newPrivKeySigner(nodeKey), nil, [32]byte{},
+	)
 	require.NoError(t, err)
 
 	require.NotEmpty(t, result.Encoded)
@@ -147,7 +149,7 @@ func TestGenerateInvoiceAmount(t *testing.T) {
 			}
 
 			result, err := GenerateInvoice(
-				ir, newPrivKeySigner(nodeKey), nil,
+				ir, newPrivKeySigner(nodeKey), nil, [32]byte{},
 			)
 			if tc.wantErr != nil {
 				require.ErrorIs(t, err, tc.wantErr)
@@ -182,7 +184,9 @@ func TestGenerateInvoice_BlindedPath(t *testing.T) {
 
 	ir := testInvoiceRequest(t, offer, payerKey, 10000)
 
-	result, err := GenerateInvoice(ir, newPrivKeySigner(nodeKey), nil)
+	result, err := GenerateInvoice(
+		ir, newPrivKeySigner(nodeKey), nil, [32]byte{},
+	)
 	require.NoError(t, err)
 
 	decoded, err := bolt12.DecodeInvoiceString(
@@ -212,8 +216,8 @@ type fakePathBuilder struct {
 }
 
 // BuildPaymentPaths returns the fixed result and error.
-func (f *fakePathBuilder) BuildPaymentPaths(amountMsat uint64,
-	pathID []byte) (*PaymentPathResult, error) {
+func (f *fakePathBuilder) BuildPaymentPaths(amountMsat uint64, pathID []byte,
+	_ []byte) (*PaymentPathResult, error) {
 
 	f.gotAmount = amountMsat
 	f.gotPathID = pathID
@@ -268,7 +272,7 @@ func TestGenerateInvoicePathBuilder(t *testing.T) {
 			ir := testInvoiceRequest(t, offer, payerKey, 0)
 
 			path, err := buildSingleHopBlindedPath(
-				nodeKey.PubKey(), []byte{1},
+				nodeKey.PubKey(), []byte{1}, nil,
 			)
 			require.NoError(t, err)
 
@@ -285,6 +289,7 @@ func TestGenerateInvoicePathBuilder(t *testing.T) {
 
 			result, err := GenerateInvoice(
 				ir, newPrivKeySigner(nodeKey), builder,
+				[32]byte{},
 			)
 			require.NoError(t, err)
 
