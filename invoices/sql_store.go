@@ -312,6 +312,22 @@ func makeInsertInvoiceParams(invoice *Invoice, paymentHash lntypes.Hash) (
 		params.PaymentAddr = invoice.Terms.PaymentAddr[:]
 	}
 
+	// BOLT 12 fields.
+	params.IsBolt12 = invoice.IsBolt12
+	if invoice.OfferID != nil {
+		params.OfferID = sql.NullInt64{
+			Int64: *invoice.OfferID,
+			Valid: true,
+		}
+	}
+	params.InvoiceNodeID = invoice.InvoiceNodeID
+	params.InvreqPayerID = invoice.InvreqPayerID
+	if invoice.InvreqQuantity > 0 {
+		params.InvreqQuantity = sqldb.SQLInt64(
+			int64(invoice.InvreqQuantity),
+		)
+	}
+
 	return params, nil
 }
 
@@ -1864,12 +1880,24 @@ func unmarshalInvoice(row sqlc.Invoice) (*lntypes.Hash, *Invoice,
 			Value:           lnwire.MilliSatoshi(row.AmountMsat),
 			PaymentAddr:     paymentAddr,
 		},
-		AddIndex:    uint64(row.ID),
-		State:       ContractState(row.State),
-		AmtPaid:     lnwire.MilliSatoshi(row.AmountPaidMsat),
-		Htlcs:       make(map[models.CircuitKey]*InvoiceHTLC),
-		AMPState:    AMPInvoiceState{},
-		HodlInvoice: row.IsHodl,
+		AddIndex:      uint64(row.ID),
+		State:         ContractState(row.State),
+		AmtPaid:       lnwire.MilliSatoshi(row.AmountPaidMsat),
+		Htlcs:         make(map[models.CircuitKey]*InvoiceHTLC),
+		AMPState:      AMPInvoiceState{},
+		HodlInvoice:   row.IsHodl,
+		IsBolt12:      row.IsBolt12,
+		InvoiceNodeID: row.InvoiceNodeID,
+		InvreqPayerID: row.InvreqPayerID,
+	}
+
+	if row.OfferID.Valid {
+		offerID := row.OfferID.Int64
+		invoice.OfferID = &offerID
+	}
+
+	if row.InvreqQuantity.Valid {
+		invoice.InvreqQuantity = uint64(row.InvreqQuantity.Int64)
 	}
 
 	return &hash, invoice, nil

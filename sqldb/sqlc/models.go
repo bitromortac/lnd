@@ -158,6 +158,11 @@ type Invoice struct {
 	IsHodl             bool
 	IsKeysend          bool
 	CreatedAt          time.Time
+	IsBolt12           bool
+	OfferID            sql.NullInt64
+	InvoiceNodeID      []byte
+	InvreqPayerID      []byte
+	InvreqQuantity     sql.NullInt64
 }
 
 type InvoiceEvent struct {
