@@ -444,6 +444,11 @@ type Invoice struct {
 	// invreq_payer_id TLV (type 88) in the invoice request. Nil
 	// for BOLT 11.
 	InvreqPayerID []byte
+
+	// InvreqQuantity is the number of items requested by the payer
+	// (invreq_quantity, TLV type 86). Zero when the offer does not
+	// support a quantity, and for BOLT 11.
+	InvreqQuantity uint64
 }
 
 // HTLCSet returns the set of HTLCs belonging to setID and in the provided
@@ -500,7 +505,10 @@ func (i *Invoice) HTLCSetCompliment(setID *[32]byte,
 func (i *Invoice) IsKeysend() bool {
 	// TODO(positiveblue): look for a more reliable way to tests if
 	// an invoice is keysend.
-	return len(i.PaymentRequest) == 0 && !i.IsAMP()
+	//
+	// A settled BOLT 12 invoice also has no payment request, because the
+	// signed lni1... string is not kept after it is sent to the payer.
+	return len(i.PaymentRequest) == 0 && !i.IsAMP() && !i.IsBolt12
 }
 
 // IsAMP returns true if the invoice is an AMP invoice.
