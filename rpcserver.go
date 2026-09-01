@@ -73,6 +73,7 @@ import (
 	"github.com/lightningnetwork/lnd/lnwallet/types"
 	"github.com/lightningnetwork/lnd/lnwire"
 	"github.com/lightningnetwork/lnd/macaroons"
+	"github.com/lightningnetwork/lnd/offers"
 	"github.com/lightningnetwork/lnd/onionmessage"
 	paymentsdb "github.com/lightningnetwork/lnd/payments/db"
 	"github.com/lightningnetwork/lnd/peer"
@@ -571,6 +572,10 @@ func MainRPCServerPermissions() map[string][]bakery.Op {
 		"/lnrpc.Lightning/SubscribeOnionMessages": {{
 			Entity: "offchain",
 			Action: "read",
+		}},
+		"/lnrpc.Lightning/CreateOffer": {{
+			Entity: "offchain",
+			Action: "write",
 		}},
 		"/lnrpc.Lightning/LookupHtlcResolution": {{
 			Entity: "offchain",
@@ -8855,6 +8860,40 @@ func marshallBlindedPath(p *lnwire.BlindedPath) *lnrpc.BlindedPath {
 
 	return bp
 }
+
+// CreateOffer creates a new BOLT 12 offer, persists it in the offer store,
+// and returns the encoded offer string and offer hash.
+func (r *rpcServer) CreateOffer(ctx context.Context,
+	req *lnrpc.CreateOfferRequest) (*lnrpc.CreateOfferResponse,
+	error) {
+
+	if r.server.offerStore == nil {
+		return nil, errBolt12Disabled
+	}
+
+	result, err := r.server.CreateOffer(
+		ctx, req.Description, req.AmountMsat,
+		req.AbsoluteExpiry, fn.OptionFromPtr(req.QuantityMax),
+	)
+	switch {
+	case errors.Is(err, offers.ErrOfferExists):
+		return nil, status.Error(codes.AlreadyExists, err.Error())
+
+	case err != nil:
+		return nil, err
+	}
+
+	return &lnrpc.CreateOfferResponse{
+		Offer:     result.Encoded,
+		OfferHash: result.Hash[:],
+	}, nil
+}
+
+// errBolt12Disabled is returned by the BOLT 12 RPCs that need the offer store
+// or the node's BOLT 12 signer when the node runs without BOLT 12 offers.
+var errBolt12Disabled = status.Error(codes.FailedPrecondition, "BOLT 12 "+
+	"offers are disabled: start lnd with --protocol.bolt12-offers in a "+
+	"development build with native SQL")
 
 // ListAliases returns the set of all aliases we have ever allocated along with
 // their base SCIDs and possibly a separate confirmed SCID in the case of
