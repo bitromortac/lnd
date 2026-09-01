@@ -64,6 +64,10 @@ func (p *mockPayload) Metadata() []byte {
 	return p.metadata
 }
 
+func (p *mockPayload) InvoiceEnvelope() []byte {
+	return nil
+}
+
 type mockChainNotifier struct {
 	chainntnfs.ChainNotifier
 

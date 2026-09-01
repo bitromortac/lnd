@@ -119,6 +119,10 @@ type Payload interface {
 	// TotalAmtMsat returns the total amount sent to the final hop, as set
 	// by the payee.
 	TotalAmtMsat() lnwire.MilliSatoshi
+
+	// InvoiceEnvelope returns the signed envelope from the blinded path's
+	// final-hop encrypted data. Returns nil for BOLT 11 blinded paths.
+	InvoiceEnvelope() []byte
 }
 
 // InvoiceQuery represents a query to the invoice database. The query allows a
@@ -263,6 +267,18 @@ type HtlcModifyResponse struct {
 // HtlcModifyCallback is a function that is called when an invoice is
 // intercepted by the invoice interceptor.
 type HtlcModifyCallback func(HtlcModifyRequest) (*HtlcModifyResponse, error)
+
+// Bolt12Reconstructor reconstructs a BOLT 12 invoice from a signed envelope
+// at HTLC settlement time. This enables stateless invoice handling where no
+// database row exists until the first HTLC shard arrives.
+type Bolt12Reconstructor interface {
+	// ReconstructInvoice decodes and verifies the signed envelope, validates
+	// the preimage against the payment hash, checks expiry, looks up the
+	// offer, and returns a fully populated Invoice struct ready for INSERT.
+	ReconstructInvoice(ctx context.Context, envelope []byte,
+		pathID chainhash.Hash,
+		paymentHash lntypes.Hash) (*Invoice, error)
+}
 
 // HtlcModifier is an interface that allows an intercept client to register
 // itself as a modifier of HTLCs that are settling an invoice. The client can
