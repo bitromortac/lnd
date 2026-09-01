@@ -202,7 +202,9 @@ func TestValidateInvoiceReply(t *testing.T) {
 			ir, err = bolt12.DecodeInvoiceRequest(irBytes)
 			require.NoError(t, err)
 
-			result, err := GenerateInvoice(ir, tc.signer, nil)
+			result, err := GenerateInvoice(
+				ir, tc.signer, nil, [32]byte{},
+			)
 			require.NoError(t, err)
 
 			invBytes, err := result.Invoice.Encode()

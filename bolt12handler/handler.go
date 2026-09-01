@@ -38,7 +38,8 @@ type OnionReplier interface {
 		replyPath *sphinx.BlindedPath) error
 }
 
-// NodeSigner provides the node's identity key for BOLT 12 invoice signing.
+// NodeSigner provides the node's identity key for BOLT 12 invoice signing and
+// envelope operations.
 type NodeSigner interface {
 	// NodePubKey returns the node's identity public key.
 	NodePubKey() *btcec.PublicKey
@@ -46,6 +47,17 @@ type NodeSigner interface {
 	// SignInvoice signs a BOLT 12 invoice using the node's identity private
 	// key and returns the 64-byte Schnorr signature.
 	SignInvoice(inv *bolt12.Invoice) ([64]byte, error)
+
+	// SignEnvelopeData signs envelope data using a BIP-340 tagged hash:
+	// tagged_hash("bolt12/envelope", offerIDHash || data). Returns the
+	// 64-byte Schnorr signature.
+	SignEnvelopeData(offerIDHash [32]byte,
+		data []byte) ([64]byte, error)
+
+	// VerifyEnvelopeData verifies a tagged-hash signature over envelope
+	// data using the node's public key.
+	VerifyEnvelopeData(offerIDHash [32]byte,
+		data []byte, sig [64]byte) error
 }
 
 // Handler processes incoming BOLT 12 invoice requests and generates signed
@@ -117,8 +129,10 @@ func (h *Handler) HandleInvoiceRequest(ctx context.Context, invreqBytes []byte,
 		return fmt.Errorf("validate against offer: %w", err)
 	}
 
-	// Generate the invoice from the validated request.
-	result, err := GenerateInvoice(ir, h.signer, h.paymentPathBuilder)
+	// Generate the invoice with the offer ID hash for envelope signing.
+	result, err := GenerateInvoice(
+		ir, h.signer, h.paymentPathBuilder, offer.OfferID,
+	)
 	if err != nil {
 		return fmt.Errorf("generate invoice: %w", err)
 	}

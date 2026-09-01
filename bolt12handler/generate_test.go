@@ -25,7 +25,7 @@ func TestGenerateInvoice_HappyPath(t *testing.T) {
 
 	ir := testInvoiceRequest(t, offer, payerKey, 10000)
 
-	result, err := GenerateInvoice(ir, NewPrivKeySigner(nodeKey), nil)
+	result, err := GenerateInvoice(ir, NewPrivKeySigner(nodeKey), nil, [32]byte{})
 	require.NoError(t, err)
 
 	// Verify the result has all required fields.
@@ -100,7 +100,7 @@ func TestGenerateInvoice_NoFixedAmount(t *testing.T) {
 
 	ir := testInvoiceRequest(t, offer, payerKey, 25000)
 
-	result, err := GenerateInvoice(ir, NewPrivKeySigner(nodeKey), nil)
+	result, err := GenerateInvoice(ir, NewPrivKeySigner(nodeKey), nil, [32]byte{})
 	require.NoError(t, err)
 
 	decoded, err := bolt12.DecodeInvoiceString(result.Encoded, time.Now(), testChainHash())
@@ -139,7 +139,7 @@ func TestGenerateInvoice_WithQuantity(t *testing.T) {
 		},
 	)
 
-	result, err := GenerateInvoice(ir, NewPrivKeySigner(nodeKey), nil)
+	result, err := GenerateInvoice(ir, NewPrivKeySigner(nodeKey), nil, [32]byte{})
 	require.NoError(t, err)
 
 	decoded, err := bolt12.DecodeInvoiceString(result.Encoded, time.Now(), testChainHash())
@@ -168,7 +168,7 @@ func TestGenerateInvoice_BlindedPath(t *testing.T) {
 
 	ir := testInvoiceRequest(t, offer, payerKey, 10000)
 
-	result, err := GenerateInvoice(ir, NewPrivKeySigner(nodeKey), nil)
+	result, err := GenerateInvoice(ir, NewPrivKeySigner(nodeKey), nil, [32]byte{})
 	require.NoError(t, err)
 
 	decoded, err := bolt12.DecodeInvoiceString(result.Encoded, time.Now(), testChainHash())
@@ -220,10 +220,10 @@ func TestGenerateInvoice_UniquePreimages(t *testing.T) {
 
 	signer := NewPrivKeySigner(nodeKey)
 
-	r1, err := GenerateInvoice(ir, signer, nil)
+	r1, err := GenerateInvoice(ir, signer, nil, [32]byte{})
 	require.NoError(t, err)
 
-	r2, err := GenerateInvoice(ir, signer, nil)
+	r2, err := GenerateInvoice(ir, signer, nil, [32]byte{})
 	require.NoError(t, err)
 
 	require.NotEqual(t, r1.Preimage, r2.Preimage)
