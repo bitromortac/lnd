@@ -4511,6 +4511,37 @@ func (s *server) SubscribeOnionMessages() (*subscribe.Client, error) {
 	return s.onionMessageServer.Subscribe()
 }
 
+// CreateOffer creates a new BOLT 12 offer, persists it in the offer
+// store, and returns the encoded offer string and offer ID.
+func (s *server) CreateOffer(ctx context.Context,
+	description string, amountMsat uint64,
+	absoluteExpiry uint64,
+	quantityMax *uint64) (*offers.CreateOfferResult, error) {
+
+	if s.offerStore == nil {
+		return nil, fmt.Errorf("offer store not initialized")
+	}
+
+	identity := fn.NewLeft[
+		*btcec.PublicKey, []lnwire.BlindedPath,
+	](s.identityECDH.PubKey())
+
+	// Include the active chain hash so other implementations can
+	// validate the offer on non-mainnet networks. The spec defaults
+	// to Bitcoin mainnet when offer_chains is absent.
+	genesisHash := *s.cfg.ActiveNetParams.GenesisHash
+	chains := [][32]byte{genesisHash}
+
+	return offers.CreateOffer(ctx, s.offerStore, offers.CreateOfferParams{
+		Identity:       identity,
+		Description:    description,
+		AmountMsat:     amountMsat,
+		AbsoluteExpiry: absoluteExpiry,
+		QuantityMax:    quantityMax,
+		Chains:         chains,
+	})
+}
+
 // bolt12InvoiceRequestLoop subscribes to onion message updates and
 // dispatches invoice requests (TLV type 64) to the BOLT 12 handler.
 func (s *server) bolt12InvoiceRequestLoop() {

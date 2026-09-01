@@ -394,6 +394,10 @@ type LightningClient interface {
 	// lncli: `subscribeonion`
 	// SubscribeOnionMessages subscribes to a stream of incoming onion messages.
 	SubscribeOnionMessages(ctx context.Context, in *SubscribeOnionMessagesRequest, opts ...grpc.CallOption) (Lightning_SubscribeOnionMessagesClient, error)
+	// lncli: `createoffer`
+	// CreateOffer creates a new BOLT 12 offer. The offer is persisted in the
+	// offer store and the encoded offer string (lno1...) is returned.
+	CreateOffer(ctx context.Context, in *CreateOfferRequest, opts ...grpc.CallOption) (*CreateOfferResponse, error)
 	// lncli: `listaliases`
 	// ListAliases returns the set of all aliases that have ever existed with
 	// their confirmed SCID (if it exists) and/or the base SCID (in the case of
@@ -1272,6 +1276,15 @@ func (x *lightningSubscribeOnionMessagesClient) Recv() (*OnionMessageUpdate, err
 	return m, nil
 }
 
+func (c *lightningClient) CreateOffer(ctx context.Context, in *CreateOfferRequest, opts ...grpc.CallOption) (*CreateOfferResponse, error) {
+	out := new(CreateOfferResponse)
+	err := c.cc.Invoke(ctx, "/lnrpc.Lightning/CreateOffer", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *lightningClient) ListAliases(ctx context.Context, in *ListAliasesRequest, opts ...grpc.CallOption) (*ListAliasesResponse, error) {
 	out := new(ListAliasesResponse)
 	err := c.cc.Invoke(ctx, "/lnrpc.Lightning/ListAliases", in, out, opts...)
@@ -1670,6 +1683,10 @@ type LightningServer interface {
 	// lncli: `subscribeonion`
 	// SubscribeOnionMessages subscribes to a stream of incoming onion messages.
 	SubscribeOnionMessages(*SubscribeOnionMessagesRequest, Lightning_SubscribeOnionMessagesServer) error
+	// lncli: `createoffer`
+	// CreateOffer creates a new BOLT 12 offer. The offer is persisted in the
+	// offer store and the encoded offer string (lno1...) is returned.
+	CreateOffer(context.Context, *CreateOfferRequest) (*CreateOfferResponse, error)
 	// lncli: `listaliases`
 	// ListAliases returns the set of all aliases that have ever existed with
 	// their confirmed SCID (if it exists) and/or the base SCID (in the case of
@@ -1880,6 +1897,9 @@ func (UnimplementedLightningServer) SendOnionMessage(context.Context, *SendOnion
 }
 func (UnimplementedLightningServer) SubscribeOnionMessages(*SubscribeOnionMessagesRequest, Lightning_SubscribeOnionMessagesServer) error {
 	return status.Errorf(codes.Unimplemented, "method SubscribeOnionMessages not implemented")
+}
+func (UnimplementedLightningServer) CreateOffer(context.Context, *CreateOfferRequest) (*CreateOfferResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method CreateOffer not implemented")
 }
 func (UnimplementedLightningServer) ListAliases(context.Context, *ListAliasesRequest) (*ListAliasesResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ListAliases not implemented")
@@ -3116,6 +3136,24 @@ func (x *lightningSubscribeOnionMessagesServer) Send(m *OnionMessageUpdate) erro
 	return x.ServerStream.SendMsg(m)
 }
 
+func _Lightning_CreateOffer_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CreateOfferRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(LightningServer).CreateOffer(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/lnrpc.Lightning/CreateOffer",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(LightningServer).CreateOffer(ctx, req.(*CreateOfferRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _Lightning_ListAliases_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(ListAliasesRequest)
 	if err := dec(in); err != nil {
@@ -3370,6 +3408,10 @@ var Lightning_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "SendOnionMessage",
 			Handler:    _Lightning_SendOnionMessage_Handler,
+		},
+		{
+			MethodName: "CreateOffer",
+			Handler:    _Lightning_CreateOffer_Handler,
 		},
 		{
 			MethodName: "ListAliases",
