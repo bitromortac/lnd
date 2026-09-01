@@ -1575,6 +1575,15 @@ func (i *InvoiceRegistry) notifyClients(hash lntypes.Hash,
 	}
 }
 
+// NotifyNewBolt12Invoice sends a fire-and-forget notification about a newly
+// generated BOLT 12 invoice to connected subscribers. No database write
+// occurs, so the notification is not replayable to late-joining subscribers.
+func (i *InvoiceRegistry) NotifyNewBolt12Invoice(hash lntypes.Hash,
+	invoice *Invoice) {
+
+	i.notifyClients(hash, invoice, nil)
+}
+
 // invoiceSubscriptionKit defines that are common to both all invoice
 // subscribers and single invoice subscribers.
 type invoiceSubscriptionKit struct {
