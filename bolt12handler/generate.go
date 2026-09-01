@@ -27,13 +27,13 @@ type PaymentPathResult struct {
 }
 
 // PaymentPathBuilder constructs blinded payment paths for a BOLT 12 invoice.
-// The builder receives the invoice amount and a path_id to embed in the final
-// hop's encrypted data.
+// The builder receives the invoice amount, a path_id, and an optional signed
+// envelope to embed in the final hop's encrypted data.
 type PaymentPathBuilder interface {
 	// BuildPaymentPaths returns blinded payment paths suitable for
 	// embedding in a BOLT 12 invoice.
-	BuildPaymentPaths(amountMsat uint64,
-		pathID []byte) (*PaymentPathResult, error)
+	BuildPaymentPaths(amountMsat uint64, pathID []byte,
+		invoiceEnvelope []byte) (*PaymentPathResult, error)
 }
 
 // InvoiceResult contains the output of invoice generation.
@@ -55,13 +55,12 @@ type InvoiceResult struct {
 	PathID [32]byte
 }
 
-// GenerateInvoice creates a BOLT 12 invoice in response to a validated invoice
-// request. It mirrors all non-signature TLV fields from the request (types
-// 0–159), generates a preimage and path_id, constructs blinded payment paths,
-// and signs the invoice. If pathBuilder is nil, a single-hop blinded path is
-// used as fallback.
-func GenerateInvoice(ir *bolt12.InvoiceRequest, signer NodeSigner,
-	pathBuilder PaymentPathBuilder) (*InvoiceResult, error) {
+// GenerateInvoice builds a signed BOLT 12 invoice for a validated invoice
+// request. It returns the invoice with its preimage, payment hash, and path
+// ID. A nil pathBuilder yields a single-hop blinded path.
+func GenerateInvoice(ir *bolt12.InvoiceRequest,
+	signer NodeSigner, pathBuilder PaymentPathBuilder,
+	offerHash [32]byte) (*InvoiceResult, error) {
 
 	// Generate a random preimage and compute the payment hash.
 	var preimage lntypes.Preimage
@@ -76,16 +75,48 @@ func GenerateInvoice(ir *bolt12.InvoiceRequest, signer NodeSigner,
 		return nil, fmt.Errorf("generate path_id: %w", err)
 	}
 
+	// Extract payer ID from the invoice request as the serialised
+	// compressed point, for downstream envelope builders that take []byte.
+	var payerIDBytes []byte
+	ir.InvreqPayerID.WhenSome(
+		func(r tlv.RecordT[tlv.TlvType88, *btcec.PublicKey]) {
+			payerIDBytes = r.Val.SerializeCompressed()
+		},
+	)
+
+	// Build the signed envelope for stateless BOLT 12 settlement.
 	invoiceAmount := computeInvoiceAmount(ir)
+	envData := &InvoiceEnvelopeData{
+		Preimage:  [32]byte(preimage),
+		CreatedAt: uint64(time.Now().Unix()),
+		Amount:    invoiceAmount,
+		Quantity:  getUint64Field(ir.InvreqQuantity),
+	}
+	if len(payerIDBytes) == 33 {
+		copy(envData.PayerID[:], payerIDBytes)
+	}
+
+	envTLVData, err := EncodeEnvelopeData(envData)
+	if err != nil {
+		return nil, fmt.Errorf("encode envelope data: %w", err)
+	}
+
+	envSig, err := signer.SignEnvelopeData(offerHash, envTLVData)
+	if err != nil {
+		return nil, fmt.Errorf("sign envelope: %w", err)
+	}
+
+	envelopeBytes := EncodeSignedEnvelope(&SignedInvoiceEnvelope{
+		Signature: envSig,
+		OfferHash: offerHash,
+		TLVData:   envTLVData,
+	})
 
 	// Build blinded payment paths for the invoice.
-	var (
-		pathResult *PaymentPathResult
-		err        error
-	)
+	var pathResult *PaymentPathResult
 	if pathBuilder != nil {
 		pathResult, err = pathBuilder.BuildPaymentPaths(
-			invoiceAmount, pathID[:],
+			invoiceAmount, pathID[:], envelopeBytes,
 		)
 		if err != nil {
 			log.Debugf("Multi-hop payment path construction "+
@@ -97,7 +128,7 @@ func GenerateInvoice(ir *bolt12.InvoiceRequest, signer NodeSigner,
 	if pathResult == nil {
 		// Fall back to single-hop blinded path.
 		path, pathErr := buildSingleHopBlindedPath(
-			signer.NodePubKey(), pathID[:],
+			signer.NodePubKey(), pathID[:], envelopeBytes,
 		)
 		if pathErr != nil {
 			return nil, fmt.Errorf("build single-hop path: %w",
@@ -234,7 +265,8 @@ func computeInvoiceAmount(ir *bolt12.InvoiceRequest) uint64 {
 // introduction node is the receiver itself, and the single hop's encrypted
 // data contains the path_id for invoice lookup.
 func buildSingleHopBlindedPath(nodePubKey *btcec.PublicKey,
-	pathID []byte) (lnwire.BlindedPath, error) {
+	pathID []byte,
+	invoiceEnvelope []byte) (lnwire.BlindedPath, error) {
 
 	sessionKey, err := btcec.NewPrivateKey()
 	if err != nil {
@@ -242,9 +274,11 @@ func buildSingleHopBlindedPath(nodePubKey *btcec.PublicKey,
 			"key: %w", err)
 	}
 
-	// Encode BlindedRouteData with the path_id so the receiver can match
-	// the incoming HTLC to the invoice.
-	routeData := record.NewFinalHopBlindedRouteData(nil, pathID)
+	// Encode BlindedRouteData with the path_id and optional envelope so the
+	// receiver can match the incoming HTLC and reconstruct the invoice.
+	routeData := record.NewFinalHopBlindedRouteData(
+		nil, pathID, invoiceEnvelope,
+	)
 
 	plainText, err := record.EncodeBlindedRouteData(routeData)
 	if err != nil {
