@@ -79,6 +79,7 @@ import (
 	"github.com/lightningnetwork/lnd/queue"
 	"github.com/lightningnetwork/lnd/record"
 	"github.com/lightningnetwork/lnd/routing"
+	"github.com/lightningnetwork/lnd/routing/blindedpath"
 	"github.com/lightningnetwork/lnd/routing/localchans"
 	"github.com/lightningnetwork/lnd/routing/route"
 	"github.com/lightningnetwork/lnd/subscribe"
@@ -466,6 +467,12 @@ type server struct {
 	// bolt12Replier sends invoice replies via onion messages. Stored
 	// separately for deferred route-finder wiring.
 	bolt12Replier *bolt12handler.ServerOnionReplier
+
+	// sciddirResolver translates BOLT 4 sciddir blinded-path
+	// introduction nodes into pubkeys via the channel graph. Shared
+	// across BOLT 11 + blinded-path RPC paths and every BOLT 12
+	// conversion site that calls (*lnwire.BlindedPath).ToSphinx.
+	sciddirResolver *blindedpath.SciddirResolver
 
 	// offerStore persists and queries BOLT 12 offers.
 	offerStore offers.Store
@@ -888,6 +895,24 @@ func newServer(ctx context.Context, cfg *Config, listenAddrs []net.Addr,
 	)
 	s.invoices = invoices.NewRegistry(
 		dbs.InvoiceDB, expiryWatcher, &registryConfig,
+	)
+
+	// Construct the channel-graph-backed sciddir resolver before any
+	// consumer that calls lnwire.BlindedPath.ToSphinx. This single
+	// instance services BOLT 11 + blinded paths (routerrpc) and every
+	// BOLT 12 conversion site below. The graph fetch takes a context;
+	// callers of the lnwire.IntroNodeResolver interface have no context
+	// to thread, so the resolver runs the lookup with a background
+	// context — graph reads are local and bounded.
+	s.sciddirResolver = blindedpath.NewSciddirResolver(
+		func(chanID uint64) (
+			*models.ChannelEdgeInfo, *models.ChannelEdgePolicy,
+			*models.ChannelEdgePolicy, error) {
+
+			return s.graphDB.FetchChannelEdgesByID(
+				context.Background(), chanID,
+			)
+		},
 	)
 
 	// Initialize the BOLT 12 handler if the offer store is
@@ -4578,14 +4603,14 @@ func (s *server) bolt12InvoiceRequestLoop() {
 			ctx := context.Background()
 
 			// Convert the reply path from lnwire to sphinx form.
-			// Only pubkey-form introduction nodes are accepted:
-			// resolving the sciddir form needs a channel-graph
-			// lookup that is not wired up yet.
+			// The sciddir resolver translates 9-byte
+			// introduction-node references against the local
+			// channel graph; pubkey-form intros bypass it.
 			var sphinxReplyPath *sphinx.BlindedPath
 			if msg.ReplyPath != nil {
 				var convErr error
 				sphinxReplyPath, convErr =
-					msg.ReplyPath.ToSphinx(nil)
+					msg.ReplyPath.ToSphinx(s.sciddirResolver)
 				if convErr != nil {
 					srvrLog.Warnf("Failed to convert "+
 						"BOLT 12 reply path: %v",
