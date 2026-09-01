@@ -207,6 +207,7 @@ func TestValidateInvoiceReply(t *testing.T) {
 			if tc.offer.OfferIssuerID.IsSome() {
 				result, err := GenerateInvoice(
 					testInvoiceConfig(nodeKey), ir,
+					[32]byte{},
 				)
 				require.NoError(t, err)
 				signed = result.Invoice
@@ -243,7 +244,9 @@ func signTestInvoice(t *testing.T, ir *bolt12.InvoiceRequest,
 	amount, err := computeInvoiceAmount(ir)
 	require.NoError(t, err)
 
-	path, err := buildSingleHopBlindedPath(key.PubKey(), make([]byte, 32))
+	path, err := buildSingleHopBlindedPath(
+		key.PubKey(), make([]byte, 32), nil,
+	)
 	require.NoError(t, err)
 
 	pathResult := &PaymentPathResult{
