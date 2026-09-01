@@ -440,6 +440,12 @@ type Invoice struct {
 	// not tied to an offer.
 	OfferID *int64
 
+	// OfferHash is the 32-byte SHA256 hash of the TLV-encoded
+	// offer. The store reads it from the offer through OfferID, and it
+	// is the external identifier exposed in RPC responses. Nil for
+	// BOLT 11 invoices.
+	OfferHash []byte
+
 	// InvreqPayerID is the 33-byte compressed pubkey from the
 	// invreq_payer_id TLV (type 88) in the invoice request. Nil
 	// for BOLT 11.
