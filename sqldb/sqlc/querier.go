@@ -36,6 +36,8 @@ type Querier interface {
 	DeletePruneLogEntriesInRange(ctx context.Context, arg DeletePruneLogEntriesInRangeParams) error
 	DeleteUnconnectedNodes(ctx context.Context) ([][]byte, error)
 	DeleteZombieChannel(ctx context.Context, arg DeleteZombieChannelParams) (sql.Result, error)
+	DisableOffer(ctx context.Context, id int64) (sql.Result, error)
+	EnableOffer(ctx context.Context, id int64) (sql.Result, error)
 	FailAttempt(ctx context.Context, arg FailAttemptParams) error
 	FailPayment(ctx context.Context, arg FailPaymentParams) (sql.Result, error)
 	FetchAMPSubInvoiceHTLCs(ctx context.Context, arg FetchAMPSubInvoiceHTLCsParams) ([]FetchAMPSubInvoiceHTLCsRow, error)
@@ -143,6 +145,8 @@ type Querier interface {
 	GetNodesByBlockHeightRange(ctx context.Context, arg GetNodesByBlockHeightRangeParams) ([]GraphNode, error)
 	GetNodesByIDs(ctx context.Context, ids []int64) ([]GraphNode, error)
 	GetNodesByLastUpdateRange(ctx context.Context, arg GetNodesByLastUpdateRangeParams) ([]GraphNode, error)
+	GetOfferByID(ctx context.Context, id int64) (Offer, error)
+	GetOfferByOfferID(ctx context.Context, offerID []byte) (Offer, error)
 	GetPruneEntriesForHeights(ctx context.Context, heights []int64) ([]GraphPruneLog, error)
 	GetPruneHashByHeight(ctx context.Context, blockHeight int64) ([]byte, error)
 	GetPruneTip(ctx context.Context) (GraphPruneLog, error)
@@ -198,6 +202,7 @@ type Querier interface {
 	// is used because of the constraint in that query that requires a node update
 	// to have a newer last_update than the existing node).
 	InsertNodeMig(ctx context.Context, arg InsertNodeMigParams) (int64, error)
+	InsertOffer(ctx context.Context, arg InsertOfferParams) (int64, error)
 	// Insert a new payment and return its ID.
 	// When creating a payment we don't have a fail reason because we start the
 	// payment process.
@@ -231,6 +236,10 @@ type Querier interface {
 	ListChannelsWithPoliciesPaginated(ctx context.Context, arg ListChannelsWithPoliciesPaginatedParams) ([]ListChannelsWithPoliciesPaginatedRow, error)
 	ListNodeIDsAndPubKeys(ctx context.Context, arg ListNodeIDsAndPubKeysParams) ([]ListNodeIDsAndPubKeysRow, error)
 	ListNodesPaginated(ctx context.Context, arg ListNodesPaginatedParams) ([]GraphNode, error)
+	// ListOffers returns offers ordered by creation time. The caller supplies
+	// Go-side defaults when a filter is not needed:
+	//   include_disabled → true  (include all offers)
+	ListOffers(ctx context.Context, arg ListOffersParams) ([]Offer, error)
 	NextInvoiceSettleIndex(ctx context.Context) (int64, error)
 	NodeExists(ctx context.Context, arg NodeExistsParams) (bool, error)
 	OnAMPSubInvoiceCanceled(ctx context.Context, arg OnAMPSubInvoiceCanceledParams) error
