@@ -48,6 +48,17 @@ type NodeSigner interface {
 	// key and returns the 64-byte Schnorr signature.
 	SignInvoice(inv *bolt12.Invoice) ([64]byte, error)
 
+	// BlindedNodePubKey returns the blinded_node_id this node was given
+	// for pathKey, the route-blinding ephemeral key an onion message
+	// arrived under. An offer that publishes offer_paths rather than
+	// offer_issuer_id binds invoice_node_id to this key.
+	BlindedNodePubKey(pathKey *btcec.PublicKey) (*btcec.PublicKey, error)
+
+	// SignInvoiceBlinded signs a BOLT 12 invoice with the blinded node
+	// key for pathKey and returns the 64-byte Schnorr signature.
+	SignInvoiceBlinded(inv *bolt12.Invoice,
+		pathKey *btcec.PublicKey) ([64]byte, error)
+
 	// SignEnvelopeData signs envelope data using a BIP-340 tagged hash:
 	// tagged_hash("bolt12/envelope", offerIDHash || data). Returns the
 	// 64-byte Schnorr signature.
@@ -98,8 +109,12 @@ func (h *Handler) SetPaymentPathBuilder(b PaymentPathBuilder) {
 
 // HandleInvoiceRequest is the top-level entry point called when an onion
 // message with TLV type 64 (invoice request) arrives.
+//
+// pathKey is the route-blinding ephemeral key the request arrived under, or
+// nil when it reached us unblinded. An offer that published offer_paths needs
+// it to sign the reply under the blinded identity the payer expects.
 func (h *Handler) HandleInvoiceRequest(ctx context.Context, invreqBytes []byte,
-	replyPath *sphinx.BlindedPath) error {
+	replyPath *sphinx.BlindedPath, pathKey *btcec.PublicKey) error {
 
 	// Decode the raw bytes as a BOLT 12 invoice request.
 	ir, err := bolt12.DecodeInvoiceRequest(invreqBytes)
@@ -131,7 +146,7 @@ func (h *Handler) HandleInvoiceRequest(ctx context.Context, invreqBytes []byte,
 
 	// Generate the invoice with the offer ID hash for envelope signing.
 	result, err := GenerateInvoice(
-		ir, h.signer, h.paymentPathBuilder, offer.OfferID,
+		ir, h.signer, h.paymentPathBuilder, offer.OfferID, pathKey,
 	)
 	if err != nil {
 		return fmt.Errorf("generate invoice: %w", err)

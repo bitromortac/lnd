@@ -35,6 +35,35 @@ func (s *PrivKeySigner) SignInvoice(inv *bolt12.Invoice) ([64]byte, error) {
 	return bolt12.SignInvoice(inv, s.privKey)
 }
 
+// BlindedNodePubKey returns the blinded_node_id derived for pathKey.
+//
+// NOTE: This is part of the NodeSigner interface.
+func (s *PrivKeySigner) BlindedNodePubKey(
+	pathKey *btcec.PublicKey) (*btcec.PublicKey, error) {
+
+	blindedKey, err := blindPrivKey(s.privKey, pathKey)
+	if err != nil {
+		return nil, err
+	}
+
+	return blindedKey.PubKey(), nil
+}
+
+// SignInvoiceBlinded signs a BOLT 12 invoice with the blinded node key for
+// pathKey.
+//
+// NOTE: This is part of the NodeSigner interface.
+func (s *PrivKeySigner) SignInvoiceBlinded(inv *bolt12.Invoice,
+	pathKey *btcec.PublicKey) ([64]byte, error) {
+
+	blindedKey, err := blindPrivKey(s.privKey, pathKey)
+	if err != nil {
+		return [64]byte{}, err
+	}
+
+	return bolt12.SignInvoice(inv, blindedKey)
+}
+
 // SignEnvelopeData signs envelope data using a BIP-340 tagged hash:
 // tagged_hash("bolt12/envelope", offerIDHash || data).
 //

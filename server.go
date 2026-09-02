@@ -4746,8 +4746,20 @@ func (s *server) bolt12InvoiceRequestLoop() {
 				}
 			}
 
+			// The path key the message arrived under names the
+			// blinded identity a payer reached us at. An offer
+			// published as offer_paths is signed under that
+			// identity, so the handler needs it to answer.
+			pathKey, keyErr := btcec.ParsePubKey(msg.PathKey[:])
+			if keyErr != nil {
+				srvrLog.Warnf("Failed to parse BOLT 12 "+
+					"onion message path key: %v", keyErr)
+
+				continue
+			}
+
 			if handleErr := s.bolt12Handler.HandleInvoiceRequest(
-				ctx, invreqBytes, sphinxReplyPath,
+				ctx, invreqBytes, sphinxReplyPath, pathKey,
 			); handleErr != nil {
 				srvrLog.Warnf("Failed to handle BOLT "+
 					"12 invoice request: %v",

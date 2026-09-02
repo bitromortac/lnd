@@ -211,7 +211,9 @@ func TestHandleInvoiceRequest_FullFlow(t *testing.T) {
 
 	// Handle the request.
 	ctx := context.Background()
-	err := handler.HandleInvoiceRequest(ctx, invreqBytes, replyPath)
+	err := handler.HandleInvoiceRequest(
+		ctx, invreqBytes, replyPath, nil,
+	)
 	require.NoError(t, err)
 
 	// Verify invoice notification was sent (no DB write).
@@ -272,7 +274,7 @@ func TestHandleInvoiceRequest_NoReplyPath(t *testing.T) {
 	)
 
 	ctx := context.Background()
-	err := handler.HandleInvoiceRequest(ctx, invreqBytes, nil)
+	err := handler.HandleInvoiceRequest(ctx, invreqBytes, nil, nil)
 	require.NoError(t, err)
 
 	// Invoice notification should be sent but no reply.
@@ -307,7 +309,7 @@ func TestHandleInvoiceRequest_OfferNotFound(t *testing.T) {
 	)
 
 	ctx := context.Background()
-	err := handler.HandleInvoiceRequest(ctx, invreqBytes, nil)
+	err := handler.HandleInvoiceRequest(ctx, invreqBytes, nil, nil)
 	require.Error(t, err)
 	require.Contains(t, err.Error(), "lookup offer")
 }

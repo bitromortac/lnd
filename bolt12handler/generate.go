@@ -62,7 +62,8 @@ type InvoiceResult struct {
 // If pathBuilder is nil, a single-hop blinded path is used as fallback.
 func GenerateInvoice(ir *bolt12.InvoiceRequest,
 	signer NodeSigner, pathBuilder PaymentPathBuilder,
-	offerIDHash [32]byte) (*InvoiceResult, error) {
+	offerIDHash [32]byte,
+	pathKey *btcec.PublicKey) (*InvoiceResult, error) {
 
 	// Generate a random preimage and compute the payment hash.
 	var preimage lntypes.Preimage
@@ -154,16 +155,29 @@ func GenerateInvoice(ir *bolt12.InvoiceRequest,
 			"%d path(s)", len(pathResult.Paths))
 	}
 
+	// Choose the identity the invoice is signed under. An offer that
+	// publishes offer_paths instead of offer_issuer_id binds
+	// invoice_node_id to the blinded node the payer reached, so signing
+	// under our identity key would produce an invoice the payer must
+	// reject. The payment path's introduction node stays the real node ID
+	// in both cases, since the payer has to route to it.
+	invoiceNodeID, signInvoice, err := invoiceSigningIdentity(
+		ir, signer, pathKey,
+	)
+	if err != nil {
+		return nil, err
+	}
+
 	// Build the invoice by copying all non-signature raw TLV fields from
 	// the request (types 0-159) for byte-for-byte mirroring, then appending
 	// the invoice-specific fields (types >= 160).
 	inv := buildInvoiceFromRequest(
-		ir, signer.NodePubKey(), paymentHash[:], pathResult,
+		ir, invoiceNodeID, paymentHash[:], pathResult,
 		invoiceAmount,
 	)
 
 	// Sign the invoice over its Merkle root and encode the signed form.
-	signedInv, encoded, err := signAndEncode(inv, signer)
+	signedInv, encoded, err := signAndEncode(inv, signInvoice)
 	if err != nil {
 		return nil, fmt.Errorf("sign invoice: %w", err)
 	}
@@ -175,6 +189,47 @@ func GenerateInvoice(ir *bolt12.InvoiceRequest,
 		PaymentHash: lntypes.Hash(paymentHash),
 		PathID:      pathID,
 	}, nil
+}
+
+// invoiceSigner produces the Schnorr signature for an invoice over its Merkle
+// root. It abstracts which identity signs, so the caller resolves that once
+// and the signing path stays unaware of blinding.
+type invoiceSigner func(inv *bolt12.Invoice) ([64]byte, error)
+
+// invoiceSigningIdentity resolves the key an invoice must be signed under and
+// the invoice_node_id that names it.
+//
+// The spec gives offer_issuer_id precedence: when the offer published one, the
+// payer checks invoice_node_id against it and our identity key is correct.
+// With offer_paths and no offer_issuer_id there is no published identity to
+// sign under, so the binding falls to the blinded_node_id of the path the
+// request arrived on. Refusing to sign when that path key is unknown is
+// deliberate. An invoice signed under the wrong identity is rejected by any
+// conforming payer, so failing here reports the real fault instead of
+// deferring it to a confusing validation error at the payer.
+func invoiceSigningIdentity(ir *bolt12.InvoiceRequest, signer NodeSigner,
+	pathKey *btcec.PublicKey) (*btcec.PublicKey, invoiceSigner, error) {
+
+	if ir.OfferIssuerID.IsSome() {
+		return signer.NodePubKey(), signer.SignInvoice, nil
+	}
+
+	if pathKey == nil {
+		return nil, nil, fmt.Errorf("offer has no offer_issuer_id " +
+			"and the arrival path key is unknown, so " +
+			"invoice_node_id cannot be bound to a blinded node")
+	}
+
+	blindedNodeID, err := signer.BlindedNodePubKey(pathKey)
+	if err != nil {
+		return nil, nil, fmt.Errorf("derive blinded node id: %w", err)
+	}
+
+	signInvoice := func(inv *bolt12.Invoice) ([64]byte, error) {
+		return signer.SignInvoiceBlinded(inv, pathKey)
+	}
+
+	return blindedNodeID, signInvoice, nil
 }
 
 // buildInvoiceFromRequest constructs a bolt12.Invoice by mirroring the request
@@ -337,8 +392,8 @@ func buildSingleHopBlindedPath(nodePubKey *btcec.PublicKey,
 // signAndEncode validates the invoice against the writer requirements, signs
 // it, then encodes it with the signature to produce the final bech32 string.
 // Returns the signed invoice and its encoded form.
-func signAndEncode(inv *bolt12.Invoice, signer NodeSigner) (*bolt12.Invoice,
-	string, error) {
+func signAndEncode(inv *bolt12.Invoice,
+	signInvoice invoiceSigner) (*bolt12.Invoice, string, error) {
 
 	// Encode runs the writer validation, so a malformed invoice fails
 	// here rather than after a key has signed it. The bytes are not
@@ -348,7 +403,7 @@ func signAndEncode(inv *bolt12.Invoice, signer NodeSigner) (*bolt12.Invoice,
 	}
 
 	// Sign the invoice via the node signer.
-	sig, err := signer.SignInvoice(inv)
+	sig, err := signInvoice(inv)
 	if err != nil {
 		return nil, "", fmt.Errorf("sign: %w", err)
 	}
