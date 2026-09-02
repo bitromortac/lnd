@@ -30,7 +30,7 @@ func TestGenerateInvoice_HappyPath(t *testing.T) {
 	ir := testInvoiceRequest(t, offer, payerKey, 10000)
 
 	result, err := GenerateInvoice(
-		testInvoiceConfig(nodeKey), ir, [32]byte{},
+		testInvoiceConfig(nodeKey), ir, [32]byte{}, nil,
 	)
 	require.NoError(t, err)
 
@@ -176,7 +176,7 @@ func TestGenerateInvoiceAmount(t *testing.T) {
 			})
 
 			result, err := GenerateInvoice(
-				testInvoiceConfig(nodeKey), ir, [32]byte{},
+				testInvoiceConfig(nodeKey), ir, [32]byte{}, nil,
 			)
 			if tc.wantErr != nil {
 				require.ErrorIs(t, err, tc.wantErr)
@@ -212,7 +212,7 @@ func TestGenerateInvoice_BlindedPath(t *testing.T) {
 	ir := testInvoiceRequest(t, offer, payerKey, 10000)
 
 	result, err := GenerateInvoice(
-		testInvoiceConfig(nodeKey), ir, [32]byte{},
+		testInvoiceConfig(nodeKey), ir, [32]byte{}, nil,
 	)
 	require.NoError(t, err)
 
@@ -326,7 +326,7 @@ func TestGenerateInvoicePathBuilder(t *testing.T) {
 			cfg := testInvoiceConfig(nodeKey)
 			cfg.PathBuilder = builder
 
-			result, err := GenerateInvoice(cfg, ir, [32]byte{})
+			result, err := GenerateInvoice(cfg, ir, [32]byte{}, nil)
 			require.NoError(t, err)
 
 			require.EqualValues(t, 10000, builder.gotAmount)
@@ -353,27 +353,52 @@ func TestGenerateInvoicePathBuilder(t *testing.T) {
 	}
 }
 
-// TestGenerateInvoiceIssuerID verifies that GenerateInvoice signs an invoice
-// for an offer with offer_issuer_id, and refuses an offer with offer_paths and
-// no offer_issuer_id, because the invoice would carry the node identity key.
+// TestGenerateInvoiceIssuerID verifies the identity that signs the invoice of
+// an offer with offer_paths. With offer_issuer_id it is the node key. Without
+// it, it is the blinded node key of the arrival path.
 func TestGenerateInvoiceIssuerID(t *testing.T) {
 	t.Parallel()
 
+	nodeKey := testKey(t)
+	pathKey := testSeededKey(t, 200).PubKey()
+	blindedID, err := blindedNodeID(NewPrivKeySigner(nodeKey), pathKey)
+	require.NoError(t, err)
+
 	tests := []struct {
-		name     string
-		issuerID bool
-		wantErr  error
+		name      string
+		issuerID  *btcec.PublicKey
+		pathKey   *btcec.PublicKey
+		noBuilder bool
+		wantNode  *btcec.PublicKey
+		wantErr   error
 	}{
 		// lnd never creates an offer with both fields, but another
 		// implementation can. The issuer id then binds the invoice to
 		// the node key, and the paths only route the request.
 		{
 			name:     "offer paths with issuer id",
-			issuerID: true,
+			issuerID: nodeKey.PubKey(),
+			wantNode: nodeKey.PubKey(),
 		},
 		{
-			name:    "offer paths without issuer id",
-			wantErr: errOfferWithoutIssuerID,
+			name:     "issuer id of another key",
+			issuerID: testKey2(t).PubKey(),
+			wantErr:  errIssuerIDMismatch,
+		},
+		{
+			name:     "known path key",
+			pathKey:  pathKey,
+			wantNode: blindedID,
+		},
+		{
+			name:    "unknown path key",
+			wantErr: errNoArrivalPathKey,
+		},
+		{
+			name:      "no multi-hop path",
+			pathKey:   pathKey,
+			noBuilder: true,
+			wantErr:   errNoBlindedOfferPath,
 		},
 	}
 
@@ -381,7 +406,6 @@ func TestGenerateInvoiceIssuerID(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			nodeKey := testKey(t)
 			offer := testOffer(t, nodeKey, 10000)
 
 			path, err := buildSingleHopBlindedPath(
@@ -398,10 +422,15 @@ func TestGenerateInvoiceIssuerID(t *testing.T) {
 					},
 				),
 			)
-			if !tc.issuerID {
-				offer.OfferIssuerID = tlv.OptionalRecordT[
-					tlv.TlvType22, *btcec.PublicKey,
-				]{}
+			offer.OfferIssuerID = tlv.OptionalRecordT[
+				tlv.TlvType22, *btcec.PublicKey,
+			]{}
+			if tc.issuerID != nil {
+				offer.OfferIssuerID = tlv.SomeRecordT(
+					tlv.NewPrimitiveRecord[tlv.TlvType22](
+						tc.issuerID,
+					),
+				)
 			}
 
 			var payerSeed [32]byte
@@ -410,8 +439,22 @@ func TestGenerateInvoiceIssuerID(t *testing.T) {
 
 			ir := testInvoiceRequest(t, offer, payerKey, 0)
 
+			pathResult := &PaymentPathResult{
+				Paths: []lnwire.BlindedPath{path},
+				PayInfos: []bolt12.BlindedPayInfo{{
+					HtlcMaximumMsat: 10000,
+				}},
+			}
+
+			cfg := testInvoiceConfig(nodeKey)
+			if !tc.noBuilder {
+				cfg.PathBuilder = &fakePathBuilder{
+					result: pathResult,
+				}
+			}
+
 			result, err := GenerateInvoice(
-				testInvoiceConfig(nodeKey), ir, [32]byte{},
+				cfg, ir, [32]byte{}, tc.pathKey,
 			)
 			if tc.wantErr != nil {
 				require.ErrorIs(t, err, tc.wantErr)
@@ -420,9 +463,16 @@ func TestGenerateInvoiceIssuerID(t *testing.T) {
 			require.NoError(t, err)
 
 			require.Equal(
-				t, nodeKey.PubKey(),
+				t, tc.wantNode,
 				result.Invoice.InvoiceNodeID.UnwrapOrFailV(t),
 			)
+
+			// The reader checks the signature against
+			// invoice_node_id.
+			_, err = bolt12.DecodeInvoiceString(
+				result.Encoded, time.Now(), testChainHash(),
+			)
+			require.NoError(t, err)
 		})
 	}
 }

@@ -23,12 +23,24 @@ var (
 	// invreq_quantity does not fit in a uint64.
 	errAmountOverflow = errors.New("invoice amount overflows uint64")
 
-	// errOfferWithoutIssuerID is returned for an offer that has
-	// offer_paths but no offer_issuer_id. Its invoice must use the blinded
-	// node id of the arrival path, which GenerateInvoice does not support
-	// yet.
-	errOfferWithoutIssuerID = errors.New("offer without " +
-		"offer_issuer_id is not supported")
+	// errIssuerIDMismatch is returned when offer_issuer_id is not the
+	// node identity key. The payer would reject an invoice signed with the
+	// node key.
+	errIssuerIDMismatch = errors.New("offer_issuer_id is not the node " +
+		"key")
+
+	// errNoArrivalPathKey is returned for an offer without
+	// offer_issuer_id when the key that the request arrived under is
+	// unknown. The invoice must then be signed with the blinded node key
+	// of the arrival path.
+	errNoArrivalPathKey = errors.New("offer without offer_issuer_id " +
+		"and no arrival path key")
+
+	// errNoBlindedOfferPath is returned when no multi-hop payment path
+	// exists for an invoice signed under a blinded node id. The single-hop
+	// fallback names our node, which such an invoice hides.
+	errNoBlindedOfferPath = errors.New("no multi-hop payment path for " +
+		"an invoice signed under a blinded node id")
 
 	// errCurrencyConversion is returned when the invoice amount needs a
 	// conversion from offer_currency to msat. The handler has no exchange
@@ -109,24 +121,28 @@ type InvoiceResult struct {
 }
 
 // GenerateInvoice creates a BOLT 12 invoice in response to a validated invoice
-// request. The invoice mirrors the request, and the node identity key signs
-// it. If cfg.PathBuilder is nil or fails, a single-hop blinded path is used as
-// fallback.
+// request. The invoice mirrors the request. If cfg.PathBuilder is nil or fails,
+// a single-hop blinded path is used as fallback. pathKey is the key that the
+// request arrived under, and an offer without offer_issuer_id needs it.
 func GenerateInvoice(cfg *InvoiceConfig, ir *bolt12.InvoiceRequest,
-	offerHash [32]byte) (*InvoiceResult, error) {
+	offerHash [32]byte,
+	pathKey *btcec.PublicKey) (*InvoiceResult, error) {
 
 	if err := cfg.Validate(); err != nil {
 		return nil, err
 	}
 
-	// The invoice_node_id is always the node identity key. For an offer
-	// without offer_issuer_id, the payer expects the blinded node id of
-	// the arrival path, so such an invoice would fail and show our
-	// identity.
-	//
-	// TODO: Sign with the blinded node id key to support these offers.
-	if ir.OfferPaths.IsSome() && !ir.OfferIssuerID.IsSome() {
-		return nil, errOfferWithoutIssuerID
+	// Choose the identity the invoice is signed under. An offer that
+	// publishes offer_paths instead of offer_issuer_id binds
+	// invoice_node_id to the blinded node the payer reached, so signing
+	// under our identity key would produce an invoice the payer must
+	// reject. The payment path's introduction node stays the real node ID
+	// in both cases, since the payer has to route to it.
+	invoiceNodeID, signingKey, err := invoiceSigningIdentity(
+		ir, cfg.Signer, pathKey,
+	)
+	if err != nil {
+		return nil, err
 	}
 
 	var preimage lntypes.Preimage
@@ -195,11 +211,13 @@ func GenerateInvoice(cfg *InvoiceConfig, ir *bolt12.InvoiceRequest,
 
 	// The single-hop path keeps the offer payable when the builder finds
 	// no path through a peer. It names our node as the introduction node.
-	// This shows nothing new, because GenerateInvoice only answers an
-	// offer that names our node in offer_issuer_id.
-	//
-	// TODO: A blinded offer hides our node, so its invoice must fail here
-	// instead of using the single-hop path.
+	// This shows nothing new when invoice_node_id is our node key. An
+	// invoice signed under a blinded node id hides our node, so it fails
+	// instead.
+	hidesNode := !invoiceNodeID.IsEqual(cfg.Signer.NodePubKey())
+	if pathResult == nil && hidesNode {
+		return nil, errNoBlindedOfferPath
+	}
 	if pathResult == nil {
 		path, pathErr := buildSingleHopBlindedPath(
 			cfg.Signer.NodePubKey(), pathID[:], envelopeBytes,
@@ -233,11 +251,10 @@ func GenerateInvoice(cfg *InvoiceConfig, ir *bolt12.InvoiceRequest,
 	}
 
 	inv := buildInvoiceFromRequest(
-		ir, cfg.Signer.NodePubKey(), paymentHash, pathResult,
-		invoiceAmount, now,
+		ir, invoiceNodeID, paymentHash, pathResult, invoiceAmount, now,
 	)
 
-	signedInv, encoded, err := signAndEncode(inv, cfg.Signer, KeyRef{})
+	signedInv, encoded, err := signAndEncode(inv, cfg.Signer, signingKey)
 	if err != nil {
 		return nil, fmt.Errorf("sign invoice: %w", err)
 	}
@@ -249,6 +266,48 @@ func GenerateInvoice(cfg *InvoiceConfig, ir *bolt12.InvoiceRequest,
 		PaymentHash: paymentHash,
 		PathID:      pathID,
 	}, nil
+}
+
+// invoiceSigningIdentity resolves the key an invoice must be signed under and
+// the invoice_node_id that names it.
+//
+// The spec gives offer_issuer_id precedence: when the offer published one, the
+// payer checks invoice_node_id against it, so it must be our identity key.
+// With offer_paths and no offer_issuer_id there is no published identity to
+// sign under, so the binding falls to the blinded_node_id of the path the
+// request arrived on. Refusing to sign when that path key is unknown is
+// deliberate. An invoice signed under the wrong identity is rejected by any
+// conforming payer, so failing here reports the real fault instead of
+// deferring it to a confusing validation error at the payer.
+func invoiceSigningIdentity(ir *bolt12.InvoiceRequest, signer Signer,
+	pathKey *btcec.PublicKey) (*btcec.PublicKey, KeyRef, error) {
+
+	if ir.OfferIssuerID.IsSome() {
+		issuerID := ir.OfferIssuerID.ValOpt().UnwrapOr(nil)
+		if !issuerID.IsEqual(signer.NodePubKey()) {
+			return nil, KeyRef{}, errIssuerIDMismatch
+		}
+
+		return signer.NodePubKey(), KeyRef{}, nil
+	}
+
+	if pathKey == nil {
+		return nil, KeyRef{}, errNoArrivalPathKey
+	}
+
+	key, err := blindedKeyRef(signer, pathKey)
+	if err != nil {
+		return nil, KeyRef{}, fmt.Errorf("derive blinded node key: %w",
+			err)
+	}
+
+	blindedNodeID, err := signer.PubKey(key)
+	if err != nil {
+		return nil, KeyRef{}, fmt.Errorf("derive blinded node id: %w",
+			err)
+	}
+
+	return blindedNodeID, key, nil
 }
 
 // buildInvoiceFromRequest constructs a bolt12.Invoice by mirroring the request

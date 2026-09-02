@@ -60,7 +60,7 @@ func TestHandleInvoiceRequest_FullFlow(t *testing.T) {
 
 	// Handle the request.
 	ctx := t.Context()
-	err = handler.HandleInvoiceRequest(ctx, invreqBytes, replyPath)
+	err = handler.HandleInvoiceRequest(ctx, invreqBytes, replyPath, nil)
 	require.NoError(t, err)
 
 	// Verify invoice notification was sent (no DB write).
@@ -355,7 +355,7 @@ func TestHandleInvoiceRequestErrors(t *testing.T) {
 				replyPath = nil
 			}
 			err = handler.HandleInvoiceRequest(
-				t.Context(), buf.Bytes(), replyPath,
+				t.Context(), buf.Bytes(), replyPath, nil,
 			)
 			require.ErrorIs(t, err, tc.wantErr)
 
