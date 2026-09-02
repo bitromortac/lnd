@@ -27,7 +27,7 @@ func TestBolt12InvoiceToBlindedPathSet_SingleHop(t *testing.T) {
 	ir, err = bolt12.DecodeInvoiceRequest(irBytes)
 	require.NoError(t, err)
 
-	result, err := GenerateInvoice(ir, signer, nil, [32]byte{})
+	result, err := GenerateInvoice(ir, signer, nil, [32]byte{}, nil)
 	require.NoError(t, err)
 
 	// Round-trip the invoice through encode/decode.
@@ -161,7 +161,7 @@ func TestBuildLightningPayment_Valid(t *testing.T) {
 	ir, err = bolt12.DecodeInvoiceRequest(irBytes)
 	require.NoError(t, err)
 
-	result, err := GenerateInvoice(ir, signer, nil, [32]byte{})
+	result, err := GenerateInvoice(ir, signer, nil, [32]byte{}, nil)
 	require.NoError(t, err)
 
 	invBytes, err := result.Invoice.EncodeSigned()
@@ -216,7 +216,7 @@ func TestBuildLightningPayment_MissingHash(t *testing.T) {
 	ir, err = bolt12.DecodeInvoiceRequest(irBytes)
 	require.NoError(t, err)
 
-	result, err := GenerateInvoice(ir, signer, nil, [32]byte{})
+	result, err := GenerateInvoice(ir, signer, nil, [32]byte{}, nil)
 	require.NoError(t, err)
 
 	invBytes, err := result.Invoice.EncodeSigned()
@@ -258,7 +258,7 @@ func TestBuildLightningPayment_ExplicitFeeLimit(t *testing.T) {
 	ir, err = bolt12.DecodeInvoiceRequest(irBytes)
 	require.NoError(t, err)
 
-	result, err := GenerateInvoice(ir, signer, nil, [32]byte{})
+	result, err := GenerateInvoice(ir, signer, nil, [32]byte{}, nil)
 	require.NoError(t, err)
 
 	invBytes, err := result.Invoice.EncodeSigned()

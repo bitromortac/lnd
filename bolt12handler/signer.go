@@ -18,6 +18,17 @@ type NodeSigner interface {
 	// key and returns the 64-byte Schnorr signature.
 	SignInvoice(inv *bolt12.Invoice) ([64]byte, error)
 
+	// BlindedNodePubKey returns the blinded_node_id this node was given
+	// for pathKey, the route-blinding ephemeral key an onion message
+	// arrived under. An offer that publishes offer_paths rather than
+	// offer_issuer_id binds invoice_node_id to this key.
+	BlindedNodePubKey(pathKey *btcec.PublicKey) (*btcec.PublicKey, error)
+
+	// SignInvoiceBlinded signs a BOLT 12 invoice with the blinded node
+	// key for pathKey and returns the 64-byte Schnorr signature.
+	SignInvoiceBlinded(inv *bolt12.Invoice,
+		pathKey *btcec.PublicKey) ([64]byte, error)
+
 	// SignEnvelopeData signs envelope data using a BIP-340 tagged hash:
 	// tagged_hash("bolt12/envelope", offerHash || data). Returns the
 	// 64-byte Schnorr signature.
@@ -53,6 +64,35 @@ func (s *PrivKeySigner) NodePubKey() *btcec.PublicKey {
 // NOTE: This is part of the NodeSigner interface.
 func (s *PrivKeySigner) SignInvoice(inv *bolt12.Invoice) ([64]byte, error) {
 	return bolt12.SignInvoice(inv, s.privKey)
+}
+
+// BlindedNodePubKey returns the blinded_node_id derived for pathKey.
+//
+// NOTE: This is part of the NodeSigner interface.
+func (s *PrivKeySigner) BlindedNodePubKey(
+	pathKey *btcec.PublicKey) (*btcec.PublicKey, error) {
+
+	blindedKey, err := blindPrivKey(s.privKey, pathKey)
+	if err != nil {
+		return nil, err
+	}
+
+	return blindedKey.PubKey(), nil
+}
+
+// SignInvoiceBlinded signs a BOLT 12 invoice with the blinded node key for
+// pathKey.
+//
+// NOTE: This is part of the NodeSigner interface.
+func (s *PrivKeySigner) SignInvoiceBlinded(inv *bolt12.Invoice,
+	pathKey *btcec.PublicKey) ([64]byte, error) {
+
+	blindedKey, err := blindPrivKey(s.privKey, pathKey)
+	if err != nil {
+		return [64]byte{}, err
+	}
+
+	return bolt12.SignInvoice(inv, blindedKey)
 }
 
 // SignEnvelopeData signs envelope data using a BIP-340 tagged hash:
