@@ -29,7 +29,7 @@ func TestGenerateInvoice_HappyPath(t *testing.T) {
 	ir := testInvoiceRequest(t, offer, payerKey, 10000)
 
 	result, err := GenerateInvoice(
-		ir, newPrivKeySigner(nodeKey), nil, [32]byte{},
+		ir, newPrivKeySigner(nodeKey), nil, [32]byte{}, nil,
 	)
 	require.NoError(t, err)
 
@@ -150,6 +150,7 @@ func TestGenerateInvoiceAmount(t *testing.T) {
 
 			result, err := GenerateInvoice(
 				ir, newPrivKeySigner(nodeKey), nil, [32]byte{},
+				nil,
 			)
 			if tc.wantErr != nil {
 				require.ErrorIs(t, err, tc.wantErr)
@@ -185,7 +186,7 @@ func TestGenerateInvoice_BlindedPath(t *testing.T) {
 	ir := testInvoiceRequest(t, offer, payerKey, 10000)
 
 	result, err := GenerateInvoice(
-		ir, newPrivKeySigner(nodeKey), nil, [32]byte{},
+		ir, newPrivKeySigner(nodeKey), nil, [32]byte{}, nil,
 	)
 	require.NoError(t, err)
 
@@ -289,7 +290,7 @@ func TestGenerateInvoicePathBuilder(t *testing.T) {
 
 			result, err := GenerateInvoice(
 				ir, newPrivKeySigner(nodeKey), builder,
-				[32]byte{},
+				[32]byte{}, nil,
 			)
 			require.NoError(t, err)
 

@@ -76,8 +76,12 @@ func (h *Handler) SetPaymentPathBuilder(b PaymentPathBuilder) {
 
 // HandleInvoiceRequest is the top-level entry point called when an onion
 // message with TLV type 64 (invoice request) arrives.
+//
+// pathKey is the route-blinding ephemeral key the request arrived under, or
+// nil when it reached us unblinded. An offer that published offer_paths needs
+// it to sign the reply under the blinded identity the payer expects.
 func (h *Handler) HandleInvoiceRequest(ctx context.Context, invreqBytes []byte,
-	replyPath *sphinx.BlindedPath) error {
+	replyPath *sphinx.BlindedPath, pathKey *btcec.PublicKey) error {
 
 	// Decode the raw bytes as a BOLT 12 invoice request.
 	ir, err := bolt12.DecodeInvoiceRequest(invreqBytes)
@@ -106,9 +110,15 @@ func (h *Handler) HandleInvoiceRequest(ctx context.Context, invreqBytes []byte,
 		return fmt.Errorf("validate against offer: %w", err)
 	}
 
+	// An offer with offer_paths answers only requests that arrived on one
+	// of those paths.
+	if err := CheckArrivalPath(ir, h.signer, pathKey); err != nil {
+		return err
+	}
+
 	// Generate the invoice with the offer hash for envelope signing.
 	result, err := GenerateInvoice(
-		ir, h.signer, h.paymentPathBuilder, offer.Hash,
+		ir, h.signer, h.paymentPathBuilder, offer.Hash, pathKey,
 	)
 	if err != nil {
 		return fmt.Errorf("generate invoice: %w", err)

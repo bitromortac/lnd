@@ -4,7 +4,9 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/btcsuite/btcd/btcec/v2"
 	"github.com/lightningnetwork/lnd/bolt12"
+	"github.com/lightningnetwork/lnd/lnwire"
 	"github.com/lightningnetwork/lnd/offers"
 )
 
@@ -35,7 +37,57 @@ var (
 	// offer requires it.
 	ErrMissingQuantity = errors.New("invreq_quantity required when offer " +
 		"has quantity_max")
+
+	// ErrWrongArrivalPath is returned when an invoice request for an offer
+	// with offer_paths did not arrive on one of them. The reader must
+	// ignore such a request, so a node never reveals that it also created
+	// another offer.
+	ErrWrongArrivalPath = errors.New("invoice request did not arrive " +
+		"on one of the offer's paths")
 )
+
+// CheckArrivalPath enforces the reader rule that an invoice request for an
+// offer with offer_paths must arrive on one of those paths. pathKey is the key
+// the onion message arrived under at this node.
+//
+// The check needs no state. The final hop of each offer path names this node
+// by a blinded node id, and the node derives the same id from the path key it
+// received only when the message came along that path. Any other path, also
+// one the node made for a different offer, gives a different id.
+//
+// The rule for an offer without offer_paths, that the request must not arrive
+// on a blinded path the node made, needs the path_id of the arrival path, and
+// the onion message layer does not pass it on yet.
+func CheckArrivalPath(ir *bolt12.InvoiceRequest, signer NodeSigner,
+	pathKey *btcec.PublicKey) error {
+
+	if !ir.OfferPaths.IsSome() {
+		return nil
+	}
+	paths := ir.OfferPaths.ValOpt().UnwrapOr(lnwire.BlindedPaths{})
+
+	if pathKey == nil {
+		return ErrWrongArrivalPath
+	}
+
+	arrivalID, err := signer.BlindedNodePubKey(pathKey)
+	if err != nil {
+		return fmt.Errorf("derive arrival blinded node id: %w", err)
+	}
+
+	for _, path := range paths.Paths {
+		if len(path.Hops) == 0 {
+			continue
+		}
+
+		final := path.Hops[len(path.Hops)-1].BlindedNodeID
+		if final != nil && final.IsEqual(arrivalID) {
+			return nil
+		}
+	}
+
+	return ErrWrongArrivalPath
+}
 
 // ValidateInvoiceRequestForOffer performs the offer-specific validation of an
 // invoice request that ValidateInvoiceRequestRead does not cover. It checks
