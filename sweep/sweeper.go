@@ -420,6 +420,12 @@ type UtxoSweeperConfig struct {
 	// NoDeadlineConfTarget is the conf target to use when sweeping
 	// non-time-sensitive outputs.
 	NoDeadlineConfTarget uint32
+
+	// Ready, when non-nil, is closed once the aux components the sweeper
+	// consumes are ready. The sweeper waits on it before attempting a
+	// sweep, so it never reaches into an aux sweeper (e.g. tapd's) before
+	// it is started.
+	Ready <-chan struct{}
 }
 
 // Result is the struct that is pushed through the result channel. Callers can
@@ -716,6 +722,18 @@ func (s *UtxoSweeper) collector() {
 		case beat := <-s.BlockbeatChan:
 			// Update the sweeper to the best height.
 			s.currentHeight = beat.Height()
+
+			// The sweeper depends on the aux components (e.g. tapd's
+			// aux sweeper) to craft sweeps. Wait for them to be
+			// ready before attempting any sweep, so we never reach
+			// into an unstarted aux implementation.
+			if s.cfg.Ready != nil {
+				select {
+				case <-s.cfg.Ready:
+				case <-s.quit:
+					return
+				}
+			}
 
 			// Update the inputs with the latest height.
 			inputs := s.updateSweeperInputs()

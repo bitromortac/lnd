@@ -1306,6 +1306,7 @@ func newServer(ctx context.Context, cfg *Config, listenAddrs []net.Addr,
 		Aggregator:           aggregator,
 		Publisher:            s.txPublisher,
 		NoDeadlineConfTarget: cfg.Sweeper.NoDeadlineConfTarget,
+		Ready: implCfg.AuxComponents.Ready.UnwrapOr(nil),
 	})
 
 	s.utxoNursery = contractcourt.NewUtxoNursery(&contractcourt.NurseryConfig{

@@ -228,6 +228,13 @@ type AuxComponents struct {
 	// implementations to inject and process custom records over channel
 	// related wire messages.
 	AuxChannelNegotiator fn.Option[lnwallet.AuxChannelNegotiator]
+
+	// Ready, when set, is closed once the aux implementation is fully
+	// started. lnd must not invoke any aux component until it is closed.
+	// This lets an in-process aux implementation (e.g. tapd) be started
+	// after lnd's blockbeat would otherwise begin consuming it, without
+	// stalling block processing.
+	Ready fn.Option[<-chan struct{}]
 }
 
 // DefaultWalletImpl is the default implementation of our normal, btcwallet
