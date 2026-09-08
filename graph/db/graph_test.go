@@ -1382,6 +1382,7 @@ func assertEdgeWithNoPoliciesInCache(t *testing.T, g *ChannelGraph,
 		Capacity:     e.Capacity,
 		OutPolicySet: false,
 		InPolicy:     nil,
+		version:      e.Version,
 	}
 	nodeChannels := g.cache.graphCache.nodeChannels
 	require.Contains(
@@ -1399,6 +1400,7 @@ func assertEdgeWithNoPoliciesInCache(t *testing.T, g *ChannelGraph,
 		Capacity:     e.Capacity,
 		OutPolicySet: false,
 		InPolicy:     nil,
+		version:      e.Version,
 	}
 	require.Contains(
 		t, nodeChannels[e.NodeKey2Bytes], e.ChannelID,
@@ -7314,6 +7316,136 @@ func TestPreferredForEachChannel(t *testing.T) {
 	require.Equal(t, lnwire.GossipVersion2, gotShellPref.info.Version)
 	require.Nil(t, gotShellPref.p1)
 	require.Nil(t, gotShellPref.p2)
+}
+
+// cachedChannel returns the cached directed channel that the given node holds
+// for the given SCID, or nil if the cache holds no such channel.
+func cachedChannel(t *testing.T, g *ChannelGraph, node route.Vertex,
+	scid uint64) *DirectedChannel {
+
+	t.Helper()
+
+	var found *DirectedChannel
+	err := g.ForEachNodeDirectedChannel(
+		t.Context(), node, func(c *DirectedChannel) error {
+			if c.ChannelID == scid {
+				found = c
+			}
+
+			return nil
+		}, func() {},
+	)
+	require.NoError(t, err)
+
+	return found
+}
+
+// TestCachePrefersPolicedChannelVersion asserts that the graph cache resolves a
+// channel announced on both gossip versions the same way the preferred lookup
+// tables do: the version that carries policies outranks the bare one. If the
+// two views disagreed, the channel would be routable in RPC output and
+// unroutable for pathfinding.
+func TestCachePrefersPolicedChannelVersion(t *testing.T) {
+	t.Parallel()
+
+	if !isSQLDB {
+		t.Skip("preferred lookup requires SQL backend")
+	}
+
+	ctx := t.Context()
+	graph := MakeTestGraph(t)
+	store := graph.db
+
+	node1Priv, err := btcec.NewPrivateKey()
+	require.NoError(t, err)
+	node2Priv, err := btcec.NewPrivateKey()
+	require.NoError(t, err)
+
+	node1V1 := createNode(t, lnwire.GossipVersion1, node1Priv)
+	node1V2 := createNode(t, lnwire.GossipVersion2, node1Priv)
+	node2V1 := createNode(t, lnwire.GossipVersion1, node2Priv)
+	node2V2 := createNode(t, lnwire.GossipVersion2, node2Priv)
+
+	for _, n := range []*models.Node{node1V1, node1V2, node2V1, node2V2} {
+		require.NoError(t, graph.AddNode(ctx, n))
+	}
+
+	// The channel is announced on v1 with a policy from node 1, and then a
+	// second time on v2 with no policy at all.
+	policedV1, _ := createEdge(
+		lnwire.GossipVersion1, 300, 0, 0, 1, node1V1, node2V1,
+	)
+	require.NoError(t, graph.AddChannelEdge(ctx, policedV1))
+
+	policy := newEdgePolicy(
+		lnwire.GossipVersion1, policedV1.ChannelID, 1000, true,
+	)
+	policy.ToNode = node2V1.PubKeyBytes
+	policy.SigBytes = testSig.Serialize()
+	require.NoError(t, graph.UpdateEdgePolicy(ctx, policy))
+
+	bareV2, _ := createEdge(
+		lnwire.GossipVersion2, 300, 0, 0, 1, node1V2, node2V2,
+	)
+	require.NoError(t, graph.AddChannelEdge(ctx, bareV2))
+
+	// The preferred lookup keeps the policed v1 announcement.
+	var (
+		gotInfo   *models.ChannelEdgeInfo
+		gotPolicy *models.ChannelEdgePolicy
+	)
+	err = store.ForEachChannel(ctx, func(info *models.ChannelEdgeInfo,
+		p1, _ *models.ChannelEdgePolicy) error {
+
+		if info.ChannelID != policedV1.ChannelID {
+			return nil
+		}
+
+		gotInfo, gotPolicy = info, p1
+
+		return nil
+	}, func() {
+		gotInfo, gotPolicy = nil, nil
+	})
+	require.NoError(t, err)
+	require.NotNil(t, gotInfo)
+	require.Equal(t, lnwire.GossipVersion1, gotInfo.Version)
+	require.NotNil(t, gotPolicy)
+
+	// The cache must reach the same verdict, both for the writes applied
+	// while it was live and for a fresh load of the same store.
+	assertPolicyCached := func(g *ChannelGraph) {
+		t.Helper()
+
+		node1Chan := cachedChannel(
+			t, g, node1V1.PubKeyBytes, policedV1.ChannelID,
+		)
+		require.NotNil(t, node1Chan)
+		require.True(
+			t, node1Chan.OutPolicySet, "node 1 lost its outgoing "+
+				"policy to the bare v2 announcement",
+		)
+
+		node2Chan := cachedChannel(
+			t, g, node2V1.PubKeyBytes, policedV1.ChannelID,
+		)
+		require.NotNil(t, node2Chan)
+		require.NotNil(
+			t, node2Chan.InPolicy, "node 2 lost its incoming "+
+				"policy to the bare v2 announcement",
+		)
+	}
+
+	assertPolicyCached(graph)
+
+	reloaded, err := NewChannelGraph(store, WithSyncGraphCachePopulation())
+	require.NoError(t, err)
+	require.NoError(t, reloaded.Start())
+	t.Cleanup(func() {
+		require.NoError(t, reloaded.Stop())
+	})
+
+	assertPolicyCached(reloaded)
 }
 
 // TestDeleteChannelPreferredRecomputation asserts that deleting one gossip

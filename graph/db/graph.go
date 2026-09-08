@@ -238,13 +238,16 @@ func (c *ChannelGraph) populateCache(ctx context.Context) error {
 	for _, v := range []lnwire.GossipVersion{
 		gossipV1, gossipV2,
 	} {
-		// We iterate v1 first, then v2. AddNodeFeatures and AddChannel
-		// overwrite on key collision, so v2 data takes precedence when
-		// both versions exist. For features specifically we
-		// additionally skip empty v2 entries so they don't shadow a
-		// non-empty v1 feature set; this matches the no-cache
-		// FetchNodeFeatures fallback rule that a non-empty
-		// lower-version vector wins over an empty higher-version one.
+		// We iterate v1 first, then v2. AddNodeFeatures overwrites on
+		// key collision, so v2 features take precedence when both
+		// versions exist. For features specifically we additionally
+		// skip empty v2 entries so they don't shadow a non-empty v1
+		// feature set; this matches the no-cache FetchNodeFeatures
+		// fallback rule that a non-empty lower-version vector wins
+		// over an empty higher-version one. AddChannel ranks a
+		// colliding SCID itself, using the same rule as the preferred
+		// lookup tables, so the iteration order here does not decide
+		// which version a channel is cached from.
 		err := c.db.ForEachNodeCacheable(ctx, v,
 			func(node route.Vertex,
 				features *lnwire.FeatureVector) error {
