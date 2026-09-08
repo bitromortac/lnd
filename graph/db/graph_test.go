@@ -7285,3 +7285,89 @@ func TestDeleteChannelPreferredRecomputation(t *testing.T) {
 	))
 	require.Empty(t, fetchVersions())
 }
+
+// TestPreferredIterationPaging asserts that the byte cursors used by the
+// preferred node and channel iteration hand over correctly between pages. Both
+// queries page on a pub key or SCID instead of an integer id, so a cursor bug
+// shows up as a node or channel that is skipped or yielded twice.
+func TestPreferredIterationPaging(t *testing.T) {
+	t.Parallel()
+
+	if !isSQLDB {
+		t.Skip("preferred lookup requires SQL backend")
+	}
+
+	ctx := t.Context()
+	graph := MakeTestGraph(t)
+	store := graph.db
+
+	// Page after two rows so that a handful of rows already spans several
+	// pages.
+	sqlStore, ok := store.(*SQLStore)
+	require.True(t, ok)
+	sqlStore.cfg.QueryCfg.MaxPageSize = 2
+
+	const numNodes = 5
+
+	nodes := make([]*models.Node, 0, numNodes)
+	for i := 0; i < numNodes; i++ {
+		priv, err := btcec.NewPrivateKey()
+		require.NoError(t, err)
+
+		node := createNode(t, lnwire.GossipVersion1, priv)
+		require.NoError(t, graph.AddNode(ctx, node))
+		nodes = append(nodes, node)
+
+		// Announce every second node on v2 as well, so that the
+		// preferred mapping has to deduplicate across a page boundary.
+		if i%2 == 0 {
+			nodeV2 := createNode(t, lnwire.GossipVersion2, priv)
+			require.NoError(t, graph.AddNode(ctx, nodeV2))
+		}
+	}
+
+	// Fan the channels out from the first node so that we get one channel
+	// per remaining node.
+	scids := make(map[uint64]struct{})
+	for i := 1; i < numNodes; i++ {
+		edge, _ := createEdge(
+			lnwire.GossipVersion1, uint32(320+i), 0, 0, uint32(i),
+			nodes[0], nodes[i],
+		)
+		require.NoError(t, graph.AddChannelEdge(ctx, edge))
+		scids[edge.ChannelID] = struct{}{}
+	}
+
+	seenNodes := make(map[route.Vertex]int)
+	err := store.ForEachNode(ctx, func(node *models.Node) error {
+		seenNodes[node.PubKeyBytes]++
+
+		return nil
+	}, func() {
+		clear(seenNodes)
+	})
+	require.NoError(t, err)
+	require.Len(t, seenNodes, numNodes)
+	for pub, count := range seenNodes {
+		require.Equal(t, 1, count, "node %x yielded %d times", pub[:],
+			count)
+	}
+
+	seenChans := make(map[uint64]int)
+	err = store.ForEachChannel(ctx, func(info *models.ChannelEdgeInfo, _,
+		_ *models.ChannelEdgePolicy) error {
+
+		seenChans[info.ChannelID]++
+
+		return nil
+	}, func() {
+		clear(seenChans)
+	})
+	require.NoError(t, err)
+	require.Len(t, seenChans, len(scids))
+	for scid, count := range seenChans {
+		require.Contains(t, scids, scid)
+		require.Equal(t, 1, count, "channel %d yielded %d times", scid,
+			count)
+	}
+}
