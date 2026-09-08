@@ -897,6 +897,14 @@ func (c *ChannelGraph) PruneTip(ctx context.Context) (*chainhash.Hash,
 
 // VersionedGraph is a wrapper around ChannelGraph that will call underlying
 // Store methods with a specific gossip version.
+//
+// NOTE: ForEachNode and ForEachChannel are the exception. They are promoted
+// from the embedded ChannelGraph and iterate every gossip version, yielding
+// the preferred record per pub key or SCID. Both callers that reach them
+// through this wrapper want exactly that: autopilot ranks every candidate node
+// for channel opening, and the discovery bootstrapper dials every known
+// address, so neither has a reason to ignore a v2 announcement. A caller that
+// does need one version must use a version-taking Store method instead.
 type VersionedGraph struct {
 	*ChannelGraph
 	v lnwire.GossipVersion
