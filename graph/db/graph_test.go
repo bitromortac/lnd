@@ -7187,14 +7187,26 @@ func TestPreferredForEachChannel(t *testing.T) {
 	require.Nil(t, gotV1Only.p1)
 	require.Nil(t, gotV1Only.p2)
 
+	// Assert the policy content too, not just its presence, so that a
+	// policy taken from the wrong version or attached to the wrong
+	// direction fails the test.
 	gotPolicyPref := channelsByID[policyPrefV1.ChannelID]
 	require.Equal(t, lnwire.GossipVersion1, gotPolicyPref.info.Version)
 	require.NotNil(t, gotPolicyPref.p1)
+	require.Equal(t, lnwire.GossipVersion1, gotPolicyPref.p1.Version)
+	require.Equal(
+		t, policyOnlyV1.FeeBaseMSat, gotPolicyPref.p1.FeeBaseMSat,
+	)
 	require.Nil(t, gotPolicyPref.p2)
 
 	gotVersionPref := channelsByID[versionPrefV1.ChannelID]
 	require.Equal(t, lnwire.GossipVersion2, gotVersionPref.info.Version)
 	require.NotNil(t, gotVersionPref.p1)
+	require.Equal(t, lnwire.GossipVersion2, gotVersionPref.p1.Version)
+	require.Equal(
+		t, versionPolicyV2.FeeBaseMSat, gotVersionPref.p1.FeeBaseMSat,
+	)
+	require.Nil(t, gotVersionPref.p2)
 
 	gotShellPref := channelsByID[shellPrefV1.ChannelID]
 	require.Equal(t, lnwire.GossipVersion2, gotShellPref.info.Version)
