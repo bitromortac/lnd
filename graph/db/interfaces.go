@@ -159,9 +159,11 @@ type Store interface { //nolint:interfacebloat
 	// ForEachChannel iterates through all channel edges stored within the
 	// graph across all gossip versions, yielding each unique channel
 	// exactly once. The callback receives the edge info and both
-	// directional policies. When both versions are present, v2 is
-	// preferred. Nil pointers are passed for policies that haven't been
-	// advertised.
+	// directional policies. When a channel is present on more than one
+	// version, a version that carries policies outranks a bare one, and
+	// the higher version only breaks a tie between two versions of equal
+	// policy state. Nil pointers are passed for policies that haven't
+	// been advertised.
 	ForEachChannel(ctx context.Context,
 		cb func(*models.ChannelEdgeInfo, *models.ChannelEdgePolicy,
 			*models.ChannelEdgePolicy) error,
