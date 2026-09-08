@@ -7201,3 +7201,87 @@ func TestPreferredForEachChannel(t *testing.T) {
 	require.Nil(t, gotShellPref.p1)
 	require.Nil(t, gotShellPref.p2)
 }
+
+// TestDeleteChannelPreferredRecomputation asserts that deleting one gossip
+// version of a channel leaves the other version reachable through the
+// cross-version iteration. The cascade drops the preferred mapping row along
+// with the deleted version, so the delete path has to re-insert it.
+func TestDeleteChannelPreferredRecomputation(t *testing.T) {
+	t.Parallel()
+
+	if !isSQLDB {
+		t.Skip("preferred lookup requires SQL backend")
+	}
+
+	ctx := t.Context()
+	graph := MakeTestGraph(t)
+	store := graph.db
+
+	node1Priv, err := btcec.NewPrivateKey()
+	require.NoError(t, err)
+	node2Priv, err := btcec.NewPrivateKey()
+	require.NoError(t, err)
+
+	node1V1 := createNode(t, lnwire.GossipVersion1, node1Priv)
+	node1V2 := createNode(t, lnwire.GossipVersion2, node1Priv)
+	node2V1 := createNode(t, lnwire.GossipVersion1, node2Priv)
+	node2V2 := createNode(t, lnwire.GossipVersion2, node2Priv)
+
+	for _, n := range []*models.Node{node1V1, node1V2, node2V1, node2V2} {
+		require.NoError(t, graph.AddNode(ctx, n))
+	}
+
+	chanV1, _ := createEdge(
+		lnwire.GossipVersion1, 310, 0, 0, 1, node1V1, node2V1,
+	)
+	chanV2, _ := createEdge(
+		lnwire.GossipVersion2, 310, 0, 0, 1, node1V2, node2V2,
+	)
+	require.NoError(t, graph.AddChannelEdge(ctx, chanV1))
+	require.NoError(t, graph.AddChannelEdge(ctx, chanV2))
+
+	// fetchVersions returns the gossip version of every channel that the
+	// cross-version iteration yields for our SCID.
+	fetchVersions := func() []lnwire.GossipVersion {
+		var versions []lnwire.GossipVersion
+		err := store.ForEachChannel(
+			ctx, func(info *models.ChannelEdgeInfo, _,
+				_ *models.ChannelEdgePolicy) error {
+
+				if info.ChannelID == chanV1.ChannelID {
+					versions = append(
+						versions, info.Version,
+					)
+				}
+
+				return nil
+			}, func() {
+				versions = nil
+			},
+		)
+		require.NoError(t, err)
+
+		return versions
+	}
+
+	// Both versions exist, so the channel is yielded once, as v2.
+	require.Equal(
+		t, []lnwire.GossipVersion{lnwire.GossipVersion2},
+		fetchVersions(),
+	)
+
+	// After deleting the v2 announcement the v1 one must take over.
+	require.NoError(t, graph.DeleteChannelEdges(
+		ctx, lnwire.GossipVersion2, false, false, chanV2.ChannelID,
+	))
+	require.Equal(
+		t, []lnwire.GossipVersion{lnwire.GossipVersion1},
+		fetchVersions(),
+	)
+
+	// With both versions gone the channel disappears.
+	require.NoError(t, graph.DeleteChannelEdges(
+		ctx, lnwire.GossipVersion1, false, false, chanV1.ChannelID,
+	))
+	require.Empty(t, fetchVersions())
+}
