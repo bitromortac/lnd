@@ -7532,6 +7532,66 @@ func TestDeleteChannelPreferredRecomputation(t *testing.T) {
 	require.Empty(t, fetchVersions())
 }
 
+// TestCacheKeepsFeaturesOverEmptyV2 asserts that a node announced on v2 with
+// no features does not shadow the feature vector it announced on v1. The cache
+// keys features by pub key alone, so both the live write path and a fresh
+// cache load have to rank the two announcements the same way.
+func TestCacheKeepsFeaturesOverEmptyV2(t *testing.T) {
+	t.Parallel()
+
+	if !isSQLDB {
+		t.Skip("cross-version nodes require SQL backend")
+	}
+
+	ctx := t.Context()
+	graph := MakeTestGraph(t)
+	store := graph.db
+
+	nodePriv, err := btcec.NewPrivateKey()
+	require.NoError(t, err)
+
+	nodeV1 := createNode(t, lnwire.GossipVersion1, nodePriv)
+	require.False(t, nodeV1.Features.IsEmpty())
+	require.NoError(t, graph.AddNode(ctx, nodeV1))
+
+	// The same node re-announces on v2 without any feature bits.
+	pubKey := route.NewVertex(nodePriv.PubKey())
+	nodeV2 := models.NewV2Node(pubKey, &models.NodeV2Fields{
+		Signature:       testSig.Serialize(),
+		LastBlockHeight: nextBlockHeight(),
+		Features:        lnwire.NewRawFeatureVector(),
+		Addresses:       testAddrs,
+	})
+	require.True(t, nodeV2.Features.IsEmpty())
+	require.NoError(t, graph.AddNode(ctx, nodeV2))
+
+	assertV1Features := func(g *ChannelGraph) {
+		t.Helper()
+
+		features, err := g.FetchNodeFeatures(ctx, pubKey)
+		require.NoError(t, err)
+		require.False(
+			t, features.IsEmpty(), "empty v2 features shadowed "+
+				"the v1 announcement",
+		)
+		require.Equal(
+			t, nodeV1.Features.RawFeatureVector,
+			features.RawFeatureVector,
+		)
+	}
+
+	assertV1Features(graph)
+
+	reloaded, err := NewChannelGraph(store, WithSyncGraphCachePopulation())
+	require.NoError(t, err)
+	require.NoError(t, reloaded.Start())
+	t.Cleanup(func() {
+		require.NoError(t, reloaded.Stop())
+	})
+
+	assertV1Features(reloaded)
+}
+
 // TestPreferredIterationPaging asserts that the byte cursors used by the
 // preferred node and channel iteration hand over correctly between pages. Both
 // queries page on a pub key or SCID instead of an integer id, so a cursor bug

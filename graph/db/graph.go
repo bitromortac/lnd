@@ -214,6 +214,18 @@ func (c *ChannelGraph) handleTopologySubscriptions(ctx context.Context) {
 	}
 }
 
+// cacheableFeatures reports whether a node's feature vector may overwrite the
+// vector the graph cache already holds for that node. The cache keys features
+// by pub key alone, so an empty v2 vector would otherwise shadow a non-empty
+// v1 one. This is the same rule the no-cache FetchNodeFeatures fallback
+// applies, and every path that feeds the cache must apply it, otherwise the
+// cache disagrees with itself before and after a restart.
+func cacheableFeatures(v lnwire.GossipVersion,
+	features *lnwire.FeatureVector) bool {
+
+	return v != gossipV2 || !features.IsEmpty()
+}
+
 // populateCache loads the entire channel graph into the in-memory graph cache.
 func (c *ChannelGraph) populateCache(ctx context.Context) error {
 	if c.cache == nil {
@@ -240,19 +252,16 @@ func (c *ChannelGraph) populateCache(ctx context.Context) error {
 	} {
 		// We iterate v1 first, then v2. AddNodeFeatures overwrites on
 		// key collision, so v2 features take precedence when both
-		// versions exist. For features specifically we additionally
-		// skip empty v2 entries so they don't shadow a non-empty v1
-		// feature set; this matches the no-cache FetchNodeFeatures
-		// fallback rule that a non-empty lower-version vector wins
-		// over an empty higher-version one. AddChannel ranks a
-		// colliding SCID itself, using the same rule as the preferred
-		// lookup tables, so the iteration order here does not decide
-		// which version a channel is cached from.
+		// versions exist, except for the entries that
+		// cacheableFeatures rejects. AddChannel ranks a colliding SCID
+		// itself, using the same rule as the preferred lookup tables,
+		// so the iteration order here does not decide which version a
+		// channel is cached from.
 		err := c.db.ForEachNodeCacheable(ctx, v,
 			func(node route.Vertex,
 				features *lnwire.FeatureVector) error {
 
-				if v == gossipV2 && features.IsEmpty() {
+				if !cacheableFeatures(v, features) {
 					return nil
 				}
 
@@ -400,7 +409,7 @@ func (c *ChannelGraph) AddNode(ctx context.Context,
 		return err
 	}
 
-	if c.cache != nil {
+	if c.cache != nil && cacheableFeatures(node.Version, node.Features) {
 		c.cache.applyUpdate(func(cache *GraphCache) {
 			cache.AddNodeFeatures(
 				node.PubKeyBytes, node.Features,
