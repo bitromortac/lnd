@@ -4139,7 +4139,6 @@ func TestStressTestChannelGraphAPI(t *testing.T) {
 	)
 
 	for i := 0; i < concurrencyLevel; i++ {
-
 		t.Run(fmt.Sprintf("%d", i), func(t *testing.T) {
 			t.Parallel()
 
@@ -4343,7 +4342,6 @@ func TestFilterChannelRange(t *testing.T) {
 	}
 
 	for _, test := range tests {
-
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
 
