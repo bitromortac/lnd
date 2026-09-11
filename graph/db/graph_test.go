@@ -7383,3 +7383,115 @@ func TestPreferredIterationPaging(t *testing.T) {
 			count)
 	}
 }
+
+// TestPruneAndDisconnectRemoveAllChannelVersions pins the property that the
+// cascade-only maintenance paths rely on. PruneGraph and
+// DisconnectBlockAtHeight match channels by outpoint and by SCID range, and
+// neither query filters on gossip version, so every version of a matched
+// channel is deleted in one statement and the cascade takes the preferred
+// mapping row with it. If either query ever gained a version predicate, the
+// cascade would strand the surviving version: its row would stay in the
+// database while it vanished from every cross-version read.
+func TestPruneAndDisconnectRemoveAllChannelVersions(t *testing.T) {
+	t.Parallel()
+
+	if !isSQLDB {
+		t.Skip("preferred lookup requires SQL backend")
+	}
+
+	ctx := t.Context()
+	graph := MakeTestGraph(t)
+
+	require.NoError(t, graph.SetSourceNode(
+		ctx, createTestVertex(t, lnwire.GossipVersion1),
+	))
+
+	node1Priv, err := btcec.NewPrivateKey()
+	require.NoError(t, err)
+	node2Priv, err := btcec.NewPrivateKey()
+	require.NoError(t, err)
+
+	node1V1 := createNode(t, lnwire.GossipVersion1, node1Priv)
+	node1V2 := createNode(t, lnwire.GossipVersion2, node1Priv)
+	node2V1 := createNode(t, lnwire.GossipVersion1, node2Priv)
+	node2V2 := createNode(t, lnwire.GossipVersion2, node2Priv)
+
+	for _, n := range []*models.Node{node1V1, node1V2, node2V1, node2V2} {
+		require.NoError(t, graph.AddNode(ctx, n))
+	}
+
+	// Both channels are announced under both gossip versions, so each SCID
+	// owns two channel rows and one preferred mapping row.
+	prunedV1, _ := createEdge(
+		lnwire.GossipVersion1, 201, 0, 0, 1, node1V1, node2V1,
+	)
+	prunedV2, _ := createEdge(
+		lnwire.GossipVersion2, 201, 0, 0, 1, node1V2, node2V2,
+	)
+	disconnectedV1, _ := createEdge(
+		lnwire.GossipVersion1, 202, 0, 0, 2, node1V1, node2V1,
+	)
+	disconnectedV2, _ := createEdge(
+		lnwire.GossipVersion2, 202, 0, 0, 2, node1V2, node2V2,
+	)
+	for _, e := range []*models.ChannelEdgeInfo{
+		prunedV1, prunedV2, disconnectedV1, disconnectedV2,
+	} {
+		require.NoError(t, graph.AddChannelEdge(ctx, e))
+	}
+
+	// assertGone checks both halves of the invariant: the SCID is absent
+	// from the cross-version iteration, which reads through the preferred
+	// mapping, and no channel row survives under either version.
+	assertGone := func(chanID uint64) {
+		t.Helper()
+
+		var seen bool
+		err := graph.db.ForEachChannel(
+			ctx, func(info *models.ChannelEdgeInfo, _,
+				_ *models.ChannelEdgePolicy) error {
+
+				if info.ChannelID == chanID {
+					seen = true
+				}
+
+				return nil
+			}, func() { seen = false },
+		)
+		require.NoError(t, err)
+		require.False(t, seen, "channel still yielded after delete")
+
+		for _, v := range []lnwire.GossipVersion{
+			lnwire.GossipVersion1, lnwire.GossipVersion2,
+		} {
+			has, _, err := graph.HasChannelEdge(ctx, v, chanID)
+			require.NoError(t, err)
+			require.Falsef(
+				t, has, "%v channel row survived the delete "+
+					"that dropped its preferred mapping", v,
+			)
+		}
+	}
+
+	// Seed the prune log so that DisconnectBlockAtHeight has something to
+	// roll back later on.
+	var blockHash chainhash.Hash
+	copy(blockHash[:], bytes.Repeat([]byte{1}, 32))
+	_, err = graph.PruneGraph(ctx, nil, &blockHash, 200)
+	require.NoError(t, err)
+
+	// Spending the funding outpoint must take both versions with it.
+	var blockHash2 chainhash.Hash
+	copy(blockHash2[:], bytes.Repeat([]byte{2}, 32))
+	pruned, err := graph.PruneGraph(
+		ctx, []*wire.OutPoint{&prunedV1.ChannelPoint}, &blockHash2, 203,
+	)
+	require.NoError(t, err)
+	require.NotEmpty(t, pruned)
+	assertGone(prunedV1.ChannelID)
+
+	// Disconnecting the block that funded the channel must do the same.
+	_, err = graph.DisconnectBlockAtHeight(ctx, 202)
+	require.NoError(t, err)
+	assertGone(disconnectedV1.ChannelID)
+}
