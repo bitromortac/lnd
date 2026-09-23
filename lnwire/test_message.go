@@ -146,8 +146,8 @@ func (a *AnnounceSignatures2) RandTestMessage(t *rapid.T) Message {
 		PartialSignature: tlv.NewRecordT[tlv.TlvType4, PartialSig](
 			*pSig,
 		),
-		FundingTxID: tlv.NewPrimitiveRecord[tlv.TlvType6, [32]byte](
-			[32]byte(fundingTxID),
+		FundingTxID: tlv.NewPrimitiveRecord[tlv.TlvType6](
+			fundingTxID,
 		),
 		ExtraSignedFields: make(map[uint64][]byte),
 	}
