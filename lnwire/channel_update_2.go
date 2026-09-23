@@ -33,9 +33,8 @@ type ChannelUpdate2 struct {
 	// ShortChannelID identifies the channel and the side of it that sent
 	// this update. It is BOLT 1's `sciddir_or_pubkey` type constrained to
 	// the `sciddir` form: 9 wire bytes of `<dirbyte><scid>`, where the
-	// direction byte is `0` for `node_id_1` and `1` for `node_id_2`. The
-	// previous separate `second_peer` flag TLV at type 8 is no longer
-	// emitted; its information is now carried by the direction byte.
+	// direction byte is `0` for `node_id_1` and `1` for `node_id_2`. It is
+	// the only field that says which side sent the update.
 	ShortChannelID tlv.RecordT[tlv.TlvType2, Sciddir]
 
 	// BlockHeight allows ordering in the case of multiple announcements. We
