@@ -123,8 +123,9 @@ func (c *ChannelUpdate2) Decode(r io.Reader, _ uint32) error {
 	typeMap, err := tlvRecords.ExtractRecords(
 		&chainHash, sciddirRecord(&c.ShortChannelID), &c.BlockHeight,
 		&c.DisabledFlags,
-		&c.CLTVExpiryDelta, &c.HTLCMinimumMsat,
-		&c.HTLCMaximumMsat, truncatedUint32Record(&c.FeeBaseMsat),
+		&c.CLTVExpiryDelta, truncatedUint64Record(&c.HTLCMinimumMsat),
+		truncatedUint64Record(&c.HTLCMaximumMsat),
+		truncatedUint32Record(&c.FeeBaseMsat),
 		truncatedUint32Record(&c.FeeProportionalMillionths),
 		truncatedUint32Record(&c.InboundFeeBaseMsat),
 		truncatedUint32Record(&c.InboundFeeProportionalMillionths),
@@ -221,10 +222,15 @@ func (c *ChannelUpdate2) AllRecords() []tlv.Record {
 	}
 
 	if c.HTLCMinimumMsat.Val != defaultHtlcMinMsat {
-		recordProducers = append(recordProducers, &c.HTLCMinimumMsat)
+		recordProducers = append(
+			recordProducers,
+			truncatedUint64Record(&c.HTLCMinimumMsat),
+		)
 	}
 
-	recordProducers = append(recordProducers, &c.HTLCMaximumMsat)
+	recordProducers = append(
+		recordProducers, truncatedUint64Record(&c.HTLCMaximumMsat),
+	)
 
 	if c.FeeBaseMsat.Val != defaultFeeBaseMsat {
 		recordProducers = append(

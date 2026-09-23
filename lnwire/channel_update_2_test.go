@@ -160,14 +160,14 @@ func TestChanUpdate2EncodeDecode(t *testing.T) {
 		0x0, 0x10, // value.
 
 		// HTLCMinimumMsat record.
-		0xc,                        // type.
-		0x5,                        // length.
-		0xfe, 0x0, 0xf, 0x42, 0x40, // value (BigSize: 1_000_000).
+		0xc,             // type.
+		0x3,             // length.
+		0xf, 0x42, 0x40, // value (tu64: 1_000_000).
 
 		// HTLCMaximumMsat record.
-		0xe,                        // type.
-		0x5,                        // length.
-		0xfe, 0x0, 0xf, 0x42, 0x40, // value (BigSize: 1_000_000).
+		0xe,             // type.
+		0x3,             // length.
+		0xf, 0x42, 0x40, // value (tu64: 1_000_000).
 
 		// FeeBaseMsat record.
 		0x10,     // type.
