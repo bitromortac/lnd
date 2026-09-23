@@ -55,7 +55,7 @@ func TestChanUpdate2FeeEncoding(t *testing.T) {
 
 				data, err := EncodeRecords(tlv.MapToRecords(
 					map[uint64][]byte{
-						2:   make([]byte, scidLen),
+						2:   make([]byte, sciddirLen),
 						4:   make([]byte, 4),
 						240: make([]byte, 64),
 						typ: test.raw,
