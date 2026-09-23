@@ -76,13 +76,11 @@ type ChannelUpdate2 struct {
 	// node for HTLCs forwarded *in* via this channel, regardless of which
 	// channel they are forwarded out on. Default 0. Positive-only: this
 	// version of gossip does not support negative inbound fees.
-	// The wire value uses truncated uint32 encoding.
 	InboundFeeBaseMsat tlv.RecordT[tlv.TlvType20, uint32]
 
 	// InboundFeeProportionalMillionths is the proportional inbound fee (in
 	// millionths of a satoshi) added by this node per transferred satoshi
 	// for HTLCs forwarded *in* via this channel. Default 0. Positive-only.
-	// The wire value uses truncated uint32 encoding.
 	InboundFeeProportionalMillionths tlv.RecordT[tlv.TlvType22, uint32]
 
 	// Signature is used to validate the announced data and prove the
