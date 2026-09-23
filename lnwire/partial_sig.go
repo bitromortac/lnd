@@ -1,6 +1,7 @@
 package lnwire
 
 import (
+	"fmt"
 	"io"
 
 	"github.com/btcsuite/btcd/btcec/v2"
@@ -327,8 +328,17 @@ func announcementSigPairDecoder(r io.Reader, val interface{}, buf *[8]byte,
 		return err
 	}
 
-	v.Node.SetBytes(&nodeBytes)
-	v.Bitcoin.SetBytes(&bitcoinBytes)
+	// A partial signature must be below the curve order. BIP-327 rejects
+	// one that is not, and so does musig2.PartialSignature.Decode. Without
+	// the check, SetBytes silently reduces it mod n.
+	if v.Node.SetBytes(&nodeBytes) != 0 {
+		return fmt.Errorf("node partial signature: %w",
+			musig2.ErrPartialSigInvalid)
+	}
+	if v.Bitcoin.SetBytes(&bitcoinBytes) != 0 {
+		return fmt.Errorf("bitcoin partial signature: %w",
+			musig2.ErrPartialSigInvalid)
+	}
 
 	return nil
 }
