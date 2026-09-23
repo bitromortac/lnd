@@ -2,9 +2,11 @@ package lnwire
 
 import (
 	"bytes"
+	"net"
 	"testing"
 
 	"github.com/lightningnetwork/lnd/tlv"
+	"github.com/lightningnetwork/lnd/tor"
 	"github.com/stretchr/testify/require"
 )
 
@@ -118,4 +120,67 @@ func TestNodeAnn2EncodeDecode(t *testing.T) {
 	// The re-encoded bytes should be exactly the same as the original raw
 	// bytes.
 	require.Equal(t, rawBytes, b.Bytes())
+}
+
+// TestNodeAnn2AddressesIgnorePortZero tests that an address with a zero port,
+// or a DNS entry with an invalid hostname, drops only that address. The
+// message must still round-trip byte for byte, because the signature digest
+// is rebuilt from the decoded records.
+func TestNodeAnn2AddressesIgnorePortZero(t *testing.T) {
+	t.Parallel()
+
+	onion := tor.Base32Encoding.EncodeToString(make([]byte, 35)) +
+		tor.OnionSuffix
+
+	var (
+		ip4 = &net.TCPAddr{IP: net.IPv4(10, 0, 0, 1).To4(), Port: 9735}
+		ip6 = &net.TCPAddr{IP: net.ParseIP("2001:db8::1"), Port: 9735}
+		onn = &tor.OnionAddr{OnionService: onion, Port: 9735}
+		dns = &DNSAddress{Hostname: "example.com", Port: 9735}
+	)
+
+	// Each ip list reuses one IP for both of its entries, so that only
+	// the port tells them apart. The ip decoders share one buffer across
+	// entries, which is a known issue this test does not cover.
+	msg := &NodeAnnouncement2{}
+	msg.Signature.Val = testSchnorrSig
+	msg.IPV4Addrs = tlv.SomeRecordT(tlv.NewRecordT[tlv.TlvType5](
+		IPV4Addrs{
+			ip4,
+			{IP: net.IPv4(10, 0, 0, 1).To4(), Port: 0},
+		},
+	))
+	msg.IPV6Addrs = tlv.SomeRecordT(tlv.NewRecordT[tlv.TlvType7](
+		IPV6Addrs{
+			{IP: net.ParseIP("2001:db8::1"), Port: 0},
+			ip6,
+		},
+	))
+	msg.TorV3Addrs = tlv.SomeRecordT(tlv.NewRecordT[tlv.TlvType9](
+		TorV3Addrs{
+			onn,
+			{OnionService: onion, Port: 0},
+		},
+	))
+	msg.DNSHostNames = tlv.SomeRecordT(tlv.NewRecordT[tlv.TlvType11](
+		DNSAddrs{
+			{Hostname: "example.org", Port: 0},
+			{Hostname: "bad_host", Port: 9735},
+			dns,
+		},
+	))
+
+	// The codec keeps every entry, including the unusable ones.
+	var b bytes.Buffer
+	require.NoError(t, msg.Encode(&b, 0))
+
+	var decoded NodeAnnouncement2
+	require.NoError(t, decoded.Decode(bytes.NewReader(b.Bytes()), 0))
+
+	var reencoded bytes.Buffer
+	require.NoError(t, decoded.Encode(&reencoded, 0))
+	require.Equal(t, b.Bytes(), reencoded.Bytes())
+
+	// Only the usable addresses remain, in field order.
+	require.Equal(t, []net.Addr{ip4, ip6, onn, dns}, decoded.Addresses())
 }
