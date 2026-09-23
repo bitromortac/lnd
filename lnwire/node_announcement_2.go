@@ -223,6 +223,57 @@ func (n *NodeAnnouncement2) NodeFeatures() *FeatureVector {
 	return NewFeatureVector(&n.Features.Val, Features)
 }
 
+// Addresses returns the addresses that the node can be reached at, with every
+// unusable entry left out. An entry with a zero port is unusable, and so is a
+// DNS entry whose hostname fails ValidateDNSAddr. BOLT 7 tells a receiver to
+// ignore such an address and keep the rest of the announcement, so a
+// consumer uses this method rather than the raw address fields.
+//
+// The filter cannot live in the codec. The address fields are in the signed
+// range, and the signature digest is rebuilt by re-encoding the decoded
+// records, so the codec has to round-trip every entry. For the same reason
+// the codec does not enforce the sender rule that a node must not announce a
+// zero port. That rule belongs where lnd builds its own announcement.
+func (n *NodeAnnouncement2) Addresses() []net.Addr {
+	var addrs []net.Addr
+
+	n.IPV4Addrs.WhenSome(func(r tlv.RecordT[tlv.TlvType5, IPV4Addrs]) {
+		for _, addr := range r.Val {
+			if addr.Port != 0 {
+				addrs = append(addrs, addr)
+			}
+		}
+	})
+
+	n.IPV6Addrs.WhenSome(func(r tlv.RecordT[tlv.TlvType7, IPV6Addrs]) {
+		for _, addr := range r.Val {
+			if addr.Port != 0 {
+				addrs = append(addrs, addr)
+			}
+		}
+	})
+
+	n.TorV3Addrs.WhenSome(func(r tlv.RecordT[tlv.TlvType9, TorV3Addrs]) {
+		for _, addr := range r.Val {
+			if addr.Port != 0 {
+				addrs = append(addrs, addr)
+			}
+		}
+	})
+
+	n.DNSHostNames.WhenSome(func(r tlv.RecordT[tlv.TlvType11, DNSAddrs]) {
+		for _, addr := range r.Val {
+			// ValidateDNSAddr also rejects a zero port.
+			err := ValidateDNSAddr(addr.Hostname, addr.Port)
+			if err == nil {
+				addrs = append(addrs, addr)
+			}
+		}
+	})
+
+	return addrs
+}
+
 // TimestampDesc returns a human-readable description of the timestamp of the
 // announcement.
 //
@@ -546,11 +597,6 @@ func (a *TorV3Addrs) Record() tlv.Record {
 func torV3AddrsEncoder(w io.Writer, val interface{}, _ *[8]byte) error {
 	if v, ok := val.(*TorV3Addrs); ok {
 		for _, addr := range *v {
-			if addr.Port == 0 {
-				return fmt.Errorf("tor_v3_address port " +
-					"must not be 0")
-			}
-
 			encodedHostLen := tor.V3Len - tor.OnionSuffixLen
 			host, err := tor.Base32Encoding.DecodeString(
 				addr.OnionService[:encodedHostLen],
@@ -615,10 +661,6 @@ func torV3AddrsDecoder(r io.Reader, val interface{}, _ *[8]byte,
 			}
 
 			port := int(binary.BigEndian.Uint16(p[:]))
-			if port == 0 {
-				return fmt.Errorf("tor_v3_address port " +
-					"must not be 0")
-			}
 			addrs = append(addrs, &tor.OnionAddr{
 				OnionService: onionService,
 				Port:         port,
