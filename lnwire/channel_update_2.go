@@ -65,12 +65,11 @@ type ChannelUpdate2 struct {
 
 	// FeeBaseMsat is the base fee that must be used for incoming HTLC's to
 	// this particular channel. This value will be tacked onto the required
-	// for a payment independent of the size of the payment. The wire value
-	// uses truncated uint32 encoding.
+	// for a payment independent of the size of the payment.
 	FeeBaseMsat tlv.RecordT[tlv.TlvType16, uint32]
 
 	// FeeProportionalMillionths is the fee rate that will be charged per
-	// millionth of a satoshi, encoded as a truncated uint32.
+	// millionth of a satoshi.
 	FeeProportionalMillionths tlv.RecordT[tlv.TlvType18, uint32]
 
 	// InboundFeeBaseMsat is the base fee (in millisatoshis) added by this
