@@ -15,6 +15,15 @@ import (
 func TestChanUpdate2FeeEncoding(t *testing.T) {
 	t.Parallel()
 
+	// defaults holds the value each fee field takes when its TLV is
+	// absent. A fee equal to its default is not encoded.
+	defaults := map[uint64]uint32{
+		16: defaultFeeBaseMsat,
+		18: defaultFeeProportionalMillionths,
+		20: defaultInboundFeeBaseMsat,
+		22: defaultInboundFeeProportionalMillionths,
+	}
+
 	tests := []struct {
 		name    string
 		raw     []byte
@@ -63,13 +72,24 @@ func TestChanUpdate2FeeEncoding(t *testing.T) {
 				}
 				require.NoError(t, err)
 
-				values := []uint32{
-					msg.FeeBaseMsat.Val,
-					msg.FeeProportionalMillionths.Val,
-					msg.InboundFeeBaseMsat.Val,
-					msg.InboundFeeProportionalMillionths.Val, //nolint: ll
+				// The TLV under test fills its own field. The
+				// other fee fields keep their defaults.
+				fields := map[uint64]uint32{
+					16: msg.FeeBaseMsat.Val,
+					18: msg.FeeProportionalMillionths.Val,
+					20: msg.InboundFeeBaseMsat.Val,
+					22: msg.InboundFeeProportionalMillionths.Val, //nolint: ll
 				}
-				require.Equal(t, test.value, values[(typ-16)/2])
+				for fieldType, got := range fields {
+					want := defaults[fieldType]
+					if fieldType == typ {
+						want = test.value
+					}
+					require.Equalf(
+						t, want, got, "fee TLV %d",
+						fieldType,
+					)
+				}
 
 				var found bool
 				for _, record := range msg.AllRecords() {
@@ -87,9 +107,10 @@ func TestChanUpdate2FeeEncoding(t *testing.T) {
 					)
 				}
 
-				// Zero inbound fees are omitted as defaults.
+				// The record is encoded only when the fee
+				// differs from its default.
 				require.Equal(
-					t, typ < 20 || test.value != 0, found,
+					t, test.value != defaults[typ], found,
 				)
 			})
 		}
