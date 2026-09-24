@@ -73,6 +73,14 @@
   modern revocation log format, and the breach arbiter now skips and logs
   any HTLC retribution with a nil sign descriptor output.
 
+* [Fixed onion message
+  forwarding](https://github.com/lightningnetwork/lnd/pull/11245) when the
+  next hop of a blinded onion message is a local SCID alias of a private
+  channel. An alias is not in the graph, so the message was dropped. As BOLT 4
+  requires, a next-hop SCID now resolves only for an announced channel or a
+  local alias, and the HTLC switch resolves the alias. The confirmed SCID of
+  a private channel no longer resolves.
+
 # New Features
 
 ## Functional Enhancements
@@ -169,5 +177,6 @@
 * Gijs van Dam
 * Nishant Bansal
 * Olaoluwa Osuntokun
+* Vincenzo Palazzo
 * Yong Yu
 * Ziggie
