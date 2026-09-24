@@ -6027,3 +6027,116 @@ func testSwitchAliasInterceptFail(t *testing.T, zeroConf bool) {
 
 	require.NoError(t, interceptSwitch.Stop())
 }
+
+// TestSwitchGetLinkForForward checks that GetLinkForForward accepts the same
+// outgoing SCIDs as HTLC forwarding.
+func TestSwitchGetLinkForForward(t *testing.T) {
+	t.Parallel()
+
+	alias := lnwire.ShortChannelID{
+		BlockHeight: 16_000_000,
+		TxIndex:     5,
+		TxPosition:  5,
+	}
+	chanID, confirmed := genID()
+	unknown := lnwire.NewShortChanIDFromInt(99)
+
+	tests := []struct {
+		name      string
+		private   bool
+		zeroConf  bool
+		aliasFeat bool
+		scid      lnwire.ShortChannelID
+		found     bool
+	}{
+		{
+			name:    "private channel confirmed scid",
+			private: true,
+			scid:    confirmed,
+			found:   true,
+		},
+		{
+			name:      "private alias channel local alias",
+			private:   true,
+			aliasFeat: true,
+			scid:      alias,
+			found:     true,
+		},
+		{
+			name:      "private alias channel confirmed scid",
+			private:   true,
+			aliasFeat: true,
+			scid:      confirmed,
+		},
+		{
+			name:      "public alias channel confirmed scid",
+			aliasFeat: true,
+			scid:      confirmed,
+			found:     true,
+		},
+		{
+			name:     "private zero-conf channel local alias",
+			private:  true,
+			zeroConf: true,
+			scid:     alias,
+			found:    true,
+		},
+		{
+			name:     "private zero-conf channel confirmed scid",
+			private:  true,
+			zeroConf: true,
+			scid:     confirmed,
+		},
+		{
+			name:    "unknown scid",
+			private: true,
+			scid:    unknown,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+
+			peer, err := newMockServer(
+				t, "alice", testStartingHeight, nil,
+				testDefaultDelta,
+			)
+			require.NoError(t, err)
+
+			s, err := initSwitchWithTempDB(t, testStartingHeight)
+			require.NoError(t, err)
+			require.NoError(t, s.Start())
+			t.Cleanup(func() {
+				require.NoError(t, s.Stop())
+			})
+
+			var link *mockChannelLink
+			if test.zeroConf {
+				link = newMockChannelLink(
+					s, chanID, alias, confirmed, peer,
+					true, test.private, true, false,
+				)
+			} else {
+				link = newMockChannelLink(
+					s, chanID, confirmed, emptyScid, peer,
+					true, test.private, false,
+					test.aliasFeat,
+				)
+				if test.aliasFeat {
+					link.addAlias(alias)
+				}
+			}
+			require.NoError(t, s.AddLink(link))
+
+			got, err := s.GetLinkForForward(test.scid)
+			if !test.found {
+				require.ErrorIs(t, err, ErrChannelLinkNotFound)
+				return
+			}
+
+			require.NoError(t, err)
+			require.Equal(t, link.ChanID(), got.ChanID())
+		})
+	}
+}

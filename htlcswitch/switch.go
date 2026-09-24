@@ -2328,6 +2328,18 @@ func (s *Switch) getLinkByShortID(chanID lnwire.ShortChannelID) (ChannelLink, er
 	return link, nil
 }
 
+// GetLinkForForward returns the link that an HTLC with the given outgoing
+// SCID forwards over. It applies the alias and privacy rules of
+// getLinkByMapping, so a caller outside the switch accepts the same SCIDs.
+func (s *Switch) GetLinkForForward(
+	scid lnwire.ShortChannelID) (ChannelLink, error) {
+
+	s.indexMtx.RLock()
+	defer s.indexMtx.RUnlock()
+
+	return s.getLinkByMapping(&htlcPacket{outgoingChanID: scid})
+}
+
 // getLinkByMapping attempts to fetch the link via the htlcPacket's
 // outgoingChanID, possibly using a mapping. If it finds the link via mapping,
 // the outgoingChanID will be changed so that an error can be properly
