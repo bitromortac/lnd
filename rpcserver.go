@@ -684,6 +684,8 @@ func newRPCServer(cfg *Config, interceptorChain *rpcperms.InterceptorChain,
 // addDeps populates all dependencies needed by the RPC server, and any
 // of the sub-servers that it maintains. When this is done, the RPC server can
 // be started, and start accepting RPC calls.
+//
+//nolint:funlen
 func (r *rpcServer) addDeps(ctx context.Context, s *server,
 	macService *macaroons.Service,
 	subServerCgs *subRPCServerConfigs, atpl *autopilot.Manager,
@@ -5685,9 +5687,13 @@ func (r *rpcServer) SubscribeChannelEvents(req *lnrpc.ChannelEventSubscription,
 		// closed. If context is closed by an exceeded deadline we will
 		// return an error.
 		case <-updateStream.Context().Done():
-			if errors.Is(updateStream.Context().Err(), context.Canceled) {
+			if errors.Is(
+				updateStream.Context().Err(), context.Canceled,
+			) {
+
 				return nil
 			}
+
 			return updateStream.Context().Err()
 
 		case <-r.quit:
@@ -6019,7 +6025,9 @@ func (r *rpcServer) ListInvoices(ctx context.Context,
 	// Before returning the response, we'll need to convert each invoice
 	// into it's proto representation.
 	resp := &lnrpc.ListInvoiceResponse{
-		Invoices:         make([]*lnrpc.Invoice, len(invoiceSlice.Invoices)),
+		Invoices: make(
+			[]*lnrpc.Invoice, len(invoiceSlice.Invoices),
+		),
 		FirstIndexOffset: invoiceSlice.FirstIndexOffset,
 		LastIndexOffset:  invoiceSlice.LastIndexOffset,
 	}
@@ -6123,9 +6131,13 @@ func (r *rpcServer) SubscribeInvoices(req *lnrpc.InvoiceSubscription,
 		// closed. If context is closed by an exceeded deadline we will
 		// return an error.
 		case <-updateStream.Context().Done():
-			if errors.Is(updateStream.Context().Err(), context.Canceled) {
+			if errors.Is(
+				updateStream.Context().Err(), context.Canceled,
+			) {
+
 				return nil
 			}
+
 			return updateStream.Context().Err()
 
 		case <-r.quit:
@@ -6166,9 +6178,13 @@ func (r *rpcServer) SubscribeTransactions(req *lnrpc.GetTransactionsRequest,
 		// return an error.
 		case <-updateStream.Context().Done():
 			rpcsLog.Infof("Canceling transaction subscription")
-			if errors.Is(updateStream.Context().Err(), context.Canceled) {
+			if errors.Is(
+				updateStream.Context().Err(), context.Canceled,
+			) {
+
 				return nil
 			}
+
 			return updateStream.Context().Err()
 
 		case <-r.quit:
@@ -6259,9 +6275,9 @@ func (r *rpcServer) DescribeGraph(ctx context.Context,
 		c1, c2 *models.ChannelEdgePolicy) error {
 
 		// Do not include unannounced channels unless specifically
-		// requested. Unannounced channels include both private channels as
-		// well as public channels whose authentication proof were not
-		// confirmed yet, hence were not announced.
+		// requested. Unannounced channels include both private
+		// channels as well as public channels whose authentication
+		// proof were not confirmed yet, hence were not announced.
 		if !includeUnannounced && edgeInfo.AuthProof == nil {
 			return nil
 		}
@@ -6431,8 +6447,8 @@ func (r *rpcServer) GetNodeMetrics(ctx context.Context,
 	// TODO(elle): switch to a cross-version graph view when available.
 	graph := r.server.v1Graph
 
-	// Calculate betweenness centrality if requested. Note that depending on the
-	// graph size, this may take up to a few minutes.
+	// Calculate betweenness centrality if requested. Note that depending on
+	// the graph size, this may take up to a few minutes.
 	channelGraph := autopilot.ChannelGraphFromDatabase(graph)
 	centralityMetric, err := autopilot.NewBetweennessCentralityMetric(
 		runtime.NumCPU(),
@@ -6455,7 +6471,8 @@ func (r *rpcServer) GetNodeMetrics(ctx context.Context,
 
 	centrality = centralityMetric.GetMetric(false)
 	for nodeID, val := range centrality {
-		resp.BetweennessCentrality[hex.EncodeToString(nodeID[:])].Value = val
+		nodeKey := hex.EncodeToString(nodeID[:])
+		resp.BetweennessCentrality[nodeKey].Value = val
 	}
 
 	return resp, nil
@@ -6758,18 +6775,21 @@ func (r *rpcServer) GetNetworkInfo(ctx context.Context,
 	}
 	start := time.Now()
 	diameter := simpleGraph.DiameterRadialCutoff()
-	rpcsLog.Infof("elapsed time for diameter (%d) calculation: %v", diameter,
-		time.Since(start))
+	rpcsLog.Infof("elapsed time for diameter (%d) calculation: %v",
+		diameter, time.Since(start))
+
+	avgOutDegree := float64(2*numChannels) / float64(numNodes)
+	avgChanSize := float64(totalNetworkCapacity) / float64(numChannels)
 
 	// TODO(roasbeef): also add oldest channel?
 	netInfo := &lnrpc.NetworkInfo{
 		GraphDiameter:        diameter,
 		MaxOutDegree:         maxChanOut,
-		AvgOutDegree:         float64(2*numChannels) / float64(numNodes),
+		AvgOutDegree:         avgOutDegree,
 		NumNodes:             numNodes,
 		NumChannels:          numChannels,
 		TotalNetworkCapacity: int64(totalNetworkCapacity),
-		AvgChannelSize:       float64(totalNetworkCapacity) / float64(numChannels),
+		AvgChannelSize:       avgChanSize,
 
 		MinChannelSize:       int64(minChannelSize),
 		MaxChannelSize:       int64(maxChannelSize),
@@ -6845,7 +6865,6 @@ func (r *rpcServer) SubscribeChannelGraph(req *lnrpc.GraphTopologySubscription,
 
 	for {
 		select {
-
 		// A new update has been sent by the channel router, we'll
 		// marshal it into the form expected by the gRPC client, then
 		// send it off.
@@ -6870,9 +6889,13 @@ func (r *rpcServer) SubscribeChannelGraph(req *lnrpc.GraphTopologySubscription,
 		// closed. If context is closed by an exceeded deadline
 		// we will return an error.
 		case <-updateStream.Context().Done():
-			if errors.Is(updateStream.Context().Err(), context.Canceled) {
+			if errors.Is(
+				updateStream.Context().Err(), context.Canceled,
+			) {
+
 				return nil
 			}
+
 			return updateStream.Context().Err()
 
 		// The server is quitting, so we'll exit immediately. Returning
@@ -6926,23 +6949,27 @@ func marshallTopologyChange(
 		}
 	}
 
-	channelUpdates := make([]*lnrpc.ChannelEdgeUpdate, len(topChange.ChannelEdgeUpdates))
+	channelUpdates := make(
+		[]*lnrpc.ChannelEdgeUpdate, len(topChange.ChannelEdgeUpdates),
+	)
 	for i, channelUpdate := range topChange.ChannelEdgeUpdates {
-
 		customRecords := marshalPolicyExtraOpaqueData(
 			channelUpdate.ExtraOpaqueData,
 		)
 		inboundFee := channelUpdate.InboundFee.UnwrapOr(lnwire.Fee{})
 
-		channelUpdates[i] = &lnrpc.ChannelEdgeUpdate{
-			ChanId: channelUpdate.ChanID,
-			ChanPoint: &lnrpc.ChannelPoint{
-				FundingTxid: &lnrpc.ChannelPoint_FundingTxidBytes{
-					FundingTxidBytes: channelUpdate.ChanPoint.Hash[:],
-				},
-				OutputIndex: channelUpdate.ChanPoint.Index,
+		op := channelUpdate.ChanPoint
+		chanPoint := &lnrpc.ChannelPoint{
+			FundingTxid: &lnrpc.ChannelPoint_FundingTxidBytes{
+				FundingTxidBytes: op.Hash[:],
 			},
-			Capacity: int64(channelUpdate.Capacity),
+			OutputIndex: op.Index,
+		}
+
+		channelUpdates[i] = &lnrpc.ChannelEdgeUpdate{
+			ChanId:    channelUpdate.ChanID,
+			ChanPoint: chanPoint,
+			Capacity:  int64(channelUpdate.Capacity),
 			RoutingPolicy: &lnrpc.RoutingPolicy{
 				TimeLockDelta: uint32(
 					channelUpdate.TimeLockDelta,
@@ -6964,23 +6991,32 @@ func marshallTopologyChange(
 				InboundFeeRateMilliMsat: inboundFee.FeeRate,
 				CustomRecords:           customRecords,
 			},
-			AdvertisingNode: encodeKey(channelUpdate.AdvertisingNode),
-			ConnectingNode:  encodeKey(channelUpdate.ConnectingNode),
+			AdvertisingNode: encodeKey(
+				channelUpdate.AdvertisingNode,
+			),
+			ConnectingNode: encodeKey(
+				channelUpdate.ConnectingNode,
+			),
 		}
 	}
 
-	closedChans := make([]*lnrpc.ClosedChannelUpdate, len(topChange.ClosedChannels))
+	closedChans := make(
+		[]*lnrpc.ClosedChannelUpdate, len(topChange.ClosedChannels),
+	)
 	for i, closedChan := range topChange.ClosedChannels {
+		op := closedChan.ChanPoint
+		chanPoint := &lnrpc.ChannelPoint{
+			FundingTxid: &lnrpc.ChannelPoint_FundingTxidBytes{
+				FundingTxidBytes: op.Hash[:],
+			},
+			OutputIndex: op.Index,
+		}
+
 		closedChans[i] = &lnrpc.ClosedChannelUpdate{
 			ChanId:       closedChan.ChanID,
 			Capacity:     int64(closedChan.Capacity),
 			ClosedHeight: closedChan.ClosedHeight,
-			ChanPoint: &lnrpc.ChannelPoint{
-				FundingTxid: &lnrpc.ChannelPoint_FundingTxidBytes{
-					FundingTxidBytes: closedChan.ChanPoint.Hash[:],
-				},
-				OutputIndex: closedChan.ChanPoint.Index,
-			},
+			ChanPoint:    chanPoint,
 		}
 	}
 
@@ -7042,7 +7078,6 @@ func (r *rpcServer) ListPayments(ctx context.Context,
 	}
 
 	for _, payment := range paymentsQuerySlice.Payments {
-
 		rpcPayment, err := r.routerBackend.MarshallPayment(payment)
 		if err != nil {
 			return nil, err
@@ -7269,6 +7304,7 @@ func (r *rpcServer) DecodePayReq(ctx context.Context,
 	paymentAddr := payReq.PaymentAddr.UnwrapOr([32]byte{})
 
 	dest := payReq.Destination.SerializeCompressed()
+
 	return &lnrpc.PayReq{
 		Destination:     hex.EncodeToString(dest),
 		PaymentHash:     hex.EncodeToString(payReq.PaymentHash[:]),
@@ -7276,7 +7312,7 @@ func (r *rpcServer) DecodePayReq(ctx context.Context,
 		NumMsat:         amtMsat,
 		Timestamp:       payReq.Timestamp.Unix(),
 		Description:     desc,
-		DescriptionHash: hex.EncodeToString(descHash[:]),
+		DescriptionHash: hex.EncodeToString(descHash),
 		FallbackAddr:    fallbackAddr,
 		Expiry:          expiry,
 		CltvExpiry:      int64(payReq.MinFinalCLTVExpiry()),
@@ -7356,7 +7392,8 @@ func (r *rpcServer) FeeReport(ctx context.Context,
 
 	// computeFeeSum is a helper function that computes the total fees for
 	// a particular time slice described by a forwarding event query.
-	computeFeeSum := func(query channeldb.ForwardingEventQuery) (lnwire.MilliSatoshi, error) {
+	computeFeeSum := func(query channeldb.ForwardingEventQuery) (
+		lnwire.MilliSatoshi, error) {
 
 		var totalFees lnwire.MilliSatoshi
 
@@ -7556,8 +7593,8 @@ func (r *rpcServer) UpdateChannelPolicy(ctx context.Context,
 	maxHtlc := lnwire.MilliSatoshi(req.MaxHtlcMsat)
 	var minHtlc *lnwire.MilliSatoshi
 	if req.MinHtlcMsatSpecified {
-		min := lnwire.MilliSatoshi(req.MinHtlcMsat)
-		minHtlc = &min
+		minHtlcMsat := lnwire.MilliSatoshi(req.MinHtlcMsat)
+		minHtlc = &minHtlcMsat
 	}
 
 	chanPolicy := routing.ChannelPolicy{
@@ -7975,7 +8012,8 @@ func (r *rpcServer) ExportAllChannelBackups(ctx context.Context,
 // within the channel. If we're able to unpack the backup, then the new channel
 // will be shown under listchannels, as well as pending channels.
 func (r *rpcServer) RestoreChannelBackups(ctx context.Context,
-	in *lnrpc.RestoreChanBackupRequest) (*lnrpc.RestoreBackupResponse, error) {
+	in *lnrpc.RestoreChanBackupRequest) (*lnrpc.RestoreBackupResponse,
+	error) {
 
 	// The server hasn't yet started, so it won't be able to service any of
 	// our requests, so we'll bail early here.
@@ -8005,7 +8043,9 @@ func (r *rpcServer) RestoreChannelBackups(ctx context.Context,
 
 		// Now that we know what type of backup we're working with,
 		// we'll parse them all out into a more suitable format.
-		packedBackups := make([][]byte, 0, len(chanBackupsProtos.ChanBackups))
+		packedBackups := make(
+			[][]byte, 0, len(chanBackupsProtos.ChanBackups),
+		)
 		for _, chanBackup := range chanBackupsProtos.ChanBackups {
 			packedBackups = append(
 				packedBackups, chanBackup.ChanBackup,
@@ -8052,15 +8092,17 @@ func (r *rpcServer) RestoreChannelBackups(ctx context.Context,
 // date information concerning the state of all channel back ups. Each time a
 // new channel is added, we return the new set of channels, along with a
 // multi-chan backup containing the backup info for all channels. Each time a
-// channel is closed, we send a new update, which contains new new chan back
+// channel is closed, we send a new update, which contains new chan back
 // ups, but the updated set of encrypted multi-chan backups with the closed
 // channel(s) removed.
-func (r *rpcServer) SubscribeChannelBackups(req *lnrpc.ChannelBackupSubscription,
+func (r *rpcServer) SubscribeChannelBackups(
+	req *lnrpc.ChannelBackupSubscription,
 	updateStream lnrpc.Lightning_SubscribeChannelBackupsServer) error {
 
 	// First, we'll subscribe to the primary channel notifier so we can
 	// obtain events for new pending/opened/closed channels.
-	chanSubscription, err := r.server.channelNotifier.SubscribeChannelEvents()
+	chanSubscription, err := r.server.channelNotifier.
+		SubscribeChannelEvents()
 	if err != nil {
 		return err
 	}
@@ -8081,7 +8123,6 @@ func (r *rpcServer) SubscribeChannelBackups(req *lnrpc.ChannelBackupSubscription
 			// TODO(roasbeef): batch dispatch ntnfs
 
 			switch e.(type) {
-
 			// Only channel lifecycle events should trigger this
 			// subscription. Commitment updates can affect
 			// close-tx inputs embedded in an exported SCB, but
@@ -8129,9 +8170,13 @@ func (r *rpcServer) SubscribeChannelBackups(req *lnrpc.ChannelBackupSubscription
 		// closed. If context is closed by an exceeded deadline we will
 		// return an error.
 		case <-updateStream.Context().Done():
-			if errors.Is(updateStream.Context().Err(), context.Canceled) {
+			if errors.Is(
+				updateStream.Context().Err(), context.Canceled,
+			) {
+
 				return nil
 			}
+
 			return updateStream.Context().Err()
 
 		case <-r.quit:
@@ -8145,7 +8190,9 @@ func (r *rpcServer) SubscribeChannelBackups(req *lnrpc.ChannelBackupSubscription
 // a boolean that tells LND whether or not to accept the channel. This allows
 // node operators to specify their own criteria for accepting inbound channels
 // through a single persistent connection.
-func (r *rpcServer) ChannelAcceptor(stream lnrpc.Lightning_ChannelAcceptorServer) error {
+func (r *rpcServer) ChannelAcceptor(
+	stream lnrpc.Lightning_ChannelAcceptorServer) error {
+
 	chainedAcceptor := r.chanPredicate
 
 	// Create a new RPCAcceptor which will send requests into the
@@ -8200,6 +8247,7 @@ func (r *rpcServer) BakeMacaroon(ctx context.Context,
 				Entity: op.Entity,
 				Action: op.Action,
 			}
+
 			continue
 		}
 
@@ -8518,7 +8566,7 @@ func (r *rpcServer) FundingStateStep(ctx context.Context,
 
 		case len(msg.SignedPsbt) > 0:
 			packet, err = psbt.NewFromRawBytes(
-				bytes.NewReader(in.GetPsbtFinalize().SignedPsbt),
+				bytes.NewReader(msg.SignedPsbt),
 				false,
 			)
 			if err != nil {
@@ -8649,7 +8697,9 @@ func (r *rpcServer) RegisterRPCMiddleware(
 
 	// Add the RPC middleware to the interceptor chain and defer its
 	// removal.
-	if err := r.interceptorChain.RegisterMiddleware(middleware); err != nil {
+	if err := r.interceptorChain.RegisterMiddleware(
+		middleware,
+	); err != nil {
 		return fmt.Errorf("error registering middleware: %w", err)
 	}
 	defer r.interceptorChain.RemoveMiddleware(registerMsg.MiddlewareName)
@@ -8737,7 +8787,10 @@ func (r *rpcServer) SubscribeCustomMessages(
 			return server.Context().Err()
 
 		case update := <-client.Updates():
-			customMsg := update.(*CustomMessage)
+			customMsg, ok := update.(*CustomMessage)
+			if !ok {
+				continue
+			}
 
 			err := server.Send(&lnrpc.CustomMessage{
 				Peer: customMsg.Peer[:],
