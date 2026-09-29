@@ -295,6 +295,17 @@ func DecodeInvoiceRequestString(s string,
 	return ir, nil
 }
 
+// EncodeInvoiceRequestString encodes a signed invoice request to its bech32
+// string representation (lnr1...).
+func EncodeInvoiceRequestString(ir *InvoiceRequest) (string, error) {
+	tlvBytes, err := ir.EncodeSigned()
+	if err != nil {
+		return "", err
+	}
+
+	return encodeBech32(HRPInvoiceRequest, tlvBytes)
+}
+
 // NewInvoiceRequestFromOffer constructs a new InvoiceRequest by copying
 // (mirroring) all fields from the provided Offer. It assigns the payer ID and
 // payer metadata; the caller should subsequently sign the request.

@@ -2,6 +2,7 @@ package bolt12
 
 import (
 	"bytes"
+	"strings"
 	"testing"
 
 	"github.com/btcsuite/btcd/btcec/v2"
@@ -364,4 +365,33 @@ func TestEncodeSignedInvalidSignature(t *testing.T) {
 	encoded, err := ir.EncodeSigned()
 	require.ErrorIs(t, err, ErrInvalidSignature)
 	require.Empty(t, encoded)
+}
+
+// TestEncodeInvoiceRequestString asserts that a signed request round-trips
+// through its lnr1 string, and that an unsigned one is refused, as it is in the
+// raw TLV form.
+func TestEncodeInvoiceRequestString(t *testing.T) {
+	t.Parallel()
+
+	ir := validInvoiceRequest(t)
+
+	lnr, err := EncodeInvoiceRequestString(ir)
+	require.NoError(t, err)
+	require.True(t, strings.HasPrefix(lnr, HRPInvoiceRequest+"1"))
+
+	decoded, err := DecodeInvoiceRequestString(
+		lnr, bitcoinMainnetGenesisHash,
+	)
+	require.NoError(t, err)
+
+	want, err := ir.EncodeSigned()
+	require.NoError(t, err)
+	got, err := decoded.EncodeSigned()
+	require.NoError(t, err)
+	require.Equal(t, want, got)
+
+	ir.Signature = tlv.OptionalRecordT[tlv.TlvType240, [64]byte]{}
+	lnr, err = EncodeInvoiceRequestString(ir)
+	require.ErrorIs(t, err, ErrMissingSignature)
+	require.Empty(t, lnr)
 }
