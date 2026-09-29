@@ -23,9 +23,10 @@
 // An offer only ever travels out of band, as an lno1 string. An invoice_request
 // and an invoice reach a peer as raw TLV inside an onion message, which is what
 // EncodeSigned emits. An invoice also has an lni1 string, for display and for
-// out-of-band delivery. There is deliberately no invoice_request string
-// encoder, because nothing emits that form, while its decoder stays because
-// another implementation may hand us an lnr1 string.
+// out-of-band delivery. An invoice_request that answers no offer is published
+// by the payer as an lnr1 string instead, such as a QR code.
+// EncodeInvoiceRequestString emits it signed, and a payee reads it with
+// DecodeInvoiceRequestString and answers with an invoice.
 //
 // # Pitfalls
 //
