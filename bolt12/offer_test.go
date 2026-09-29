@@ -384,3 +384,101 @@ func TestOfferPaymentFlow(t *testing.T) {
 	// Payer: pay over the invoice's blinded paths.
 	require.NotEmpty(t, reply.UsablePaths(Bolt12Features))
 }
+
+// TestOfferlessPaymentFlow simulates a payment for an invoice request that
+// answers no offer, one step per party. The payer publishes a signed request as
+// an lnr1 string, the payee reads it and answers with an invoice, and the payer
+// checks that invoice before it pays.
+func TestOfferlessPaymentFlow(t *testing.T) {
+	t.Parallel()
+
+	payerKey, payerPub := bobKey()
+	payeeKey, payeePub := aliceKey()
+
+	// Payer: build the request. It carries no offer_issuer_id and no
+	// offer_paths. The payer's own key and the amount it will pay take
+	// the place of an offer.
+	req := &InvoiceRequest{
+		InvreqMetadata: tlv.SomeRecordT(
+			tlv.NewPrimitiveRecord[tlv.TlvType0](
+				tlv.Blob("unpredictable"),
+			),
+		),
+		OfferDescription: tlv.SomeRecordT(
+			tlv.NewPrimitiveRecord[tlv.TlvType10](
+				tlv.Blob("refund"),
+			),
+		),
+		InvreqAmount: tlv.SomeRecordT(
+			tlv.NewRecordT[tlv.TlvType82, TUint64](TUint64(1000)),
+		),
+		InvreqPayerID: tlv.SomeRecordT(
+			tlv.NewPrimitiveRecord[tlv.TlvType88](payerPub),
+		),
+	}
+
+	// Payer: sign with the invreq_payer_id key and publish the request as
+	// an lnr1 string, for example in a QR code.
+	reqSig, err := SignInvoiceRequest(req, payerKey)
+	require.NoError(t, err)
+	req.Signature = tlv.SomeRecordT(
+		tlv.NewPrimitiveRecord[tlv.TlvType240](reqSig),
+	)
+	lnr, err := EncodeInvoiceRequestString(req)
+	require.NoError(t, err)
+
+	// Payee: read the scanned string. The reader gates run here, so a
+	// request without a valid signature stops at this step.
+	scanned, err := DecodeInvoiceRequestString(
+		lnr, bitcoinMainnetGenesisHash,
+	)
+	require.NoError(t, err)
+
+	// Payee: answer with an invoice for the requested amount, signed with
+	// its node key. It sends the encoded invoice in an onion message to
+	// invreq_paths, or to invreq_payer_id when there are none.
+	tmpl := validInvoice(t)
+	inv := NewInvoiceFromRequest(scanned)
+	inv.InvoiceCreatedAt = tmpl.InvoiceCreatedAt
+	inv.InvoicePaymentHash = tmpl.InvoicePaymentHash
+	inv.InvoicePaths = tmpl.InvoicePaths
+	inv.InvoiceBlindedPay = tmpl.InvoiceBlindedPay
+	inv.InvoiceAmount = tlv.SomeRecordT(
+		tlv.NewRecordT[tlv.TlvType170](
+			scanned.InvreqAmount.ValOpt().UnwrapOr(0),
+		),
+	)
+	inv.InvoiceNodeID = tlv.SomeRecordT(
+		tlv.NewPrimitiveRecord[tlv.TlvType176](payeePub),
+	)
+	invSig, err := SignInvoice(inv, payeeKey)
+	require.NoError(t, err)
+	inv.Signature = tlv.SomeRecordT(
+		tlv.NewPrimitiveRecord[tlv.TlvType240, [64]byte](invSig),
+	)
+	wire, err := inv.EncodeSigned()
+	require.NoError(t, err)
+
+	// Payer: read the invoice and check it against the request it
+	// published. It confirmed no payee key out of band, so it passes nil.
+	received, err := DecodeInvoice(wire)
+	require.NoError(t, err)
+	now := time.Unix(1234567890, 0).Add(time.Minute)
+	features := InvoiceKnownFeatures{
+		Invoice: Bolt12Features,
+		Blinded: Bolt12Features,
+	}
+	require.NoError(t, ValidateInvoiceForPayment(
+		received, req, now, bitcoinMainnetGenesisHash, features, nil,
+	))
+
+	// Payer: pay over the invoice's blinded paths.
+	require.NotEmpty(t, received.UsablePaths(Bolt12Features))
+
+	// A payer that did confirm a key out of band still rejects an invoice
+	// that another node signed.
+	require.ErrorIs(t, ValidateInvoiceForPayment(
+		received, req, now, bitcoinMainnetGenesisHash, features,
+		payerPub,
+	), ErrUnexpectedInvoiceNodeID)
+}
