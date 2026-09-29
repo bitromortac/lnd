@@ -237,11 +237,11 @@ func DecodeInvoiceRequest(data []byte) (*InvoiceRequest, error) {
 	return &ir, nil
 }
 
-// decodeInvoiceRequestString decodes a BOLT 12 invoice request from its bech32
+// DecodeInvoiceRequestString decodes a BOLT 12 invoice request from its bech32
 // string representation (lnr1...). The spec reader gates (chain, features,
 // signature) are folded in via ValidateInvoiceRequestRead, with activeChain
 // gating the invreq_chain rule.
-func decodeInvoiceRequestString(s string,
+func DecodeInvoiceRequestString(s string,
 	activeChain [32]byte) (*InvoiceRequest, error) {
 
 	hrp, tlvBytes, err := decodeBech32(s)
@@ -268,12 +268,12 @@ func decodeInvoiceRequestString(s string,
 	return ir, nil
 }
 
-// encodeInvoiceRequestString encodes a signed invoice request to its bech32
+// EncodeInvoiceRequestString encodes a signed invoice request to its bech32
 // string representation (lnr1...). The string form exists only for
 // transmission, so a populated signature is required and verified against
 // invreq_payer_id. Writer-side validation is delegated to
 // (*InvoiceRequest).Encode.
-func encodeInvoiceRequestString(ir *InvoiceRequest) (string, error) {
+func EncodeInvoiceRequestString(ir *InvoiceRequest) (string, error) {
 	if !ir.Signature.IsSome() {
 		return "", ErrMissingSignature
 	}
