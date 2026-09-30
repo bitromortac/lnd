@@ -1999,7 +1999,9 @@ func validateInvoiceRead(inv *Invoice, activeChain [32]byte,
 // is compared against invoice_node_id. It is offer_issuer_id for an offer that
 // carried one, and the final blinded_node_id on the path the payer chose for an
 // offer that carried offer_paths. For a request that answers no offer it is a
-// key the payer confirmed out of band, or nil when it has none.
+// key the payer confirmed out of band, or nil when it has none. Only that case
+// accepts nil. For a response to an offer a nil expectedNodeID returns
+// ErrNilPublicKey.
 func ValidateInvoiceForPayment(inv *Invoice, req *InvoiceRequest,
 	now time.Time, activeChain [32]byte,
 	features InvoiceKnownFeatures,
