@@ -105,6 +105,15 @@ func TestEncodeWritesMinimalFeatures(t *testing.T) {
 		tlv.NewRecordT[tlv.TlvType84](*features),
 	)
 
+	// A request that answers an offer also mirrors offer_features.
+	_, payerPub := aliceKey()
+	offerReq, err := NewInvoiceRequestFromOffer(
+		offer, payerPub, []byte("metadata"), bitcoinMainnetGenesisHash,
+	)
+	require.NoError(t, err)
+	offerReq.InvreqFeatures = invreq.InvreqFeatures
+	offerReq.InvreqAmount = invreq.InvreqAmount
+
 	inv := validInvoice(t)
 	inv.OfferFeatures = offer.OfferFeatures
 	inv.InvreqFeatures = invreq.InvreqFeatures
@@ -126,6 +135,17 @@ func TestEncodeWritesMinimalFeatures(t *testing.T) {
 				return err
 			},
 			types: []tlv.Type{offerFeaturesType},
+		},
+		{
+			name:   "invoice_request for an offer",
+			encode: offerReq.encode,
+			decode: func(b []byte) error {
+				_, err := DecodeInvoiceRequest(b)
+				return err
+			},
+			types: []tlv.Type{
+				offerFeaturesType, invreqFeaturesType,
+			},
 		},
 		{
 			name:   "invoice_request",
