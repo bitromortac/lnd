@@ -17,6 +17,17 @@
 // answers with an invoice built by NewInvoiceFromRequest and signed with
 // SignInvoice. The payer decodes that reply with DecodeInvoice, gates it with
 // ValidateInvoiceForPayment, and pays the paths UsablePaths returns.
+// TestOfferPaymentFlow in offer_test.go runs these steps in order, one per
+// party.
+//
+// A payment can also start without an offer. The payer builds a request with no
+// offer_issuer_id or offer_paths, signs it with SignInvoiceRequest, and
+// publishes it with EncodeInvoiceRequestString as an lnr1 string, such as a QR
+// code. The payee reads it with DecodeInvoiceRequestString and answers with an
+// invoice built and signed as above, sent to invreq_paths or invreq_payer_id.
+// The payer gates that invoice with ValidateInvoiceForPayment, passing a nil
+// node id unless it confirmed the payee's key out of band.
+// TestOfferlessPaymentFlow in offer_test.go runs these steps.
 //
 // # Wire form or string form
 //
@@ -24,9 +35,7 @@
 // and an invoice reach a peer as raw TLV inside an onion message, which is what
 // EncodeSigned emits. An invoice also has an lni1 string, for display and for
 // out-of-band delivery. An invoice_request that answers no offer is published
-// by the payer as an lnr1 string instead, such as a QR code.
-// EncodeInvoiceRequestString emits it signed, and a payee reads it with
-// DecodeInvoiceRequestString and answers with an invoice.
+// as an lnr1 string instead, which EncodeInvoiceRequestString emits signed.
 //
 // # Pitfalls
 //
