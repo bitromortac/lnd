@@ -1369,6 +1369,36 @@ func TestValidateInvoiceRequestWrite(t *testing.T) {
 			},
 			wantErr: ErrOfferFieldsOnSpontaneous,
 		},
+		{
+			// The writer runs the quantity rules in its offer
+			// branch, not only the reader.
+			name: "offer response quantity missing with " +
+				"quantity_max",
+			mutate: func(ir *InvoiceRequest) {
+				ir.OfferIssuerID = tlv.SomeRecordT(
+					tlv.NewPrimitiveRecord[tlv.TlvType22](
+						payerID,
+					),
+				)
+				ir.OfferQuantityMax = tlv.SomeRecordT(
+					tlv.NewRecordT[tlv.TlvType20](
+						TUint64(10),
+					),
+				)
+			},
+			wantErr: ErrQuantityMissing,
+		},
+		{
+			// A type outside 0-159 and 1000000000-2999999999 that
+			// rides in decodedTLVs must not be re-emitted.
+			name: "out-of-range TLV in decoded extras",
+			mutate: func(ir *InvoiceRequest) {
+				ir.decodedTLVs = tlv.TypeMap{
+					161: nil,
+				}
+			},
+			wantErr: ErrOutOfRangeType,
+		},
 	}
 
 	for _, tc := range tests {
@@ -1803,6 +1833,23 @@ func TestValidateInvoiceRequestReadSentinels(t *testing.T) {
 				]{}
 				ir.OfferAmount = tlv.OptionalRecordT[
 					tlv.TlvType8, TUint64,
+				]{}
+			},
+			wantErr: ErrMissingAmount,
+		},
+		{
+			// The offer branch has its own copy of the amount
+			// rule, so the row above does not reach it.
+			name: "missing amount on offer response",
+			mutate: func(ir *InvoiceRequest) {
+				_, pub := bobKey()
+				ir.OfferIssuerID = tlv.SomeRecordT(
+					tlv.NewPrimitiveRecord[tlv.TlvType22](
+						pub,
+					),
+				)
+				ir.InvreqAmount = tlv.OptionalRecordT[
+					tlv.TlvType82, TUint64,
 				]{}
 			},
 			wantErr: ErrMissingAmount,
