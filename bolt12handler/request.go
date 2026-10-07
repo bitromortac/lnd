@@ -98,6 +98,16 @@ type requestConfig struct {
 	amountMsat uint64
 	quantity   uint64
 	payerNote  string
+	payer      *PayerKey
+}
+
+// WithPayerKey signs the request with a payer key derived from an idempotency
+// key, and sets its metadata. Without it the request gets a fresh random key
+// and random metadata.
+func WithPayerKey(payer *PayerKey) RequestOption {
+	return func(c *requestConfig) {
+		c.payer = payer
+	}
 }
 
 // WithAmount sets invreq_amount on the invoice request. Required when the offer
@@ -135,15 +145,29 @@ func BuildInvoiceRequest(offer *bolt12.Offer, opts ...RequestOption) (
 		o(cfg)
 	}
 
-	// Generate ephemeral keypair for invreq_payer_id.
-	payerKey, err := btcec.NewPrivateKey()
-	if err != nil {
-		return nil, nil, fmt.Errorf("generate payer key: %w", err)
-	}
+	// Use the derived payer key when the caller supplied one, so a retry
+	// builds the same request. Otherwise generate an ephemeral keypair for
+	// invreq_payer_id and unpredictable metadata.
+	var (
+		payerKey *btcec.PrivateKey
+		metadata []byte
+	)
+	if cfg.payer != nil {
+		payerKey = cfg.payer.PrivKey
+		metadata = cfg.payer.Metadata
+	} else {
+		var err error
+		payerKey, err = btcec.NewPrivateKey()
+		if err != nil {
+			return nil, nil, fmt.Errorf("generate payer key: %w",
+				err)
+		}
 
-	metadata := make([]byte, 32)
-	if _, err := rand.Read(metadata); err != nil {
-		return nil, nil, fmt.Errorf("generate metadata: %w", err)
+		metadata = make([]byte, 32)
+		if _, err := rand.Read(metadata); err != nil {
+			return nil, nil, fmt.Errorf("generate metadata: %w",
+				err)
+		}
 	}
 
 	// Pay on the offer's chain: use the first listed offer_chains entry, or
