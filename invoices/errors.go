@@ -88,6 +88,11 @@ var (
 		"invoice with payment hash already exists",
 	)
 
+	// ErrBolt12Disabled is returned when a BOLT 12 invoice is added to a
+	// store that does not have BOLT 12 enabled.
+	ErrBolt12Disabled = errors.New("BOLT 12 is not enabled in the " +
+		"invoice store")
+
 	// ErrDuplicatePayAddr is returned when an invoice with the target
 	// payment addr already exists.
 	ErrDuplicatePayAddr = errors.New(

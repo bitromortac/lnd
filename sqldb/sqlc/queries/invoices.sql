@@ -1,6 +1,6 @@
 -- name: InsertInvoice :one
 INSERT INTO invoices (
-    hash, preimage, memo, amount_msat, cltv_delta, expiry, payment_addr,
+    hash, preimage, memo, amount_msat, cltv_delta, expiry, payment_addr, 
     payment_request, payment_request_hash, state, amount_paid_msat, is_amp,
     is_hodl, is_keysend, created_at
 ) VALUES (

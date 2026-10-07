@@ -177,12 +177,6 @@ type FetchSettledAMPSubInvoicesRow struct {
 	IsHodl             bool
 	IsKeysend          bool
 	CreatedAt          time.Time
-	IsBolt12           bool
-	OfferID            sql.NullInt64
-	InvoiceNodeID      []byte
-	InvreqPayerID      []byte
-	InvreqQuantity     sql.NullInt64
-	OfferHash          []byte
 }
 
 func (q *Queries) FetchSettledAMPSubInvoices(ctx context.Context, arg FetchSettledAMPSubInvoicesParams) ([]FetchSettledAMPSubInvoicesRow, error) {
@@ -216,12 +210,6 @@ func (q *Queries) FetchSettledAMPSubInvoices(ctx context.Context, arg FetchSettl
 			&i.IsHodl,
 			&i.IsKeysend,
 			&i.CreatedAt,
-			&i.IsBolt12,
-			&i.OfferID,
-			&i.InvoiceNodeID,
-			&i.InvreqPayerID,
-			&i.InvreqQuantity,
-			&i.OfferHash,
 		); err != nil {
 			return nil, err
 		}

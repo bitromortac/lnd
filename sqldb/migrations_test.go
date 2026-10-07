@@ -6,7 +6,6 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
-	"time"
 
 	"github.com/golang-migrate/migrate/v4"
 	"github.com/golang-migrate/migrate/v4/database"
@@ -84,34 +83,36 @@ func testInvoiceExpiryMigration(t *testing.T, makeDB makeMigrationTestDB) {
 
 	// Add a few invoices. For simplicity we reuse the payment hash as the
 	// payment address and payment request hash instead of setting them to
-	// NULL (to not run into uniqueness constraints). The insert uses raw
-	// SQL, because the generated query also writes columns that later
-	// migrations add.
-	insertInvoice := func(hash []byte, expiry int32, isAmp bool) {
-		_, err := db.ExecContext(ctxb, `
-			INSERT INTO invoices (
-				hash, amount_msat, cltv_delta, expiry,
-				payment_addr, payment_request_hash, state,
-				amount_paid_msat, is_amp, is_hodl, is_keysend,
-				created_at
-			) VALUES (
-				$1, 0, NULL, $2, $1, $1, 0, 0, $3, false, false, $4
-			)`, hash, expiry, isAmp, time.Time{},
-		)
-		require.NoError(t, err)
-	}
+	// NULL (to not run into uniqueness constraints). Note that SQLC
+	// currently doesn't support nullable blob fields porperly. A workaround
+	// is in progress: https://github.com/sqlc-dev/sqlc/issues/3149
 
+	// Add an invoice where is_amp will be set to false.
 	hash1 := []byte{1, 2, 3}
-	insertInvoice(hash1, -123, false)
+	_, err := db.InsertInvoice(ctxb, sqlc.InsertInvoiceParams{
+		Hash:               hash1,
+		PaymentAddr:        hash1,
+		PaymentRequestHash: hash1,
+		Expiry:             -123,
+		IsAmp:              false,
+	})
+	require.NoError(t, err)
 
+	// Add an invoice where is_amp will be set to false.
 	hash2 := []byte{4, 5, 6}
-	insertInvoice(hash2, -456, true)
+	_, err = db.InsertInvoice(ctxb, sqlc.InsertInvoiceParams{
+		Hash:               hash2,
+		PaymentAddr:        hash2,
+		PaymentRequestHash: hash2,
+		Expiry:             -456,
+		IsAmp:              true,
+	})
+	require.NoError(t, err)
 
 	// Now, we'll attempt to execute the migration that will fix the expiry
 	// values by inserting 86400 seconds for non AMP and 2592000 seconds for
-	// AMP invoices. The generated read query needs the latest schema.
-	require.NoError(t, migrate(TargetVersion(4)))
-	require.NoError(t, migrate(TargetLatest))
+	// AMP invoices.
+	err = migrate(TargetVersion(4))
 
 	invoices, err := db.FilterInvoicesByAddIndex(ctxb, sqlc.FilterInvoicesByAddIndexParams{
 		AddIndexGet: 1,
