@@ -112,12 +112,6 @@ func (q *Queries) FetchPendingInvoices(ctx context.Context, arg FetchPendingInvo
 			&i.IsHodl,
 			&i.IsKeysend,
 			&i.CreatedAt,
-			&i.IsBolt12,
-			&i.OfferID,
-			&i.InvoiceNodeID,
-			&i.InvreqPayerID,
-			&i.InvreqQuantity,
-			&i.OfferHash,
 		); err != nil {
 			return nil, err
 		}
@@ -179,12 +173,6 @@ func (q *Queries) FilterInvoicesByAddIndex(ctx context.Context, arg FilterInvoic
 			&i.IsHodl,
 			&i.IsKeysend,
 			&i.CreatedAt,
-			&i.IsBolt12,
-			&i.OfferID,
-			&i.InvoiceNodeID,
-			&i.InvreqPayerID,
-			&i.InvreqQuantity,
-			&i.OfferHash,
 		); err != nil {
 			return nil, err
 		}
@@ -249,12 +237,6 @@ func (q *Queries) FilterInvoicesBySettleIndex(ctx context.Context, arg FilterInv
 			&i.IsHodl,
 			&i.IsKeysend,
 			&i.CreatedAt,
-			&i.IsBolt12,
-			&i.OfferID,
-			&i.InvoiceNodeID,
-			&i.InvreqPayerID,
-			&i.InvreqQuantity,
-			&i.OfferHash,
 		); err != nil {
 			return nil, err
 		}
@@ -333,12 +315,6 @@ func (q *Queries) FilterInvoicesForward(ctx context.Context, arg FilterInvoicesF
 			&i.IsHodl,
 			&i.IsKeysend,
 			&i.CreatedAt,
-			&i.IsBolt12,
-			&i.OfferID,
-			&i.InvoiceNodeID,
-			&i.InvreqPayerID,
-			&i.InvreqQuantity,
-			&i.OfferHash,
 		); err != nil {
 			return nil, err
 		}
@@ -412,12 +388,6 @@ func (q *Queries) FilterInvoicesReverse(ctx context.Context, arg FilterInvoicesR
 			&i.IsHodl,
 			&i.IsKeysend,
 			&i.CreatedAt,
-			&i.IsBolt12,
-			&i.OfferID,
-			&i.InvoiceNodeID,
-			&i.InvreqPayerID,
-			&i.InvreqQuantity,
-			&i.OfferHash,
 		); err != nil {
 			return nil, err
 		}
@@ -460,12 +430,6 @@ func (q *Queries) GetInvoiceByAddr(ctx context.Context, paymentAddr []byte) (Inv
 		&i.IsHodl,
 		&i.IsKeysend,
 		&i.CreatedAt,
-		&i.IsBolt12,
-		&i.OfferID,
-		&i.InvoiceNodeID,
-		&i.InvreqPayerID,
-		&i.InvreqQuantity,
-		&i.OfferHash,
 	)
 	return i, err
 }
@@ -498,12 +462,6 @@ func (q *Queries) GetInvoiceByHash(ctx context.Context, hash []byte) (Invoice, e
 		&i.IsHodl,
 		&i.IsKeysend,
 		&i.CreatedAt,
-		&i.IsBolt12,
-		&i.OfferID,
-		&i.InvoiceNodeID,
-		&i.InvreqPayerID,
-		&i.InvreqQuantity,
-		&i.OfferHash,
 	)
 	return i, err
 }
@@ -545,12 +503,6 @@ func (q *Queries) GetInvoiceBySetID(ctx context.Context, setID []byte) ([]Invoic
 			&i.IsHodl,
 			&i.IsKeysend,
 			&i.CreatedAt,
-			&i.IsBolt12,
-			&i.OfferID,
-			&i.InvoiceNodeID,
-			&i.InvreqPayerID,
-			&i.InvreqQuantity,
-			&i.OfferHash,
 		); err != nil {
 			return nil, err
 		}
@@ -685,7 +637,7 @@ func (q *Queries) GetKVInvoicePaymentHashByAddIndex(ctx context.Context, addInde
 
 const insertInvoice = `-- name: InsertInvoice :one
 INSERT INTO invoices (
-    hash, preimage, memo, amount_msat, cltv_delta, expiry, payment_addr,
+    hash, preimage, memo, amount_msat, cltv_delta, expiry, payment_addr, 
     payment_request, payment_request_hash, state, amount_paid_msat, is_amp,
     is_hodl, is_keysend, created_at
 ) VALUES (
@@ -709,12 +661,6 @@ type InsertInvoiceParams struct {
 	IsHodl             bool
 	IsKeysend          bool
 	CreatedAt          time.Time
-	IsBolt12           bool
-	OfferID            sql.NullInt64
-	InvoiceNodeID      []byte
-	InvreqPayerID      []byte
-	OfferHash          []byte
-	InvreqQuantity     sql.NullInt64
 }
 
 func (q *Queries) InsertInvoice(ctx context.Context, arg InsertInvoiceParams) (int64, error) {
@@ -734,12 +680,6 @@ func (q *Queries) InsertInvoice(ctx context.Context, arg InsertInvoiceParams) (i
 		arg.IsHodl,
 		arg.IsKeysend,
 		arg.CreatedAt,
-		arg.IsBolt12,
-		arg.OfferID,
-		arg.InvoiceNodeID,
-		arg.InvreqPayerID,
-		arg.OfferHash,
-		arg.InvreqQuantity,
 	)
 	var id int64
 	err := row.Scan(&id)

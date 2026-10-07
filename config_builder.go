@@ -1360,6 +1360,7 @@ func (d *DefaultDatabaseBuilder) BuildDatabase(
 
 		sqlInvoiceDB := invoices.NewSQLStore(
 			invoiceExecutor, clock.NewDefaultClock(),
+			invoices.WithBolt12(),
 		)
 
 		dbs.InvoiceDB = sqlInvoiceDB

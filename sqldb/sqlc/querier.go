@@ -40,6 +40,7 @@ type Querier interface {
 	FailPayment(ctx context.Context, arg FailPaymentParams) (sql.Result, error)
 	FetchAMPSubInvoiceHTLCs(ctx context.Context, arg FetchAMPSubInvoiceHTLCsParams) ([]FetchAMPSubInvoiceHTLCsRow, error)
 	FetchAMPSubInvoices(ctx context.Context, arg FetchAMPSubInvoicesParams) ([]AmpSubInvoice, error)
+	FetchBolt12Invoice(ctx context.Context, invoiceID int64) (FetchBolt12InvoiceRow, error)
 	FetchBolt12Payment(ctx context.Context, idempotencyKey []byte) (FetchBolt12PaymentRow, error)
 	FetchBolt12PaymentIDsByOffer(ctx context.Context, offerHash []byte) ([]sql.NullInt64, error)
 	FetchHopLevelCustomRecords(ctx context.Context, hopIds []int64) ([]PaymentHopCustomRecord, error)
@@ -172,6 +173,7 @@ type Querier interface {
 	HighestSCID(ctx context.Context, version int16) ([]byte, error)
 	InsertAMPSubInvoice(ctx context.Context, arg InsertAMPSubInvoiceParams) error
 	InsertAMPSubInvoiceHTLC(ctx context.Context, arg InsertAMPSubInvoiceHTLCParams) error
+	InsertBolt12Invoice(ctx context.Context, arg InsertBolt12InvoiceParams) error
 	InsertChainNetwork(ctx context.Context, network string) error
 	InsertChannelFeature(ctx context.Context, arg InsertChannelFeatureParams) error
 	// NOTE: This query is only meant to be used by the graph SQL migration since
