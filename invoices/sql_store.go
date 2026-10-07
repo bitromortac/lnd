@@ -55,6 +55,16 @@ type SQLInvoiceQueries interface { //nolint:interfacebloat
 	InsertInvoice(ctx context.Context, arg sqlc.InsertInvoiceParams) (int64,
 		error)
 
+	// InsertBolt12Invoice stores the BOLT 12 data of an invoice in its
+	// side table. Only a store with BOLT 12 enabled calls it.
+	InsertBolt12Invoice(ctx context.Context,
+		arg sqlc.InsertBolt12InvoiceParams) error
+
+	// FetchBolt12Invoice returns the BOLT 12 data of an invoice, or
+	// sql.ErrNoRows for an invoice that is not a BOLT 12 invoice.
+	FetchBolt12Invoice(ctx context.Context,
+		invoiceID int64) (sqlc.FetchBolt12InvoiceRow, error)
+
 	// TODO(bhandras): remove this once migrations have been separated out.
 	InsertMigratedInvoice(ctx context.Context,
 		arg sqlc.InsertMigratedInvoiceParams) (int64, error)
@@ -218,6 +228,11 @@ type SQLStore struct {
 // SQLStoreOptions holds the options for the SQL store.
 type SQLStoreOptions struct {
 	paginationLimit int
+
+	// bolt12 enables the BOLT 12 side table. Its migration is only
+	// applied in builds with the development migrations, so a store
+	// without this option never queries it.
+	bolt12 bool
 }
 
 // defaultSQLStoreOptions returns the default options for the SQL store.
@@ -236,6 +251,15 @@ type SQLStoreOption func(*SQLStoreOptions)
 func WithPaginationLimit(limit int) SQLStoreOption {
 	return func(o *SQLStoreOptions) {
 		o.paginationLimit = limit
+	}
+}
+
+// WithBolt12 lets the store read and write the BOLT 12 side table. The
+// caller sets it only when BOLT 12 is enabled, which also guarantees that the
+// table exists.
+func WithBolt12() SQLStoreOption {
+	return func(o *SQLStoreOptions) {
+		o.bolt12 = true
 	}
 }
 
@@ -313,19 +337,6 @@ func makeInsertInvoiceParams(invoice *Invoice, paymentHash lntypes.Hash) (
 		params.PaymentAddr = invoice.Terms.PaymentAddr[:]
 	}
 
-	// BOLT 12 fields.
-	params.IsBolt12 = invoice.IsBolt12
-	invoice.OfferID.WhenSome(func(id int64) {
-		params.OfferID = sqldb.SQLInt64(id)
-	})
-	params.InvreqPayerID = invoice.InvreqPayerID
-	params.OfferHash = invoice.OfferHash
-	if invoice.InvreqQuantity > 0 {
-		params.InvreqQuantity = sqldb.SQLInt64(
-			int64(invoice.InvreqQuantity),
-		)
-	}
-
 	return params, nil
 }
 
@@ -342,6 +353,10 @@ func (i *SQLStore) AddInvoice(ctx context.Context,
 	// DB.
 	if err := ValidateInvoice(newInvoice, paymentHash); err != nil {
 		return 0, err
+	}
+
+	if newInvoice.IsBolt12 && !i.opts.bolt12 {
+		return 0, ErrBolt12Disabled
 	}
 
 	var (
@@ -361,6 +376,15 @@ func (i *SQLStore) AddInvoice(ctx context.Context,
 		invoiceID, err = db.InsertInvoice(ctx, insertInvoiceParams)
 		if err != nil {
 			return fmt.Errorf("unable to insert invoice: %w", err)
+		}
+
+		if newInvoice.IsBolt12 {
+			err := insertBolt12Invoice(
+				ctx, db, invoiceID, newInvoice,
+			)
+			if err != nil {
+				return err
+			}
 		}
 
 		// TODO(positiveblue): if invocies do not have custom features
@@ -486,8 +510,8 @@ func getInvoiceByRef(ctx context.Context,
 
 // fetchInvoice fetches the common invoice data and the AMP state for the
 // invoice with the given reference.
-func fetchInvoice(ctx context.Context, db SQLInvoiceQueries, ref InvoiceRef) (
-	*Invoice, error) {
+func fetchInvoice(ctx context.Context, db SQLInvoiceQueries, ref InvoiceRef,
+	bolt12 bool) (*Invoice, error) {
 
 	// Fetch the invoice from the database.
 	sqlInvoice, err := getInvoiceByRef(ctx, db, ref)
@@ -531,7 +555,7 @@ func fetchInvoice(ctx context.Context, db SQLInvoiceQueries, ref InvoiceRef) (
 
 	// Fetch the rest of the invoice data and fill the invoice struct.
 	_, invoice, err := fetchInvoiceData(
-		ctx, db, sqlInvoice, setID, fetchAmpHtlcs,
+		ctx, db, sqlInvoice, setID, fetchAmpHtlcs, bolt12,
 	)
 	if err != nil {
 		return nil, err
@@ -764,7 +788,7 @@ func (i *SQLStore) LookupInvoice(ctx context.Context,
 
 	readTxOpt := sqldb.ReadTxOpt()
 	txErr := i.db.ExecTx(ctx, readTxOpt, func(db SQLInvoiceQueries) error {
-		invoice, err = fetchInvoice(ctx, db, ref)
+		invoice, err = fetchInvoice(ctx, db, ref, i.opts.bolt12)
 
 		return err
 	}, sqldb.NoOpReset)
@@ -803,6 +827,7 @@ func (i *SQLStore) FetchPendingInvoices(ctx context.Context) (
 			for _, row := range rows {
 				hash, invoice, err := fetchInvoiceData(
 					ctx, db, row, nil, true,
+					i.opts.bolt12,
 				)
 				if err != nil {
 					return err
@@ -870,6 +895,7 @@ func (i *SQLStore) InvoicesSettledSince(ctx context.Context, idx uint64) (
 			for _, row := range rows {
 				_, invoice, err := fetchInvoiceData(
 					ctx, db, row, nil, true,
+					i.opts.bolt12,
 				)
 				if err != nil {
 					return fmt.Errorf("unable to fetch "+
@@ -936,6 +962,7 @@ func (i *SQLStore) InvoicesSettledSince(ctx context.Context, idx uint64) (
 			_, invoice, err := fetchInvoiceData(
 				ctx, db, sqlInvoice,
 				(*[32]byte)(ampInvoice.SetID), true,
+				i.opts.bolt12,
 			)
 			if err != nil {
 				return fmt.Errorf("unable to fetch "+
@@ -1020,6 +1047,7 @@ func (i *SQLStore) InvoicesAddedSince(ctx context.Context, idx uint64) (
 			for _, row := range rows {
 				_, invoice, err := fetchInvoiceData(
 					ctx, db, row, nil, true,
+					i.opts.bolt12,
 				)
 				if err != nil {
 					return err
@@ -1153,6 +1181,7 @@ func (i *SQLStore) QueryInvoices(ctx context.Context,
 			for _, row := range rows {
 				_, invoice, err := fetchInvoiceData(
 					ctx, db, row, nil, true,
+					i.opts.bolt12,
 				)
 				if err != nil {
 					return err
@@ -1577,7 +1606,7 @@ func (i *SQLStore) UpdateInvoice(ctx context.Context, ref InvoiceRef,
 			ref.refModifier = HtlcSetOnlyModifier
 		}
 
-		invoice, err := fetchInvoice(ctx, db, ref)
+		invoice, err := fetchInvoice(ctx, db, ref, i.opts.bolt12)
 		if err != nil {
 			return err
 		}
@@ -1693,8 +1722,8 @@ func (i *SQLStore) DeleteCanceledInvoices(ctx context.Context) error {
 // state and HTLCs for the given setID, otherwise for all AMP sub invoices of
 // the invoice. If fetchAmpHtlcs is true, it will also fetch the AMP HTLCs.
 func fetchInvoiceData(ctx context.Context, db SQLInvoiceQueries,
-	row sqlc.Invoice, setID *[32]byte, fetchAmpHtlcs bool) (*lntypes.Hash,
-	*Invoice, error) {
+	row sqlc.Invoice, setID *[32]byte, fetchAmpHtlcs bool,
+	bolt12 bool) (*lntypes.Hash, *Invoice, error) {
 
 	// Unmarshal the common data.
 	hash, invoice, err := unmarshalInvoice(row)
@@ -1710,6 +1739,13 @@ func fetchInvoiceData(ctx context.Context, db SQLInvoiceQueries,
 	}
 
 	invoice.Terms.Features = features
+
+	if bolt12 && !invoice.IsAMP() {
+		err := fetchBolt12Invoice(ctx, db, row.ID, invoice)
+		if err != nil {
+			return nil, nil, err
+		}
+	}
 
 	// If this is an AMP invoice, we'll need fetch the AMP state along
 	// with the HTLCs (if requested).
@@ -1739,6 +1775,64 @@ func fetchInvoiceData(ctx context.Context, db SQLInvoiceQueries,
 	}
 
 	return hash, invoice, nil
+}
+
+// insertBolt12Invoice stores the BOLT 12 data of the invoice with the given ID
+// in its side table.
+func insertBolt12Invoice(ctx context.Context, db SQLInvoiceQueries,
+	invoiceID int64, invoice *Invoice) error {
+
+	// An invoice that answers an invoice request without an offer has no
+	// offer link.
+	params := sqlc.InsertBolt12InvoiceParams{
+		InvoiceID:     invoiceID,
+		InvreqPayerID: invoice.InvreqPayerID,
+	}
+	invoice.OfferID.WhenSome(func(id int64) {
+		params.OfferID = sqldb.SQLInt64(id)
+	})
+	if invoice.InvreqQuantity > 0 {
+		params.InvreqQuantity = sqldb.SQLInt64(
+			int64(invoice.InvreqQuantity),
+		)
+	}
+
+	err := db.InsertBolt12Invoice(ctx, params)
+	if err != nil {
+		return fmt.Errorf("unable to insert BOLT 12 data of "+
+			"invoice(id=%d): %w", invoiceID, err)
+	}
+
+	return nil
+}
+
+// fetchBolt12Invoice fills the BOLT 12 fields of the invoice with the given ID
+// from its side table. An invoice without a row is not a BOLT 12 invoice and
+// stays unchanged.
+func fetchBolt12Invoice(ctx context.Context, db SQLInvoiceQueries,
+	invoiceID int64, invoice *Invoice) error {
+
+	row, err := db.FetchBolt12Invoice(ctx, invoiceID)
+	switch {
+	case errors.Is(err, sql.ErrNoRows):
+		return nil
+
+	case err != nil:
+		return fmt.Errorf("unable to fetch BOLT 12 data of "+
+			"invoice(id=%d): %w", invoiceID, err)
+	}
+
+	invoice.IsBolt12 = true
+	if row.OfferID.Valid {
+		invoice.OfferID = fn.Some(row.OfferID.Int64)
+		invoice.OfferHash = row.OfferHash
+	}
+	invoice.InvreqPayerID = row.InvreqPayerID
+	if row.InvreqQuantity.Valid {
+		invoice.InvreqQuantity = uint64(row.InvreqQuantity.Int64)
+	}
+
+	return nil
 }
 
 // getInvoiceFeatures fetches the invoice features for the given invoice id.
@@ -1878,23 +1972,12 @@ func unmarshalInvoice(row sqlc.Invoice) (*lntypes.Hash, *Invoice,
 			Value:           lnwire.MilliSatoshi(row.AmountMsat),
 			PaymentAddr:     paymentAddr,
 		},
-		AddIndex:      uint64(row.ID),
-		State:         ContractState(row.State),
-		AmtPaid:       lnwire.MilliSatoshi(row.AmountPaidMsat),
-		Htlcs:         make(map[models.CircuitKey]*InvoiceHTLC),
-		AMPState:      AMPInvoiceState{},
-		HodlInvoice:   row.IsHodl,
-		IsBolt12:      row.IsBolt12,
-		InvreqPayerID: row.InvreqPayerID,
-		OfferHash:     row.OfferHash,
-	}
-
-	if row.OfferID.Valid {
-		invoice.OfferID = fn.Some(row.OfferID.Int64)
-	}
-
-	if row.InvreqQuantity.Valid {
-		invoice.InvreqQuantity = uint64(row.InvreqQuantity.Int64)
+		AddIndex:    uint64(row.ID),
+		State:       ContractState(row.State),
+		AmtPaid:     lnwire.MilliSatoshi(row.AmountPaidMsat),
+		Htlcs:       make(map[models.CircuitKey]*InvoiceHTLC),
+		AMPState:    AMPInvoiceState{},
+		HodlInvoice: row.IsHodl,
 	}
 
 	return &hash, invoice, nil

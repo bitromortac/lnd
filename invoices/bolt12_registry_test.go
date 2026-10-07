@@ -109,7 +109,7 @@ func newBolt12RegistryContext(t *testing.T) (*testContext,
 		)
 
 		store := invpkg.NewSQLStore(
-			executor, testClock,
+			executor, testClock, invpkg.WithBolt12(),
 		)
 
 		return store, testClock

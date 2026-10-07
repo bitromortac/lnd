@@ -28,6 +28,21 @@ type AmpSubInvoiceHtlc struct {
 	Preimage   []byte
 }
 
+type Bolt12Invoice struct {
+	InvoiceID      int64
+	OfferID        sql.NullInt64
+	InvreqPayerID  []byte
+	InvreqQuantity sql.NullInt64
+}
+
+type Bolt12Payment struct {
+	IdempotencyKey []byte
+	PaymentID      sql.NullInt64
+	OfferHash      []byte
+	ParamsHash     []byte
+	CreatedAt      time.Time
+}
+
 type ChainParam struct {
 	SingleRow bool
 	Network   string
@@ -158,12 +173,6 @@ type Invoice struct {
 	IsHodl             bool
 	IsKeysend          bool
 	CreatedAt          time.Time
-	IsBolt12           bool
-	OfferID            sql.NullInt64
-	InvoiceNodeID      []byte
-	InvreqPayerID      []byte
-	InvreqQuantity     sql.NullInt64
-	OfferHash          []byte
 }
 
 type InvoiceEvent struct {
