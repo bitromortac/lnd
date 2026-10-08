@@ -256,6 +256,9 @@ func (h *Handler) notifyInvoice(result *InvoiceResult,
 		OfferID:        fn.Some(offer.ID),
 		OfferHash:      offer.Hash[:],
 		InvreqPayerID:  payerIDBytes,
+		InvreqQuantity: uint64(
+			result.Invoice.InvreqQuantity.ValOpt().UnwrapOr(0),
+		),
 	}
 
 	h.notifier.NotifyNewBolt12Invoice(result.PaymentHash, invoice)
