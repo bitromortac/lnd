@@ -169,6 +169,20 @@ func (h *Handler) HandleInvoiceRequest(ctx context.Context, invreqBytes []byte,
 	return nil
 }
 
+// GenerateOfferlessInvoice answers an invoice request without an offer with an
+// invoice signed under the node key, using the handler's payment path builder.
+// The caller stores the invoice and sends it to the payer.
+func (h *Handler) GenerateOfferlessInvoice(
+	ir *bolt12.InvoiceRequest) (*InvoiceResult, error) {
+
+	return GenerateOfferlessInvoice(&InvoiceConfig{
+		Signer:         h.signer,
+		PathBuilder:    h.paymentPathBuilder,
+		Clock:          clock.NewDefaultClock(),
+		FinalCLTVDelta: h.finalCLTVDelta,
+	}, ir)
+}
+
 // lookupOffer finds the stored offer that matches the invoice request's offer
 // fields. It computes the offer hash from the offer fields in the request and
 // looks it up in the store.
