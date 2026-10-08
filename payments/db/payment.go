@@ -98,6 +98,11 @@ type PaymentCreationInfo struct {
 	// payment. It is nil for any other payment, and only an SQL store
 	// with the BOLT 12 tables accepts it.
 	Bolt12 *Bolt12PaymentInfo
+
+	// Bolt12Request binds the payment to an invoice request without an
+	// offer that this node published. It is nil for any other payment, and
+	// only an SQL store with the BOLT 12 tables accepts it.
+	Bolt12Request *Bolt12RequestBinding
 }
 
 // String returns a human-readable description of the payment creation info.
