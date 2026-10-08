@@ -28,6 +28,10 @@ func devCommands() []cli.Command {
 		DecodeOfferCommand,
 		RequestInvoiceCommand,
 		PayOfferCommand,
+		CreateInvoiceRequestCommand,
+		SendInvoiceCommand,
+		ListInvoiceRequestsCommand,
+		ApproveInvoiceRequestPaymentCommand,
 	}
 }
 
