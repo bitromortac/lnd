@@ -2,7 +2,6 @@ package bolt12handler
 
 import (
 	"errors"
-	"fmt"
 
 	"github.com/btcsuite/btcd/btcec/v2"
 	"github.com/lightningnetwork/lnd/bolt12"
@@ -43,27 +42,15 @@ func CheckArrivalPath(ir *bolt12.InvoiceRequest, signer Signer,
 	}
 	paths := ir.OfferPaths.ValOpt().UnwrapOr(lnwire.BlindedPaths{})
 
-	if pathKey == nil {
+	ok, err := CheckArrivalOnPaths(paths.Paths, signer, pathKey)
+	if err != nil {
+		return err
+	}
+	if !ok {
 		return ErrWrongArrivalPath
 	}
 
-	arrivalID, err := blindedNodeID(signer, pathKey)
-	if err != nil {
-		return fmt.Errorf("derive arrival blinded node id: %w", err)
-	}
-
-	for _, path := range paths.Paths {
-		if len(path.Hops) == 0 {
-			continue
-		}
-
-		final := path.Hops[len(path.Hops)-1].BlindedNodeID
-		if final != nil && final.IsEqual(arrivalID) {
-			return nil
-		}
-	}
-
-	return ErrWrongArrivalPath
+	return nil
 }
 
 // validateInvoiceRequestForOffer performs the offer-specific validation of an
