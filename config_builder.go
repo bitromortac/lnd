@@ -1364,16 +1364,22 @@ func (d *DefaultDatabaseBuilder) BuildDatabase(
 
 		dbs.InvoiceDB = sqlInvoiceDB
 
-		offerExecutor := sqldb.NewTransactionExecutor(
-			baseDB,
-			func(tx *sql.Tx) offers.SQLOfferQueries {
-				return baseDB.WithTx(tx)
-			},
-		)
+		// The offer table comes from a development migration, so only
+		// a node with BOLT 12 offers enabled touches it. The startup
+		// check makes sure that the migration exists then. Without an
+		// offer store the server answers no invoice requests.
+		if d.cfg.ProtocolOptions.Bolt12OffersEnabled() {
+			offerExecutor := sqldb.NewTransactionExecutor(
+				baseDB,
+				func(tx *sql.Tx) offers.SQLOfferQueries {
+					return baseDB.WithTx(tx)
+				},
+			)
 
-		dbs.OfferDB = offers.NewSQLStore(
-			offerExecutor, clock.NewDefaultClock(),
-		)
+			dbs.OfferDB = offers.NewSQLStore(
+				offerExecutor, clock.NewDefaultClock(),
+			)
+		}
 
 		// Create the graph store.
 		graphExecutor := sqldb.NewTransactionExecutor(

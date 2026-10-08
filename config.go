@@ -45,6 +45,7 @@ import (
 	"github.com/lightningnetwork/lnd/onionmessage"
 	"github.com/lightningnetwork/lnd/routing"
 	"github.com/lightningnetwork/lnd/signal"
+	"github.com/lightningnetwork/lnd/sqldb"
 	"github.com/lightningnetwork/lnd/tor"
 )
 
@@ -1201,6 +1202,12 @@ func ValidateConfig(cfg Config, interceptor signal.Interceptor, fileParser,
 		cfg.ProtocolOptions.OnionMsgGlobalBurstBytes,
 	); err != nil {
 		return nil, mkErr("%s", err)
+	}
+
+	if cfg.ProtocolOptions.Bolt12OffersEnabled() {
+		if err := validateBolt12Offers(&cfg); err != nil {
+			return nil, mkErr("%s", err)
+		}
 	}
 
 	// Ensure that --maxchansize is properly handled when set by user.
@@ -2587,4 +2594,45 @@ func logWarningsForDeprecation(cfg Config) {
 	for k := range deprecated {
 		ltndLog.Warnf("Config '%s' is deprecated, please remove it", k)
 	}
+}
+
+// bolt12Migrations names the development migrations that BOLT 12 offers need.
+// A release build does not apply them, so BOLT 12 tables exist only in a build
+// with the development migrations.
+var bolt12Migrations = []string{
+	"000016_offers",
+}
+
+// validateBolt12Offers makes sure that the node can run BOLT 12 offers. The
+// offer store lives in native SQL, and its migration must be part of this
+// build. Checking at startup keeps a node from
+// failing later, on the first offer or the first payment.
+func validateBolt12Offers(cfg *Config) error {
+	if cfg.ProtocolOptions.NoOnionMessages() {
+		return errors.New("protocol.bolt12-offers needs onion messages")
+	}
+
+	if cfg.ProtocolOptions.NoRouteBlinding() {
+		return errors.New("protocol.bolt12-offers needs route blinding")
+	}
+
+	if cfg.DB == nil || !cfg.DB.UseNativeSQL {
+		return errors.New("protocol.bolt12-offers needs " +
+			"db.use-native-sql")
+	}
+
+	known := make(map[string]struct{})
+	for _, migration := range sqldb.GetMigrations() {
+		known[migration.Name] = struct{}{}
+	}
+
+	for _, name := range bolt12Migrations {
+		if _, ok := known[name]; !ok {
+			return fmt.Errorf("protocol.bolt12-offers needs the "+
+				"BOLT 12 development migrations, but %s is "+
+				"not part of this build", name)
+		}
+	}
+
+	return nil
 }
