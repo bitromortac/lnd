@@ -72,22 +72,26 @@ type InvoiceResult struct {
 }
 
 // GenerateInvoice creates a BOLT 12 invoice in response to a validated invoice
-// request. The invoice mirrors the request. If pathBuilder is nil or fails, a
-// single-hop blinded path is used as fallback.
+// request that answers an offer. The invoice mirrors the request. If
+// pathBuilder is nil or fails, a single-hop blinded path is used as fallback.
+// The final hop carries a signed envelope, so the node can rebuild the invoice
+// when the HTLC arrives and stores nothing before that.
 func GenerateInvoice(ir *bolt12.InvoiceRequest,
 	signer NodeSigner, pathBuilder PaymentPathBuilder,
 	offerHash [32]byte,
 	pathKey *btcec.PublicKey) (*InvoiceResult, error) {
 
-	var preimage lntypes.Preimage
-	if _, err := rand.Read(preimage[:]); err != nil {
-		return nil, fmt.Errorf("generate preimage: %w", err)
-	}
-	paymentHash := preimage.Hash()
-
-	var pathID [32]byte
-	if _, err := rand.Read(pathID[:]); err != nil {
-		return nil, fmt.Errorf("generate path_id: %w", err)
+	// Choose the identity the invoice is signed under. An offer that
+	// publishes offer_paths instead of offer_issuer_id binds
+	// invoice_node_id to the blinded node the payer reached, so signing
+	// under our identity key would produce an invoice the payer must
+	// reject. The payment path's introduction node stays the real node ID
+	// in both cases, since the payer has to route to it.
+	invoiceNodeID, signInvoice, err := invoiceSigningIdentity(
+		ir, signer, pathKey,
+	)
+	if err != nil {
+		return nil, err
 	}
 
 	// Extract payer ID from the invoice request as the serialised
@@ -100,35 +104,94 @@ func GenerateInvoice(ir *bolt12.InvoiceRequest,
 	)
 
 	// Build the signed envelope for stateless BOLT 12 settlement.
+	envelope := func(preimage lntypes.Preimage,
+		invoiceAmount uint64) ([]byte, error) {
+
+		envData := &InvoiceEnvelopeData{
+			Preimage:  [32]byte(preimage),
+			CreatedAt: uint64(time.Now().Unix()),
+			Amount:    invoiceAmount,
+			Quantity: uint64(
+				ir.InvreqQuantity.ValOpt().UnwrapOr(0),
+			),
+		}
+		if len(payerIDBytes) == 33 {
+			copy(envData.PayerID[:], payerIDBytes)
+		}
+
+		envTLVData, err := EncodeEnvelopeData(envData)
+		if err != nil {
+			return nil, fmt.Errorf("encode envelope data: %w", err)
+		}
+
+		envSig, err := signer.SignEnvelopeData(offerHash, envTLVData)
+		if err != nil {
+			return nil, fmt.Errorf("sign envelope: %w", err)
+		}
+
+		return EncodeSignedEnvelope(&SignedInvoiceEnvelope{
+			Signature: envSig,
+			OfferHash: offerHash,
+			TLVData:   envTLVData,
+		}), nil
+	}
+
+	return generateInvoice(
+		ir, signer, pathBuilder, invoiceNodeID, signInvoice, envelope,
+	)
+}
+
+// GenerateOfferlessInvoice builds a signed BOLT 12 invoice for an invoice
+// request without an offer, which a payer published as an offer to send
+// money. The operator starts this flow, so the caller stores the invoice at
+// once and no envelope is needed. The invoice is signed under the node key,
+// because the spec leaves invoice_node_id to the payee for such a request and
+// the node key is what the payer can confirm out of band.
+func GenerateOfferlessInvoice(ir *bolt12.InvoiceRequest, signer NodeSigner,
+	pathBuilder PaymentPathBuilder) (*InvoiceResult, error) {
+
+	if ir.OfferIssuerID.IsSome() || ir.OfferPaths.IsSome() {
+		return nil, ErrNotOfferless
+	}
+
+	return generateInvoice(
+		ir, signer, pathBuilder, signer.NodePubKey(),
+		signer.SignInvoice, nil,
+	)
+}
+
+// generateInvoice builds and signs an invoice for the request under the given
+// identity. envelope, when not nil, gives the bytes the final hop of each
+// payment path carries for stateless settlement.
+func generateInvoice(ir *bolt12.InvoiceRequest, signer NodeSigner,
+	pathBuilder PaymentPathBuilder, invoiceNodeID *btcec.PublicKey,
+	signInvoice invoiceSigner,
+	envelope func(lntypes.Preimage, uint64) ([]byte, error)) (
+	*InvoiceResult, error) {
+
+	var preimage lntypes.Preimage
+	if _, err := rand.Read(preimage[:]); err != nil {
+		return nil, fmt.Errorf("generate preimage: %w", err)
+	}
+	paymentHash := preimage.Hash()
+
+	var pathID [32]byte
+	if _, err := rand.Read(pathID[:]); err != nil {
+		return nil, fmt.Errorf("generate path_id: %w", err)
+	}
+
 	invoiceAmount, err := computeInvoiceAmount(ir)
 	if err != nil {
 		return nil, err
 	}
-	envData := &InvoiceEnvelopeData{
-		Preimage:  [32]byte(preimage),
-		CreatedAt: uint64(time.Now().Unix()),
-		Amount:    invoiceAmount,
-		Quantity:  uint64(ir.InvreqQuantity.ValOpt().UnwrapOr(0)),
-	}
-	if len(payerIDBytes) == 33 {
-		copy(envData.PayerID[:], payerIDBytes)
-	}
 
-	envTLVData, err := EncodeEnvelopeData(envData)
-	if err != nil {
-		return nil, fmt.Errorf("encode envelope data: %w", err)
+	var envelopeBytes []byte
+	if envelope != nil {
+		envelopeBytes, err = envelope(preimage, invoiceAmount)
+		if err != nil {
+			return nil, err
+		}
 	}
-
-	envSig, err := signer.SignEnvelopeData(offerHash, envTLVData)
-	if err != nil {
-		return nil, fmt.Errorf("sign envelope: %w", err)
-	}
-
-	envelopeBytes := EncodeSignedEnvelope(&SignedInvoiceEnvelope{
-		Signature: envSig,
-		OfferHash: offerHash,
-		TLVData:   envTLVData,
-	})
 
 	var pathResult *PaymentPathResult
 	if pathBuilder != nil {
@@ -176,19 +239,6 @@ func GenerateInvoice(ir *bolt12.InvoiceRequest,
 	} else {
 		log.Debugf("Using multi-hop blinded payment path with "+
 			"%d path(s)", len(pathResult.Paths))
-	}
-
-	// Choose the identity the invoice is signed under. An offer that
-	// publishes offer_paths instead of offer_issuer_id binds
-	// invoice_node_id to the blinded node the payer reached, so signing
-	// under our identity key would produce an invoice the payer must
-	// reject. The payment path's introduction node stays the real node ID
-	// in both cases, since the payer has to route to it.
-	invoiceNodeID, signInvoice, err := invoiceSigningIdentity(
-		ir, signer, pathKey,
-	)
-	if err != nil {
-		return nil, err
 	}
 
 	inv := buildInvoiceFromRequest(

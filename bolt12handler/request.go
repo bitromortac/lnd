@@ -458,6 +458,18 @@ func WaitForInvoiceReply(ctx context.Context, msgServer *subscribe.Server,
 				continue
 			}
 
+			// An invoice without an offer answers a request this
+			// node published, and the offer-less payer handles it.
+			// It never answers the offer request waiting here.
+			inv, err := bolt12.DecodeInvoice(invoiceBytes)
+			if err == nil && IsOfferless(
+				inv.OfferIssuerID.IsSome(),
+				inv.OfferPaths.IsSome(),
+			) {
+
+				continue
+			}
+
 			return invoiceBytes, nil
 
 		case <-timer.C:
