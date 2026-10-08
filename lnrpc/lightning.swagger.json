@@ -1691,6 +1691,126 @@
         ]
       }
     },
+    "/v1/invoicerequests": {
+      "get": {
+        "summary": "lncli: `listinvoicerequests`\nListInvoiceRequests returns the invoice requests without an offer that\nthis node published, with the invoices that wait for approval.",
+        "operationId": "Lightning_ListInvoiceRequests",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/lnrpcListInvoiceRequestsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "tags": [
+          "Lightning"
+        ]
+      },
+      "post": {
+        "summary": "lncli: `createinvoicerequest`\nCreateInvoiceRequest publishes an invoice request without an offer as an\nlnr1 string: an offer to send money, for a refund or a withdrawal. The\npayee answers it with an invoice, and the node pays that invoice at most\nonce. An invoice from expected_node_id is paid at once. Without an\nexpected node, the invoice waits for ApproveInvoiceRequestPayment.",
+        "operationId": "Lightning_CreateInvoiceRequest",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/lnrpcCreateInvoiceRequestResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/lnrpcCreateInvoiceRequestRequest"
+            }
+          }
+        ],
+        "tags": [
+          "Lightning"
+        ]
+      }
+    },
+    "/v1/invoicerequests/approve": {
+      "post": {
+        "summary": "lncli: `approveinvoicerequestpayment`\nApproveInvoiceRequestPayment pays an invoice that answers one of this\nnode's published invoice requests and waits for approval, because the\nrequest names no expected node. It returns when the payment settles.",
+        "operationId": "Lightning_ApproveInvoiceRequestPayment",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/lnrpcApproveInvoiceRequestPaymentResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/lnrpcApproveInvoiceRequestPaymentRequest"
+            }
+          }
+        ],
+        "tags": [
+          "Lightning"
+        ]
+      }
+    },
+    "/v1/invoicerequests/invoice": {
+      "post": {
+        "summary": "lncli: `sendinvoice`\nSendInvoice answers an invoice request without an offer (lnr1...) with a\nBOLT 12 invoice. The node stores the invoice, sends it to the payer by\nonion message and returns it. The payer then pays it.",
+        "operationId": "Lightning_SendInvoice",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/lnrpcSendInvoiceResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/lnrpcSendInvoiceRequest"
+            }
+          }
+        ],
+        "tags": [
+          "Lightning"
+        ]
+      }
+    },
     "/v1/invoices": {
       "get": {
         "summary": "lncli: `listinvoices`\nListInvoices returns a list of all the invoices currently stored within the\ndatabase. Any active debug invoices are ignored. It has full support for\npaginated responses, allowing users to query for specific invoices through\ntheir add_index. This can be done by using either the first_index_offset or\nlast_index_offset fields included in the response as the index_offset of the\nnext request. By default, the first 100 invoices created will be returned.\nBackwards pagination is also supported through the Reversed flag.",
@@ -3646,6 +3766,36 @@
         }
       }
     },
+    "lnrpcApproveInvoiceRequestPaymentRequest": {
+      "type": "object",
+      "properties": {
+        "payment_hash": {
+          "type": "string",
+          "format": "byte",
+          "description": "The 32-byte payment hash of the pending invoice to pay."
+        },
+        "fee_limit_msat": {
+          "type": "string",
+          "format": "int64",
+          "description": "Maximum fee in millisatoshis to pay for routing. If zero, a default\npercentage of the payment amount is used."
+        }
+      }
+    },
+    "lnrpcApproveInvoiceRequestPaymentResponse": {
+      "type": "object",
+      "properties": {
+        "payment_preimage": {
+          "type": "string",
+          "format": "byte",
+          "description": "The 32-byte payment preimage proving settlement."
+        },
+        "payment_hash": {
+          "type": "string",
+          "format": "byte",
+          "description": "The 32-byte payment hash."
+        }
+      }
+    },
     "lnrpcBakeMacaroonRequest": {
       "type": "object",
       "properties": {
@@ -4987,6 +5137,54 @@
         "status": {
           "type": "string",
           "description": "The status of the connect operation."
+        }
+      }
+    },
+    "lnrpcCreateInvoiceRequestRequest": {
+      "type": "object",
+      "properties": {
+        "description": {
+          "type": "string",
+          "description": "The purpose of the payment, set as offer_description."
+        },
+        "amount_msat": {
+          "type": "string",
+          "format": "uint64",
+          "description": "The amount this node pays, in millisatoshis."
+        },
+        "absolute_expiry": {
+          "type": "string",
+          "format": "uint64",
+          "description": "If set, the time in seconds since the epoch after which the node no\nlonger pays an invoice for the request."
+        },
+        "expected_node_id": {
+          "type": "string",
+          "format": "byte",
+          "description": "The 33-byte invoice_node_id agreed with the payee out of band. An\ninvoice from this node is paid at once. If empty, every invoice waits\nfor ApproveInvoiceRequestPayment."
+        },
+        "idempotency_key": {
+          "type": "string",
+          "format": "byte",
+          "description": "The caller's idempotency key. A call with a known key returns the\nstored request. If empty, the node generates a random key."
+        },
+        "fee_limit_msat": {
+          "type": "string",
+          "format": "int64",
+          "description": "The maximum routing fee in millisatoshis for paying an invoice from\nthe expected node at once. If zero, the default fee limit applies."
+        }
+      }
+    },
+    "lnrpcCreateInvoiceRequestResponse": {
+      "type": "object",
+      "properties": {
+        "invoice_request": {
+          "type": "string",
+          "description": "The signed invoice request (lnr1...)."
+        },
+        "idempotency_key": {
+          "type": "string",
+          "format": "byte",
+          "description": "The idempotency key of the request."
         }
       }
     },
@@ -6384,6 +6582,18 @@
         }
       }
     },
+    "lnrpcListInvoiceRequestsResponse": {
+      "type": "object",
+      "properties": {
+        "invoice_requests": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/lnrpcPublishedInvoiceRequest"
+          }
+        }
+      }
+    },
     "lnrpcListInvoiceResponse": {
       "type": "object",
       "properties": {
@@ -7522,6 +7732,25 @@
         }
       }
     },
+    "lnrpcPendingInvoice": {
+      "type": "object",
+      "properties": {
+        "invoice": {
+          "type": "string",
+          "description": "The invoice that waits for approval (lni1...)."
+        },
+        "payment_hash": {
+          "type": "string",
+          "format": "byte",
+          "description": "The 32-byte payment hash of the invoice."
+        },
+        "invoice_node_id": {
+          "type": "string",
+          "format": "byte",
+          "description": "The 33-byte invoice_node_id that signed the invoice."
+        }
+      }
+    },
     "lnrpcPendingUpdate": {
       "type": "object",
       "properties": {
@@ -7639,6 +7868,62 @@
         "no_publish": {
           "type": "boolean",
           "description": "If a channel should be part of a batch (multiple channel openings in one\ntransaction), it can be dangerous if the whole batch transaction is\npublished too early before all channel opening negotiations are completed.\nThis flag prevents this particular channel from broadcasting the transaction\nafter the negotiation with the remote peer. In a batch of channel openings\nthis flag should be set to true for every channel but the very last."
+        }
+      }
+    },
+    "lnrpcPublishedInvoiceRequest": {
+      "type": "object",
+      "properties": {
+        "invoice_request": {
+          "type": "string",
+          "description": "The signed invoice request (lnr1...)."
+        },
+        "idempotency_key": {
+          "type": "string",
+          "format": "byte",
+          "description": "The idempotency key of the request."
+        },
+        "amount_msat": {
+          "type": "string",
+          "format": "uint64",
+          "description": "The amount the request pays in millisatoshis."
+        },
+        "expires_at": {
+          "type": "string",
+          "format": "int64",
+          "description": "The expiry in seconds since the epoch, or zero for none."
+        },
+        "expected_node_id": {
+          "type": "string",
+          "format": "byte",
+          "description": "The 33-byte expected invoice_node_id, or empty."
+        },
+        "used": {
+          "type": "boolean",
+          "description": "Whether a payment ever started for the request."
+        },
+        "payment_hash": {
+          "type": "string",
+          "format": "byte",
+          "description": "The 32-byte payment hash of the request's current payment, or empty."
+        },
+        "pending_invoices": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/lnrpcPendingInvoice"
+          },
+          "description": "The invoices that wait for approval. They live in memory only."
+        },
+        "created_at": {
+          "type": "string",
+          "format": "int64",
+          "description": "The creation time in seconds since the epoch."
+        },
+        "fee_limit_msat": {
+          "type": "string",
+          "format": "int64",
+          "description": "The maximum routing fee in millisatoshis for paying an invoice from\nthe expected node at once. Zero selects the default fee limit."
         }
       }
     },
@@ -8091,6 +8376,34 @@
         "status": {
           "type": "string",
           "description": "The status of the send operation."
+        }
+      }
+    },
+    "lnrpcSendInvoiceRequest": {
+      "type": "object",
+      "properties": {
+        "invoice_request": {
+          "type": "string",
+          "description": "The invoice request without an offer (lnr1...) to answer."
+        }
+      }
+    },
+    "lnrpcSendInvoiceResponse": {
+      "type": "object",
+      "properties": {
+        "invoice": {
+          "type": "string",
+          "description": "The signed invoice that was sent (lni1...)."
+        },
+        "payment_hash": {
+          "type": "string",
+          "format": "byte",
+          "description": "The 32-byte payment hash of the invoice."
+        },
+        "amount_msat": {
+          "type": "string",
+          "format": "uint64",
+          "description": "The invoice amount in millisatoshis."
         }
       }
     },

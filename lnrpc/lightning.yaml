@@ -176,3 +176,14 @@ http:
     - selector: lnrpc.Lightning.PayOffer
       post: "/v1/offers/pay"
       body: "*"
+    - selector: lnrpc.Lightning.CreateInvoiceRequest
+      post: "/v1/invoicerequests"
+      body: "*"
+    - selector: lnrpc.Lightning.SendInvoice
+      post: "/v1/invoicerequests/invoice"
+      body: "*"
+    - selector: lnrpc.Lightning.ListInvoiceRequests
+      get: "/v1/invoicerequests"
+    - selector: lnrpc.Lightning.ApproveInvoiceRequestPayment
+      post: "/v1/invoicerequests/approve"
+      body: "*"
