@@ -8984,12 +8984,6 @@ func (r *rpcServer) CreateOffer(ctx context.Context,
 	}, nil
 }
 
-// errBolt12Disabled is returned by the BOLT 12 RPCs that need the offer store
-// or the node's BOLT 12 signer when the node runs without BOLT 12 offers.
-var errBolt12Disabled = status.Error(codes.FailedPrecondition, "BOLT 12 "+
-	"offers are disabled: start lnd with --protocol.bolt12-offers in a "+
-	"development build with native SQL")
-
 // DecodeOffer decodes a bech32-encoded BOLT 12 offer string and returns the
 // decoded fields. This is a stateless utility analogous to DecodePayReq for
 // BOLT 11.
@@ -9282,7 +9276,7 @@ func (r *rpcServer) RequestInvoice(ctx context.Context,
 	req *lnrpc.RequestInvoiceRequest) (*lnrpc.RequestInvoiceResponse,
 	error) {
 
-	if r.server.bolt12Handler == nil {
+	if r.server.bolt12Signer == nil {
 		return nil, errBolt12Disabled
 	}
 
@@ -9437,6 +9431,12 @@ func (r *rpcServer) RequestInvoice(ctx context.Context,
 	return resp, nil
 }
 
+// errBolt12Disabled is returned by the BOLT 12 RPCs that need the offer store
+// or the node's BOLT 12 signer when the node runs without BOLT 12 offers.
+var errBolt12Disabled = status.Error(codes.FailedPrecondition, "BOLT 12 "+
+	"offers are disabled: start lnd with --protocol.bolt12-offers in a "+
+	"development build with native SQL")
+
 // resumeOfferPayment answers a PayOffer call whose idempotency key already has
 // a payment. A succeeded payment, or one that settles while the call waits,
 // returns its result without paying again. A key used with other parameters,
@@ -9556,6 +9556,10 @@ func (r *rpcServer) PayOffer(req *lnrpc.PayOfferRequest,
 	stream lnrpc.Lightning_PayOfferServer) error {
 
 	ctx := stream.Context()
+
+	if r.server.bolt12Signer == nil {
+		return errBolt12Disabled
+	}
 
 	// Phase 0: Decode and validate the offer.
 	offer, err := bolt12.DecodeOfferString(

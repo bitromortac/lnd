@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"encoding/hex"
-	"strings"
 	"time"
 
 	"github.com/btcsuite/btcd/btcec/v2"
@@ -710,8 +709,9 @@ func testBolt12PayOfferMultiHop(ht *lntest.HarnessTest) {
 	// Create a 4-node chain: Carol → Bob → Dave → Alice.
 	// CreateSimpleNetwork opens channels left-to-right and funds the
 	// opener, so Carol has outbound to Bob, Bob to Dave, Dave to Alice.
+	args := bolt12NodeArgs(ht)
 	chanPoints, nodes := ht.CreateSimpleNetwork(
-		[][]string{nil, nil, nil, nil},
+		[][]string{args, args, args, args},
 		lntest.OpenChannelParams{Amt: 500_000},
 	)
 	defer func() {
@@ -774,8 +774,9 @@ func testBolt12PayOfferMultiHop(ht *lntest.HarnessTest) {
 // blinded message paths (offer_paths) instead of Alice's pubkey. Carol sends
 // the invoice request through the offer's blinded path to reach Alice.
 func testBolt12PayOfferBlindedOffer(ht *lntest.HarnessTest) {
+	args := bolt12NodeArgs(ht)
 	chanPoints, nodes := ht.CreateSimpleNetwork(
-		[][]string{nil, nil, nil, nil},
+		[][]string{args, args, args, args},
 		lntest.OpenChannelParams{Amt: 500_000},
 	)
 	defer func() {
@@ -877,15 +878,6 @@ func testBolt12PayOfferDedup(ht *lntest.HarnessTest) {
 			AmountMsat:  10000,
 		},
 	)
-	if err != nil && strings.Contains(
-		err.Error(), "offer store not initialized",
-	) {
-
-		ht.Skipf(
-			"offer store requires --dbbackend=sqlite " +
-				"--nativesql",
-		)
-	}
 	require.NoError(ht, err, "CreateOffer")
 
 	// The first payment with key K1 pays the offer.
@@ -981,15 +973,6 @@ func testBolt12PayOfferStreamEvents(ht *lntest.HarnessTest) {
 			AmountMsat:  20000,
 		},
 	)
-	if err != nil && strings.Contains(
-		err.Error(), "offer store not initialized",
-	) {
-
-		ht.Skipf(
-			"offer store requires --dbbackend=sqlite " +
-				"--nativesql",
-		)
-	}
 	require.NoError(ht, err, "CreateOffer")
 
 	// Open stream directly (not via harness helper).

@@ -2601,11 +2601,13 @@ func logWarningsForDeprecation(cfg Config) {
 // with the development migrations.
 var bolt12Migrations = []string{
 	"000016_offers",
+	"000017_bolt12_invoices",
+	"000018_bolt12_payments",
 }
 
 // validateBolt12Offers makes sure that the node can run BOLT 12 offers. The
-// offer store lives in native SQL, and its migration must be part of this
-// build. Checking at startup keeps a node from
+// offer store and the BOLT 12 side tables live in native SQL, and their
+// migrations must be part of this build. Checking at startup keeps a node from
 // failing later, on the first offer or the first payment.
 func validateBolt12Offers(cfg *Config) error {
 	if cfg.ProtocolOptions.NoOnionMessages() {

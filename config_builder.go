@@ -1358,18 +1358,27 @@ func (d *DefaultDatabaseBuilder) BuildDatabase(
 			},
 		)
 
+		// The BOLT 12 tables come from development migrations, so
+		// only a node with BOLT 12 offers enabled touches them. The
+		// startup check makes sure that the migrations exist then.
+		bolt12 := d.cfg.ProtocolOptions.Bolt12OffersEnabled()
+
+		var invoiceOpts []invoices.SQLStoreOption
+		if bolt12 {
+			invoiceOpts = append(invoiceOpts, invoices.WithBolt12())
+		}
+
 		sqlInvoiceDB := invoices.NewSQLStore(
 			invoiceExecutor, clock.NewDefaultClock(),
-			invoices.WithBolt12(),
+			invoiceOpts...,
 		)
 
 		dbs.InvoiceDB = sqlInvoiceDB
 
-		// The offer table comes from a development migration, so only
-		// a node with BOLT 12 offers enabled touches it. The startup
-		// check makes sure that the migration exists then. Without an
-		// offer store the server answers no invoice requests.
-		if d.cfg.ProtocolOptions.Bolt12OffersEnabled() {
+		// Without an offer store the server builds no BOLT 12
+		// handler, answers no invoice requests and settles no BOLT
+		// 12 invoices.
+		if bolt12 {
 			offerExecutor := sqldb.NewTransactionExecutor(
 				baseDB,
 				func(tx *sql.Tx) offers.SQLOfferQueries {
