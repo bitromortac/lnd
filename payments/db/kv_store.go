@@ -185,7 +185,7 @@ func (p *KVStore) InitPayment(_ context.Context, paymentHash lntypes.Hash,
 	info *PaymentCreationInfo) error {
 
 	// BOLT 12 payments need the SQL tables of the native SQL store.
-	if info.Bolt12 != nil {
+	if info.Bolt12 != nil || info.Bolt12Request != nil {
 		return ErrBolt12NotSupported
 	}
 
