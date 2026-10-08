@@ -593,6 +593,22 @@ func MainRPCServerPermissions() map[string][]bakery.Op {
 			Entity: "offchain",
 			Action: "write",
 		}},
+		"/lnrpc.Lightning/CreateInvoiceRequest": {{
+			Entity: "offchain",
+			Action: "write",
+		}},
+		"/lnrpc.Lightning/SendInvoice": {{
+			Entity: "invoices",
+			Action: "write",
+		}},
+		"/lnrpc.Lightning/ListInvoiceRequests": {{
+			Entity: "offchain",
+			Action: "read",
+		}},
+		"/lnrpc.Lightning/ApproveInvoiceRequestPayment": {{
+			Entity: "offchain",
+			Action: "write",
+		}},
 		"/lnrpc.Lightning/LookupHtlcResolution": {{
 			Entity: "offchain",
 			Action: "read",
@@ -9847,6 +9863,263 @@ func (r *rpcServer) PayOffer(req *lnrpc.PayOfferRequest,
 	)
 
 	return stream.Send(resultUpdate)
+}
+
+// CreateInvoiceRequest publishes an invoice request without an offer. The
+// request is an offer to send money: the payee answers it with an invoice,
+// and the node pays that invoice at most once. A call with a known
+// idempotency key returns the stored request.
+func (r *rpcServer) CreateInvoiceRequest(ctx context.Context,
+	req *lnrpc.CreateInvoiceRequestRequest) (
+	*lnrpc.CreateInvoiceRequestResponse, error) {
+
+	payer := r.server.offerlessPayer
+	if r.server.bolt12Signer == nil || payer == nil {
+		return nil, errBolt12Disabled
+	}
+
+	if req.AmountMsat == 0 {
+		return nil, status.Error(codes.InvalidArgument,
+			"amount_msat required")
+	}
+	if req.Description == "" {
+		return nil, status.Error(codes.InvalidArgument,
+			"description required")
+	}
+	if req.FeeLimitMsat < 0 {
+		return nil, status.Error(codes.InvalidArgument,
+			"fee_limit_msat must not be negative")
+	}
+
+	var expectedNodeID []byte
+	if len(req.ExpectedNodeId) > 0 {
+		node, err := btcec.ParsePubKey(req.ExpectedNodeId)
+		if err != nil {
+			return nil, status.Errorf(codes.InvalidArgument,
+				"invalid expected_node_id: %v", err)
+		}
+		expectedNodeID = node.SerializeCompressed()
+	}
+
+	key := req.IdempotencyKey
+	if len(key) == 0 {
+		key = make([]byte, 32)
+		if _, err := rand.Read(key); err != nil {
+			return nil, fmt.Errorf("generate idempotency key: %w",
+				err)
+		}
+	}
+
+	// A known key returns the stored request, but only for the same
+	// parameters. Other parameters with the same key are a caller error.
+	stored, err := payer.store.FetchBolt12InvoiceRequestByKey(ctx, key)
+	switch {
+	case err == nil:
+		var expiresAt uint64
+		if !stored.ExpiresAt.IsZero() {
+			expiresAt = uint64(stored.ExpiresAt.Unix())
+		}
+
+		storedReq, err := bolt12.DecodeInvoiceRequestString(
+			stored.Encoded, payer.chain,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("decode stored invoice "+
+				"request: %w", err)
+		}
+		description := storedReq.OfferDescription.ValOpt().UnwrapOr(nil)
+
+		if uint64(stored.Amount) != req.AmountMsat ||
+			string(description) != req.Description ||
+			expiresAt != req.AbsoluteExpiry ||
+			int64(stored.FeeLimit) != req.FeeLimitMsat ||
+			!bytes.Equal(stored.ExpectedNodeID, expectedNodeID) {
+
+			return nil, status.Error(codes.AlreadyExists,
+				"idempotency key used with other parameters")
+		}
+
+		return &lnrpc.CreateInvoiceRequestResponse{
+			InvoiceRequest: stored.Encoded,
+			IdempotencyKey: key,
+		}, nil
+
+	case !errors.Is(err, paymentsdb.ErrBolt12InvoiceRequestNotFound):
+		return nil, err
+	}
+
+	paths, err := r.server.buildOfferPaths()
+	if err != nil {
+		return nil, fmt.Errorf("build invoice request paths: %w", err)
+	}
+
+	payerSecret, err := r.server.bolt12Signer.PayerSecret()
+	if err != nil {
+		return nil, fmt.Errorf("payer secret: %w", err)
+	}
+
+	// The request answers no offer, so the zero offer hash separates its
+	// payer key from the keys of every offer payment.
+	payerKey, err := bolt12handler.DerivePayerKey(
+		payerSecret, key, [32]byte{},
+	)
+	if err != nil {
+		return nil, fmt.Errorf("derive payer key: %w", err)
+	}
+
+	ir, err := bolt12handler.BuildOfferlessInvoiceRequest(
+		payerKey, bolt12handler.OfferlessRequestParams{
+			Description:    req.Description,
+			AmountMsat:     req.AmountMsat,
+			AbsoluteExpiry: req.AbsoluteExpiry,
+			Chain:          payer.chain,
+			Paths:          paths,
+		},
+	)
+	if err != nil {
+		return nil, status.Error(codes.InvalidArgument, err.Error())
+	}
+
+	encoded, err := bolt12.EncodeInvoiceRequestString(ir)
+	if err != nil {
+		return nil, fmt.Errorf("encode invoice request: %w", err)
+	}
+
+	record := &paymentsdb.Bolt12InvoiceRequest{
+		IdempotencyKey: key,
+		Metadata:       payerKey.Metadata,
+		Encoded:        encoded,
+		Amount:         lnwire.MilliSatoshi(req.AmountMsat),
+		ExpectedNodeID: expectedNodeID,
+		FeeLimit:       lnwire.MilliSatoshi(req.FeeLimitMsat),
+		CreatedAt:      time.Now(),
+	}
+	if req.AbsoluteExpiry != 0 {
+		record.ExpiresAt = time.Unix(int64(req.AbsoluteExpiry), 0)
+	}
+
+	if _, err := payer.store.InsertBolt12InvoiceRequest(
+		ctx, record,
+	); err != nil {
+		return nil, err
+	}
+
+	return &lnrpc.CreateInvoiceRequestResponse{
+		InvoiceRequest: encoded,
+		IdempotencyKey: key,
+	}, nil
+}
+
+// SendInvoice answers an invoice request without an offer as the payee. The
+// node stores the invoice and sends it to the payer, which then pays it.
+func (r *rpcServer) SendInvoice(ctx context.Context,
+	req *lnrpc.SendInvoiceRequest) (*lnrpc.SendInvoiceResponse, error) {
+
+	if r.server.bolt12Handler == nil {
+		return nil, errBolt12Disabled
+	}
+
+	result, err := r.server.sendOfferlessInvoice(ctx, req.InvoiceRequest)
+	if err != nil {
+		return nil, err
+	}
+
+	return &lnrpc.SendInvoiceResponse{
+		Invoice:     result.Encoded,
+		PaymentHash: result.PaymentHash[:],
+		AmountMsat: uint64(
+			result.Invoice.InvoiceAmount.ValOpt().UnwrapOr(0),
+		),
+	}, nil
+}
+
+// ListInvoiceRequests lists the invoice requests without an offer that this
+// node published, with the invoices that wait for approval.
+func (r *rpcServer) ListInvoiceRequests(ctx context.Context,
+	_ *lnrpc.ListInvoiceRequestsRequest) (
+	*lnrpc.ListInvoiceRequestsResponse, error) {
+
+	payer := r.server.offerlessPayer
+	if payer == nil {
+		return nil, errBolt12Disabled
+	}
+
+	reqs, err := payer.store.ListBolt12InvoiceRequests(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	resp := &lnrpc.ListInvoiceRequestsResponse{}
+	for _, stored := range reqs {
+		published := &lnrpc.PublishedInvoiceRequest{
+			InvoiceRequest: stored.Encoded,
+			IdempotencyKey: stored.IdempotencyKey,
+			AmountMsat:     uint64(stored.Amount),
+			ExpectedNodeId: stored.ExpectedNodeID,
+			FeeLimitMsat:   int64(stored.FeeLimit),
+			Used:           stored.Used,
+			CreatedAt:      stored.CreatedAt.Unix(),
+		}
+		if !stored.ExpiresAt.IsZero() {
+			published.ExpiresAt = stored.ExpiresAt.Unix()
+		}
+		if stored.PaymentHash != nil {
+			published.PaymentHash = stored.PaymentHash[:]
+		}
+
+		for _, pending := range payer.pendingFor(stored.ID) {
+			var nodeID []byte
+			if pending.nodeID != nil {
+				nodeID = pending.nodeID.SerializeCompressed()
+			}
+
+			published.PendingInvoices = append(
+				published.PendingInvoices,
+				&lnrpc.PendingInvoice{
+					Invoice:       pending.encoded,
+					PaymentHash:   pending.paymentHash[:],
+					InvoiceNodeId: nodeID,
+				},
+			)
+		}
+
+		resp.InvoiceRequests = append(resp.InvoiceRequests, published)
+	}
+
+	return resp, nil
+}
+
+// ApproveInvoiceRequestPayment pays an invoice that waits for approval because
+// its request names no expected node. The call returns when the payment
+// settles or fails.
+func (r *rpcServer) ApproveInvoiceRequestPayment(ctx context.Context,
+	req *lnrpc.ApproveInvoiceRequestPaymentRequest) (
+	*lnrpc.ApproveInvoiceRequestPaymentResponse, error) {
+
+	payer := r.server.offerlessPayer
+	if payer == nil {
+		return nil, errBolt12Disabled
+	}
+
+	hash, err := lntypes.MakeHash(req.PaymentHash)
+	if err != nil {
+		return nil, status.Errorf(codes.InvalidArgument,
+			"invalid payment_hash: %v", err)
+	}
+
+	preimage, err := payer.approve(ctx, hash, req.FeeLimitMsat)
+	switch {
+	case errors.Is(err, errPendingInvoiceNotFound):
+		return nil, status.Error(codes.NotFound, err.Error())
+
+	case err != nil:
+		return nil, err
+	}
+
+	return &lnrpc.ApproveInvoiceRequestPaymentResponse{
+		PaymentPreimage: preimage[:],
+		PaymentHash:     hash[:],
+	}, nil
 }
 
 // ListAliases returns the set of all aliases we have ever allocated along with

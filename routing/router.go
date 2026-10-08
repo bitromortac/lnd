@@ -918,6 +918,12 @@ type LightningPayment struct {
 	// payment. Nil for any other payment. The payments store checks the
 	// key in the same transaction that creates the payment.
 	Bolt12 *paymentsdb.Bolt12PaymentInfo
+
+	// Bolt12Request binds the payment to an invoice request without an
+	// offer that this node published. Nil for any other payment. The
+	// payments store checks the request in the same transaction that
+	// creates the payment.
+	Bolt12Request *paymentsdb.Bolt12RequestBinding
 }
 
 // AMPOptions houses information that must be known in order to send an AMP
@@ -1078,6 +1084,7 @@ func (r *ChannelRouter) PreparePayment(payment *LightningPayment) (
 		PaymentRequest:        payment.PaymentRequest,
 		FirstHopCustomRecords: payment.FirstHopCustomRecords,
 		Bolt12:                payment.Bolt12,
+		Bolt12Request:         payment.Bolt12Request,
 	}
 
 	// Create a new ShardTracker that we'll use during the life cycle of
