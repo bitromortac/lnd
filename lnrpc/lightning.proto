@@ -604,6 +604,38 @@ service Lightning {
     */
     rpc PayOffer (PayOfferRequest) returns (stream PayOfferUpdate);
 
+    /* lncli: `createinvoicerequest`
+    CreateInvoiceRequest publishes an invoice request without an offer as an
+    lnr1 string: an offer to send money, for a refund or a withdrawal. The
+    payee answers it with an invoice, and the node pays that invoice at most
+    once. An invoice from expected_node_id is paid at once. Without an
+    expected node, the invoice waits for ApproveInvoiceRequestPayment.
+    */
+    rpc CreateInvoiceRequest (CreateInvoiceRequestRequest)
+        returns (CreateInvoiceRequestResponse);
+
+    /* lncli: `sendinvoice`
+    SendInvoice answers an invoice request without an offer (lnr1...) with a
+    BOLT 12 invoice. The node stores the invoice, sends it to the payer by
+    onion message and returns it. The payer then pays it.
+    */
+    rpc SendInvoice (SendInvoiceRequest) returns (SendInvoiceResponse);
+
+    /* lncli: `listinvoicerequests`
+    ListInvoiceRequests returns the invoice requests without an offer that
+    this node published, with the invoices that wait for approval.
+    */
+    rpc ListInvoiceRequests (ListInvoiceRequestsRequest)
+        returns (ListInvoiceRequestsResponse);
+
+    /* lncli: `approveinvoicerequestpayment`
+    ApproveInvoiceRequestPayment pays an invoice that answers one of this
+    node's published invoice requests and waits for approval, because the
+    request names no expected node. It returns when the payment settles.
+    */
+    rpc ApproveInvoiceRequestPayment (ApproveInvoiceRequestPaymentRequest)
+        returns (ApproveInvoiceRequestPaymentResponse);
+
     /* lncli: `listaliases`
     ListAliases returns the set of all aliases that have ever existed with
     their confirmed SCID (if it exists) and/or the base SCID (in the case of
@@ -956,6 +988,122 @@ message PayOfferPaymentResult {
 
     // The idempotency key of this payment.
     bytes idempotency_key = 7;
+}
+
+message CreateInvoiceRequestRequest {
+    // The purpose of the payment, set as offer_description.
+    string description = 1;
+
+    // The amount this node pays, in millisatoshis.
+    uint64 amount_msat = 2;
+
+    // If set, the time in seconds since the epoch after which the node no
+    // longer pays an invoice for the request.
+    uint64 absolute_expiry = 3;
+
+    // The 33-byte invoice_node_id agreed with the payee out of band. An
+    // invoice from this node is paid at once. If empty, every invoice waits
+    // for ApproveInvoiceRequestPayment.
+    bytes expected_node_id = 4;
+
+    // The caller's idempotency key. A call with a known key returns the
+    // stored request. If empty, the node generates a random key.
+    bytes idempotency_key = 5;
+
+    // The maximum routing fee in millisatoshis for paying an invoice from
+    // the expected node at once. If zero, the default fee limit applies.
+    int64 fee_limit_msat = 6;
+}
+
+message CreateInvoiceRequestResponse {
+    // The signed invoice request (lnr1...).
+    string invoice_request = 1;
+
+    // The idempotency key of the request.
+    bytes idempotency_key = 2;
+}
+
+message SendInvoiceRequest {
+    // The invoice request without an offer (lnr1...) to answer.
+    string invoice_request = 1;
+}
+
+message SendInvoiceResponse {
+    // The signed invoice that was sent (lni1...).
+    string invoice = 1;
+
+    // The 32-byte payment hash of the invoice.
+    bytes payment_hash = 2;
+
+    // The invoice amount in millisatoshis.
+    uint64 amount_msat = 3;
+}
+
+message ListInvoiceRequestsRequest {
+}
+
+message PendingInvoice {
+    // The invoice that waits for approval (lni1...).
+    string invoice = 1;
+
+    // The 32-byte payment hash of the invoice.
+    bytes payment_hash = 2;
+
+    // The 33-byte invoice_node_id that signed the invoice.
+    bytes invoice_node_id = 3;
+}
+
+message PublishedInvoiceRequest {
+    // The signed invoice request (lnr1...).
+    string invoice_request = 1;
+
+    // The idempotency key of the request.
+    bytes idempotency_key = 2;
+
+    // The amount the request pays in millisatoshis.
+    uint64 amount_msat = 3;
+
+    // The expiry in seconds since the epoch, or zero for none.
+    int64 expires_at = 4;
+
+    // The 33-byte expected invoice_node_id, or empty.
+    bytes expected_node_id = 5;
+
+    // Whether a payment ever started for the request.
+    bool used = 6;
+
+    // The 32-byte payment hash of the request's current payment, or empty.
+    bytes payment_hash = 7;
+
+    // The invoices that wait for approval. They live in memory only.
+    repeated PendingInvoice pending_invoices = 8;
+
+    // The creation time in seconds since the epoch.
+    int64 created_at = 9;
+    // The maximum routing fee in millisatoshis for paying an invoice from
+    // the expected node at once. Zero selects the default fee limit.
+    int64 fee_limit_msat = 10;
+}
+
+message ListInvoiceRequestsResponse {
+    repeated PublishedInvoiceRequest invoice_requests = 1;
+}
+
+message ApproveInvoiceRequestPaymentRequest {
+    // The 32-byte payment hash of the pending invoice to pay.
+    bytes payment_hash = 1;
+
+    // Maximum fee in millisatoshis to pay for routing. If zero, a default
+    // percentage of the payment amount is used.
+    int64 fee_limit_msat = 2;
+}
+
+message ApproveInvoiceRequestPaymentResponse {
+    // The 32-byte payment preimage proving settlement.
+    bytes payment_preimage = 1;
+
+    // The 32-byte payment hash.
+    bytes payment_hash = 2;
 }
 
 message Utxo {

@@ -434,6 +434,27 @@ type LightningClient interface {
 	//dispatches an HTLC to complete the payment. Returns a stream of updates:
 	//invoice_request_sent, invoice_received, and payment_result.
 	PayOffer(ctx context.Context, in *PayOfferRequest, opts ...grpc.CallOption) (Lightning_PayOfferClient, error)
+	// lncli: `createinvoicerequest`
+	//CreateInvoiceRequest publishes an invoice request without an offer as an
+	//lnr1 string: an offer to send money, for a refund or a withdrawal. The
+	//payee answers it with an invoice, and the node pays that invoice at most
+	//once. An invoice from expected_node_id is paid at once. Without an
+	//expected node, the invoice waits for ApproveInvoiceRequestPayment.
+	CreateInvoiceRequest(ctx context.Context, in *CreateInvoiceRequestRequest, opts ...grpc.CallOption) (*CreateInvoiceRequestResponse, error)
+	// lncli: `sendinvoice`
+	//SendInvoice answers an invoice request without an offer (lnr1...) with a
+	//BOLT 12 invoice. The node stores the invoice, sends it to the payer by
+	//onion message and returns it. The payer then pays it.
+	SendInvoice(ctx context.Context, in *SendInvoiceRequest, opts ...grpc.CallOption) (*SendInvoiceResponse, error)
+	// lncli: `listinvoicerequests`
+	//ListInvoiceRequests returns the invoice requests without an offer that
+	//this node published, with the invoices that wait for approval.
+	ListInvoiceRequests(ctx context.Context, in *ListInvoiceRequestsRequest, opts ...grpc.CallOption) (*ListInvoiceRequestsResponse, error)
+	// lncli: `approveinvoicerequestpayment`
+	//ApproveInvoiceRequestPayment pays an invoice that answers one of this
+	//node's published invoice requests and waits for approval, because the
+	//request names no expected node. It returns when the payment settles.
+	ApproveInvoiceRequestPayment(ctx context.Context, in *ApproveInvoiceRequestPaymentRequest, opts ...grpc.CallOption) (*ApproveInvoiceRequestPaymentResponse, error)
 	// lncli: `listaliases`
 	//ListAliases returns the set of all aliases that have ever existed with
 	//their confirmed SCID (if it exists) and/or the base SCID (in the case of
@@ -1372,6 +1393,42 @@ func (x *lightningPayOfferClient) Recv() (*PayOfferUpdate, error) {
 	return m, nil
 }
 
+func (c *lightningClient) CreateInvoiceRequest(ctx context.Context, in *CreateInvoiceRequestRequest, opts ...grpc.CallOption) (*CreateInvoiceRequestResponse, error) {
+	out := new(CreateInvoiceRequestResponse)
+	err := c.cc.Invoke(ctx, "/lnrpc.Lightning/CreateInvoiceRequest", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *lightningClient) SendInvoice(ctx context.Context, in *SendInvoiceRequest, opts ...grpc.CallOption) (*SendInvoiceResponse, error) {
+	out := new(SendInvoiceResponse)
+	err := c.cc.Invoke(ctx, "/lnrpc.Lightning/SendInvoice", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *lightningClient) ListInvoiceRequests(ctx context.Context, in *ListInvoiceRequestsRequest, opts ...grpc.CallOption) (*ListInvoiceRequestsResponse, error) {
+	out := new(ListInvoiceRequestsResponse)
+	err := c.cc.Invoke(ctx, "/lnrpc.Lightning/ListInvoiceRequests", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *lightningClient) ApproveInvoiceRequestPayment(ctx context.Context, in *ApproveInvoiceRequestPaymentRequest, opts ...grpc.CallOption) (*ApproveInvoiceRequestPaymentResponse, error) {
+	out := new(ApproveInvoiceRequestPaymentResponse)
+	err := c.cc.Invoke(ctx, "/lnrpc.Lightning/ApproveInvoiceRequestPayment", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *lightningClient) ListAliases(ctx context.Context, in *ListAliasesRequest, opts ...grpc.CallOption) (*ListAliasesResponse, error) {
 	out := new(ListAliasesResponse)
 	err := c.cc.Invoke(ctx, "/lnrpc.Lightning/ListAliases", in, out, opts...)
@@ -1810,6 +1867,27 @@ type LightningServer interface {
 	//dispatches an HTLC to complete the payment. Returns a stream of updates:
 	//invoice_request_sent, invoice_received, and payment_result.
 	PayOffer(*PayOfferRequest, Lightning_PayOfferServer) error
+	// lncli: `createinvoicerequest`
+	//CreateInvoiceRequest publishes an invoice request without an offer as an
+	//lnr1 string: an offer to send money, for a refund or a withdrawal. The
+	//payee answers it with an invoice, and the node pays that invoice at most
+	//once. An invoice from expected_node_id is paid at once. Without an
+	//expected node, the invoice waits for ApproveInvoiceRequestPayment.
+	CreateInvoiceRequest(context.Context, *CreateInvoiceRequestRequest) (*CreateInvoiceRequestResponse, error)
+	// lncli: `sendinvoice`
+	//SendInvoice answers an invoice request without an offer (lnr1...) with a
+	//BOLT 12 invoice. The node stores the invoice, sends it to the payer by
+	//onion message and returns it. The payer then pays it.
+	SendInvoice(context.Context, *SendInvoiceRequest) (*SendInvoiceResponse, error)
+	// lncli: `listinvoicerequests`
+	//ListInvoiceRequests returns the invoice requests without an offer that
+	//this node published, with the invoices that wait for approval.
+	ListInvoiceRequests(context.Context, *ListInvoiceRequestsRequest) (*ListInvoiceRequestsResponse, error)
+	// lncli: `approveinvoicerequestpayment`
+	//ApproveInvoiceRequestPayment pays an invoice that answers one of this
+	//node's published invoice requests and waits for approval, because the
+	//request names no expected node. It returns when the payment settles.
+	ApproveInvoiceRequestPayment(context.Context, *ApproveInvoiceRequestPaymentRequest) (*ApproveInvoiceRequestPaymentResponse, error)
 	// lncli: `listaliases`
 	//ListAliases returns the set of all aliases that have ever existed with
 	//their confirmed SCID (if it exists) and/or the base SCID (in the case of
@@ -2033,6 +2111,18 @@ func (UnimplementedLightningServer) RequestInvoice(context.Context, *RequestInvo
 }
 func (UnimplementedLightningServer) PayOffer(*PayOfferRequest, Lightning_PayOfferServer) error {
 	return status.Errorf(codes.Unimplemented, "method PayOffer not implemented")
+}
+func (UnimplementedLightningServer) CreateInvoiceRequest(context.Context, *CreateInvoiceRequestRequest) (*CreateInvoiceRequestResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method CreateInvoiceRequest not implemented")
+}
+func (UnimplementedLightningServer) SendInvoice(context.Context, *SendInvoiceRequest) (*SendInvoiceResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method SendInvoice not implemented")
+}
+func (UnimplementedLightningServer) ListInvoiceRequests(context.Context, *ListInvoiceRequestsRequest) (*ListInvoiceRequestsResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ListInvoiceRequests not implemented")
+}
+func (UnimplementedLightningServer) ApproveInvoiceRequestPayment(context.Context, *ApproveInvoiceRequestPaymentRequest) (*ApproveInvoiceRequestPaymentResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ApproveInvoiceRequestPayment not implemented")
 }
 func (UnimplementedLightningServer) ListAliases(context.Context, *ListAliasesRequest) (*ListAliasesResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ListAliases not implemented")
@@ -3344,6 +3434,78 @@ func (x *lightningPayOfferServer) Send(m *PayOfferUpdate) error {
 	return x.ServerStream.SendMsg(m)
 }
 
+func _Lightning_CreateInvoiceRequest_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CreateInvoiceRequestRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(LightningServer).CreateInvoiceRequest(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/lnrpc.Lightning/CreateInvoiceRequest",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(LightningServer).CreateInvoiceRequest(ctx, req.(*CreateInvoiceRequestRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Lightning_SendInvoice_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SendInvoiceRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(LightningServer).SendInvoice(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/lnrpc.Lightning/SendInvoice",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(LightningServer).SendInvoice(ctx, req.(*SendInvoiceRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Lightning_ListInvoiceRequests_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListInvoiceRequestsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(LightningServer).ListInvoiceRequests(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/lnrpc.Lightning/ListInvoiceRequests",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(LightningServer).ListInvoiceRequests(ctx, req.(*ListInvoiceRequestsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Lightning_ApproveInvoiceRequestPayment_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ApproveInvoiceRequestPaymentRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(LightningServer).ApproveInvoiceRequestPayment(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/lnrpc.Lightning/ApproveInvoiceRequestPayment",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(LightningServer).ApproveInvoiceRequestPayment(ctx, req.(*ApproveInvoiceRequestPaymentRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _Lightning_ListAliases_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(ListAliasesRequest)
 	if err := dec(in); err != nil {
@@ -3610,6 +3772,22 @@ var Lightning_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "RequestInvoice",
 			Handler:    _Lightning_RequestInvoice_Handler,
+		},
+		{
+			MethodName: "CreateInvoiceRequest",
+			Handler:    _Lightning_CreateInvoiceRequest_Handler,
+		},
+		{
+			MethodName: "SendInvoice",
+			Handler:    _Lightning_SendInvoice_Handler,
+		},
+		{
+			MethodName: "ListInvoiceRequests",
+			Handler:    _Lightning_ListInvoiceRequests_Handler,
+		},
+		{
+			MethodName: "ApproveInvoiceRequestPayment",
+			Handler:    _Lightning_ApproveInvoiceRequestPayment_Handler,
 		},
 		{
 			MethodName: "ListAliases",
