@@ -70,6 +70,12 @@ type SQLQueries interface {
 	FetchBolt12Payment(ctx context.Context, idempotencyKey []byte) (sqlc.FetchBolt12PaymentRow, error)
 	FetchBolt12PaymentIDsByOffer(ctx context.Context, offerHash []byte) ([]sql.NullInt64, error)
 	UpsertBolt12Payment(ctx context.Context, arg sqlc.UpsertBolt12PaymentParams) error
+	InsertBolt12InvoiceRequest(ctx context.Context, arg sqlc.InsertBolt12InvoiceRequestParams) (int64, error)
+	FetchBolt12InvoiceRequestByID(ctx context.Context, id int64) (sqlc.FetchBolt12InvoiceRequestByIDRow, error)
+	FetchBolt12InvoiceRequestByKey(ctx context.Context, idempotencyKey []byte) (sqlc.FetchBolt12InvoiceRequestByKeyRow, error)
+	FetchBolt12InvoiceRequestByMetadata(ctx context.Context, invreqMetadata []byte) (sqlc.FetchBolt12InvoiceRequestByMetadataRow, error)
+	ListBolt12InvoiceRequests(ctx context.Context) ([]sqlc.ListBolt12InvoiceRequestsRow, error)
+	BindBolt12InvoiceRequest(ctx context.Context, arg sqlc.BindBolt12InvoiceRequestParams) error
 
 	FetchPaymentLevelFirstHopCustomRecords(ctx context.Context, paymentIDs []int64) ([]sqlc.PaymentFirstHopCustomRecord, error)
 	FetchRouteLevelFirstHopCustomRecords(ctx context.Context, htlcAttemptIndices []int64) ([]sqlc.PaymentAttemptFirstHopCustomRecord, error)
@@ -1248,6 +1254,18 @@ func (s *SQLStore) InitPayment(ctx context.Context, paymentHash lntypes.Hash,
 			}
 		}
 
+		// A published invoice request is judged the same way, by
+		// its current payment, before that payment can be deleted.
+		bolt12Request := paymentCreationInfo.Bolt12Request
+		if bolt12Request != nil {
+			err := checkBolt12Request(
+				ctx, s.cfg.QueryCfg, db, bolt12Request,
+			)
+			if err != nil {
+				return err
+			}
+		}
+
 		existingPayment, err := db.FetchPayment(ctx, paymentHash[:])
 		switch {
 		// A payment with this hash already exists. We need to check its
@@ -1306,7 +1324,7 @@ func (s *SQLStore) InitPayment(ctx context.Context, paymentHash lntypes.Hash,
 		// If there's a payment request, insert the payment intent.
 		if len(paymentCreationInfo.PaymentRequest) > 0 {
 			intentType := PaymentIntentTypeBolt11
-			if bolt12 != nil {
+			if bolt12 != nil || bolt12Request != nil {
 				intentType = PaymentIntentTypeBolt12
 			}
 
@@ -1343,6 +1361,22 @@ func (s *SQLStore) InitPayment(ctx context.Context, paymentHash lntypes.Hash,
 			if err != nil {
 				return fmt.Errorf("failed to store BOLT 12 "+
 					"payment: %w", err)
+			}
+		}
+
+		// The request now points to this payment and is used.
+		if bolt12Request != nil {
+			err = db.BindBolt12InvoiceRequest(
+				ctx, sqlc.BindBolt12InvoiceRequestParams{
+					ID: bolt12Request.RequestID,
+					PaymentID: sqldb.SQLInt64(
+						paymentID,
+					),
+				},
+			)
+			if err != nil {
+				return fmt.Errorf("failed to bind BOLT 12 "+
+					"invoice request: %w", err)
 			}
 		}
 
