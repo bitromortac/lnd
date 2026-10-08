@@ -197,6 +197,9 @@ func (h *Handler) notifyInvoice(result *InvoiceResult,
 		OfferID:        &offer.ID,
 		OfferHash:      offer.Hash[:],
 		InvreqPayerID:  payerIDBytes,
+		InvreqQuantity: uint64(
+			result.Invoice.InvreqQuantity.ValOpt().UnwrapOr(0),
+		),
 	}
 
 	if h.notifier != nil {
