@@ -2603,6 +2603,7 @@ var bolt12Migrations = []string{
 	"000016_offers",
 	"000017_bolt12_invoices",
 	"000018_bolt12_payments",
+	"000019_bolt12_invoice_requests",
 }
 
 // validateBolt12Offers makes sure that the node can run BOLT 12 offers. The

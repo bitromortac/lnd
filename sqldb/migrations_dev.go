@@ -24,4 +24,9 @@ var migrationAdditions = []MigrationConfig{
 		Version:       21,
 		SchemaVersion: 18,
 	},
+	{
+		Name:          "000019_bolt12_invoice_requests",
+		Version:       22,
+		SchemaVersion: 19,
+	},
 }
