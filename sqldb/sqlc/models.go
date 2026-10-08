@@ -35,6 +35,20 @@ type Bolt12Invoice struct {
 	InvreqQuantity sql.NullInt64
 }
 
+type Bolt12InvoiceRequest struct {
+	ID             int64
+	IdempotencyKey []byte
+	InvreqMetadata []byte
+	Encoded        string
+	AmountMsat     int64
+	ExpiresAt      sql.NullTime
+	ExpectedNodeID []byte
+	FeeLimitMsat   int64
+	Used           bool
+	PaymentID      sql.NullInt64
+	CreatedAt      time.Time
+}
+
 type Bolt12Payment struct {
 	IdempotencyKey []byte
 	PaymentID      sql.NullInt64

@@ -31,3 +31,40 @@ SELECT k.payment_id
 FROM bolt12_payments k
 WHERE k.offer_hash = $1 AND k.payment_id IS NOT NULL
 ORDER BY k.payment_id;
+
+-- name: InsertBolt12InvoiceRequest :one
+INSERT INTO bolt12_invoice_requests (
+    idempotency_key, invreq_metadata, encoded, amount_msat, expires_at,
+    expected_node_id, fee_limit_msat, created_at
+) VALUES (
+    $1, $2, $3, $4, $5, $6, $7, $8
+) RETURNING id;
+
+-- name: FetchBolt12InvoiceRequestByKey :one
+SELECT r.*, p.payment_identifier
+FROM bolt12_invoice_requests r
+LEFT JOIN payments p ON p.id = r.payment_id
+WHERE r.idempotency_key = $1;
+
+-- name: FetchBolt12InvoiceRequestByMetadata :one
+SELECT r.*, p.payment_identifier
+FROM bolt12_invoice_requests r
+LEFT JOIN payments p ON p.id = r.payment_id
+WHERE r.invreq_metadata = $1;
+
+-- name: FetchBolt12InvoiceRequestByID :one
+SELECT r.*, p.payment_identifier
+FROM bolt12_invoice_requests r
+LEFT JOIN payments p ON p.id = r.payment_id
+WHERE r.id = $1;
+
+-- name: ListBolt12InvoiceRequests :many
+SELECT r.*, p.payment_identifier
+FROM bolt12_invoice_requests r
+LEFT JOIN payments p ON p.id = r.payment_id
+ORDER BY r.id;
+
+-- name: BindBolt12InvoiceRequest :exec
+UPDATE bolt12_invoice_requests
+SET used = TRUE, payment_id = $2
+WHERE id = $1;

@@ -14,6 +14,7 @@ type Querier interface {
 	AddSourceNode(ctx context.Context, nodeID int64) error
 	AddV1ChannelProof(ctx context.Context, arg AddV1ChannelProofParams) (sql.Result, error)
 	AddV2ChannelProof(ctx context.Context, arg AddV2ChannelProofParams) (sql.Result, error)
+	BindBolt12InvoiceRequest(ctx context.Context, arg BindBolt12InvoiceRequestParams) error
 	ClearKVInvoiceHashIndex(ctx context.Context) error
 	CountPayments(ctx context.Context) (int64, error)
 	CountZombieChannels(ctx context.Context, version int16) (int64, error)
@@ -41,6 +42,9 @@ type Querier interface {
 	FetchAMPSubInvoiceHTLCs(ctx context.Context, arg FetchAMPSubInvoiceHTLCsParams) ([]FetchAMPSubInvoiceHTLCsRow, error)
 	FetchAMPSubInvoices(ctx context.Context, arg FetchAMPSubInvoicesParams) ([]AmpSubInvoice, error)
 	FetchBolt12Invoice(ctx context.Context, invoiceID int64) (FetchBolt12InvoiceRow, error)
+	FetchBolt12InvoiceRequestByID(ctx context.Context, id int64) (FetchBolt12InvoiceRequestByIDRow, error)
+	FetchBolt12InvoiceRequestByKey(ctx context.Context, idempotencyKey []byte) (FetchBolt12InvoiceRequestByKeyRow, error)
+	FetchBolt12InvoiceRequestByMetadata(ctx context.Context, invreqMetadata []byte) (FetchBolt12InvoiceRequestByMetadataRow, error)
 	FetchBolt12Payment(ctx context.Context, idempotencyKey []byte) (FetchBolt12PaymentRow, error)
 	FetchBolt12PaymentIDsByOffer(ctx context.Context, offerHash []byte) ([]sql.NullInt64, error)
 	FetchHopLevelCustomRecords(ctx context.Context, hopIds []int64) ([]PaymentHopCustomRecord, error)
@@ -174,6 +178,7 @@ type Querier interface {
 	InsertAMPSubInvoice(ctx context.Context, arg InsertAMPSubInvoiceParams) error
 	InsertAMPSubInvoiceHTLC(ctx context.Context, arg InsertAMPSubInvoiceHTLCParams) error
 	InsertBolt12Invoice(ctx context.Context, arg InsertBolt12InvoiceParams) error
+	InsertBolt12InvoiceRequest(ctx context.Context, arg InsertBolt12InvoiceRequestParams) (int64, error)
 	InsertChainNetwork(ctx context.Context, network string) error
 	InsertChannelFeature(ctx context.Context, arg InsertChannelFeatureParams) error
 	// NOTE: This query is only meant to be used by the graph SQL migration since
@@ -229,6 +234,7 @@ type Querier interface {
 	IsPublicV1Node(ctx context.Context, pubKey []byte) (bool, error)
 	IsPublicV2Node(ctx context.Context, pubKey []byte) (bool, error)
 	IsZombieChannel(ctx context.Context, arg IsZombieChannelParams) (bool, error)
+	ListBolt12InvoiceRequests(ctx context.Context) ([]ListBolt12InvoiceRequestsRow, error)
 	ListChannelsByNodeID(ctx context.Context, arg ListChannelsByNodeIDParams) ([]ListChannelsByNodeIDRow, error)
 	ListChannelsForNodeIDs(ctx context.Context, arg ListChannelsForNodeIDsParams) ([]ListChannelsForNodeIDsRow, error)
 	ListChannelsPaginated(ctx context.Context, arg ListChannelsPaginatedParams) ([]ListChannelsPaginatedRow, error)

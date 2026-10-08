@@ -11,6 +11,22 @@ import (
 	"time"
 )
 
+const bindBolt12InvoiceRequest = `-- name: BindBolt12InvoiceRequest :exec
+UPDATE bolt12_invoice_requests
+SET used = TRUE, payment_id = $2
+WHERE id = $1
+`
+
+type BindBolt12InvoiceRequestParams struct {
+	ID        int64
+	PaymentID sql.NullInt64
+}
+
+func (q *Queries) BindBolt12InvoiceRequest(ctx context.Context, arg BindBolt12InvoiceRequestParams) error {
+	_, err := q.db.ExecContext(ctx, bindBolt12InvoiceRequest, arg.ID, arg.PaymentID)
+	return err
+}
+
 const fetchBolt12Invoice = `-- name: FetchBolt12Invoice :one
 SELECT b.offer_id, b.invreq_payer_id, b.invreq_quantity, o.hash AS offer_hash
 FROM bolt12_invoices b
@@ -33,6 +49,132 @@ func (q *Queries) FetchBolt12Invoice(ctx context.Context, invoiceID int64) (Fetc
 		&i.InvreqPayerID,
 		&i.InvreqQuantity,
 		&i.OfferHash,
+	)
+	return i, err
+}
+
+const fetchBolt12InvoiceRequestByID = `-- name: FetchBolt12InvoiceRequestByID :one
+SELECT r.id, r.idempotency_key, r.invreq_metadata, r.encoded, r.amount_msat, r.expires_at, r.expected_node_id, r.fee_limit_msat, r.used, r.payment_id, r.created_at, p.payment_identifier
+FROM bolt12_invoice_requests r
+LEFT JOIN payments p ON p.id = r.payment_id
+WHERE r.id = $1
+`
+
+type FetchBolt12InvoiceRequestByIDRow struct {
+	ID                int64
+	IdempotencyKey    []byte
+	InvreqMetadata    []byte
+	Encoded           string
+	AmountMsat        int64
+	ExpiresAt         sql.NullTime
+	ExpectedNodeID    []byte
+	FeeLimitMsat      int64
+	Used              bool
+	PaymentID         sql.NullInt64
+	CreatedAt         time.Time
+	PaymentIdentifier []byte
+}
+
+func (q *Queries) FetchBolt12InvoiceRequestByID(ctx context.Context, id int64) (FetchBolt12InvoiceRequestByIDRow, error) {
+	row := q.db.QueryRowContext(ctx, fetchBolt12InvoiceRequestByID, id)
+	var i FetchBolt12InvoiceRequestByIDRow
+	err := row.Scan(
+		&i.ID,
+		&i.IdempotencyKey,
+		&i.InvreqMetadata,
+		&i.Encoded,
+		&i.AmountMsat,
+		&i.ExpiresAt,
+		&i.ExpectedNodeID,
+		&i.FeeLimitMsat,
+		&i.Used,
+		&i.PaymentID,
+		&i.CreatedAt,
+		&i.PaymentIdentifier,
+	)
+	return i, err
+}
+
+const fetchBolt12InvoiceRequestByKey = `-- name: FetchBolt12InvoiceRequestByKey :one
+SELECT r.id, r.idempotency_key, r.invreq_metadata, r.encoded, r.amount_msat, r.expires_at, r.expected_node_id, r.fee_limit_msat, r.used, r.payment_id, r.created_at, p.payment_identifier
+FROM bolt12_invoice_requests r
+LEFT JOIN payments p ON p.id = r.payment_id
+WHERE r.idempotency_key = $1
+`
+
+type FetchBolt12InvoiceRequestByKeyRow struct {
+	ID                int64
+	IdempotencyKey    []byte
+	InvreqMetadata    []byte
+	Encoded           string
+	AmountMsat        int64
+	ExpiresAt         sql.NullTime
+	ExpectedNodeID    []byte
+	FeeLimitMsat      int64
+	Used              bool
+	PaymentID         sql.NullInt64
+	CreatedAt         time.Time
+	PaymentIdentifier []byte
+}
+
+func (q *Queries) FetchBolt12InvoiceRequestByKey(ctx context.Context, idempotencyKey []byte) (FetchBolt12InvoiceRequestByKeyRow, error) {
+	row := q.db.QueryRowContext(ctx, fetchBolt12InvoiceRequestByKey, idempotencyKey)
+	var i FetchBolt12InvoiceRequestByKeyRow
+	err := row.Scan(
+		&i.ID,
+		&i.IdempotencyKey,
+		&i.InvreqMetadata,
+		&i.Encoded,
+		&i.AmountMsat,
+		&i.ExpiresAt,
+		&i.ExpectedNodeID,
+		&i.FeeLimitMsat,
+		&i.Used,
+		&i.PaymentID,
+		&i.CreatedAt,
+		&i.PaymentIdentifier,
+	)
+	return i, err
+}
+
+const fetchBolt12InvoiceRequestByMetadata = `-- name: FetchBolt12InvoiceRequestByMetadata :one
+SELECT r.id, r.idempotency_key, r.invreq_metadata, r.encoded, r.amount_msat, r.expires_at, r.expected_node_id, r.fee_limit_msat, r.used, r.payment_id, r.created_at, p.payment_identifier
+FROM bolt12_invoice_requests r
+LEFT JOIN payments p ON p.id = r.payment_id
+WHERE r.invreq_metadata = $1
+`
+
+type FetchBolt12InvoiceRequestByMetadataRow struct {
+	ID                int64
+	IdempotencyKey    []byte
+	InvreqMetadata    []byte
+	Encoded           string
+	AmountMsat        int64
+	ExpiresAt         sql.NullTime
+	ExpectedNodeID    []byte
+	FeeLimitMsat      int64
+	Used              bool
+	PaymentID         sql.NullInt64
+	CreatedAt         time.Time
+	PaymentIdentifier []byte
+}
+
+func (q *Queries) FetchBolt12InvoiceRequestByMetadata(ctx context.Context, invreqMetadata []byte) (FetchBolt12InvoiceRequestByMetadataRow, error) {
+	row := q.db.QueryRowContext(ctx, fetchBolt12InvoiceRequestByMetadata, invreqMetadata)
+	var i FetchBolt12InvoiceRequestByMetadataRow
+	err := row.Scan(
+		&i.ID,
+		&i.IdempotencyKey,
+		&i.InvreqMetadata,
+		&i.Encoded,
+		&i.AmountMsat,
+		&i.ExpiresAt,
+		&i.ExpectedNodeID,
+		&i.FeeLimitMsat,
+		&i.Used,
+		&i.PaymentID,
+		&i.CreatedAt,
+		&i.PaymentIdentifier,
 	)
 	return i, err
 }
@@ -119,6 +261,100 @@ func (q *Queries) InsertBolt12Invoice(ctx context.Context, arg InsertBolt12Invoi
 		arg.InvreqQuantity,
 	)
 	return err
+}
+
+const insertBolt12InvoiceRequest = `-- name: InsertBolt12InvoiceRequest :one
+INSERT INTO bolt12_invoice_requests (
+    idempotency_key, invreq_metadata, encoded, amount_msat, expires_at,
+    expected_node_id, fee_limit_msat, created_at
+) VALUES (
+    $1, $2, $3, $4, $5, $6, $7, $8
+) RETURNING id
+`
+
+type InsertBolt12InvoiceRequestParams struct {
+	IdempotencyKey []byte
+	InvreqMetadata []byte
+	Encoded        string
+	AmountMsat     int64
+	ExpiresAt      sql.NullTime
+	ExpectedNodeID []byte
+	FeeLimitMsat   int64
+	CreatedAt      time.Time
+}
+
+func (q *Queries) InsertBolt12InvoiceRequest(ctx context.Context, arg InsertBolt12InvoiceRequestParams) (int64, error) {
+	row := q.db.QueryRowContext(ctx, insertBolt12InvoiceRequest,
+		arg.IdempotencyKey,
+		arg.InvreqMetadata,
+		arg.Encoded,
+		arg.AmountMsat,
+		arg.ExpiresAt,
+		arg.ExpectedNodeID,
+		arg.FeeLimitMsat,
+		arg.CreatedAt,
+	)
+	var id int64
+	err := row.Scan(&id)
+	return id, err
+}
+
+const listBolt12InvoiceRequests = `-- name: ListBolt12InvoiceRequests :many
+SELECT r.id, r.idempotency_key, r.invreq_metadata, r.encoded, r.amount_msat, r.expires_at, r.expected_node_id, r.fee_limit_msat, r.used, r.payment_id, r.created_at, p.payment_identifier
+FROM bolt12_invoice_requests r
+LEFT JOIN payments p ON p.id = r.payment_id
+ORDER BY r.id
+`
+
+type ListBolt12InvoiceRequestsRow struct {
+	ID                int64
+	IdempotencyKey    []byte
+	InvreqMetadata    []byte
+	Encoded           string
+	AmountMsat        int64
+	ExpiresAt         sql.NullTime
+	ExpectedNodeID    []byte
+	FeeLimitMsat      int64
+	Used              bool
+	PaymentID         sql.NullInt64
+	CreatedAt         time.Time
+	PaymentIdentifier []byte
+}
+
+func (q *Queries) ListBolt12InvoiceRequests(ctx context.Context) ([]ListBolt12InvoiceRequestsRow, error) {
+	rows, err := q.db.QueryContext(ctx, listBolt12InvoiceRequests)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListBolt12InvoiceRequestsRow
+	for rows.Next() {
+		var i ListBolt12InvoiceRequestsRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.IdempotencyKey,
+			&i.InvreqMetadata,
+			&i.Encoded,
+			&i.AmountMsat,
+			&i.ExpiresAt,
+			&i.ExpectedNodeID,
+			&i.FeeLimitMsat,
+			&i.Used,
+			&i.PaymentID,
+			&i.CreatedAt,
+			&i.PaymentIdentifier,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const upsertBolt12Payment = `-- name: UpsertBolt12Payment :exec
