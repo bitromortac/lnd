@@ -6417,13 +6417,12 @@ func (b *bolt12PaymentPathBuilder) BuildPaymentPaths(amountMsat uint64,
 
 	amt := lnwire.MilliSatoshi(amountMsat)
 
-	// Use the 10-minute-per-block assumption to estimate the blocks until
-	// the invoice expires, and double it so that the path does not expire
-	// before the invoice, as for BOLT 11 invoices.
-	invoiceExpiry := uint32(
-		bolt12.DefaultInvoiceRelativeExpiry.Minutes() / 10,
-	)
-	blindedPathExpiry := invoiceExpiry * 2
+	// The path's max_cltv_expiry bounds the CLTV of the HTLC that the
+	// payer sends, and the payer does not see it. A payer adds its own
+	// slack to the final CLTV, and Eclair adds about 300 blocks, so a
+	// lifetime of twice the two hour invoice expiry, the BOLT 11 rule,
+	// rejects such payments. Use two weeks instead.
+	const blindedPathExpiry = 2016
 
 	// Use the existing payment path builder that's already used by
 	// AddInvoice for BOLT 11 blinded paths.
