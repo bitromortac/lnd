@@ -10,6 +10,7 @@ import (
 	"github.com/btcsuite/btcd/chainhash/v2"
 	"github.com/lightningnetwork/lnd/bolt12"
 	"github.com/lightningnetwork/lnd/clock"
+	"github.com/lightningnetwork/lnd/keychain"
 	"github.com/lightningnetwork/lnd/tlv"
 	"github.com/stretchr/testify/require"
 )
@@ -117,35 +118,53 @@ func testInvoiceRequest(t *testing.T, offer *bolt12.Offer,
 	return ir
 }
 
-// privKeySigner implements NodeSigner with a raw private key for tests.
+// privKeySigner implements Signer with a raw private key for tests.
 type privKeySigner struct {
 	privKey *btcec.PrivateKey
 }
 
-// newPrivKeySigner creates a NodeSigner backed by a raw private key.
+// newPrivKeySigner creates a Signer backed by a raw private key.
 func newPrivKeySigner(privKey *btcec.PrivateKey) *privKeySigner {
 	return &privKeySigner{privKey: privKey}
 }
 
-// NodePubKey returns the node's identity public key.
+// NodePubKey returns the node identity public key.
 //
-// NOTE: This is part of the NodeSigner interface.
+// NOTE: This is part of the Signer interface.
 func (s *privKeySigner) NodePubKey() *btcec.PublicKey {
 	return s.privKey.PubKey()
 }
 
-// SignInvoiceRoot signs an invoice Merkle root with the wrapped private key.
+// PubKey returns the public key of key.
 //
-// NOTE: This is part of the NodeSigner interface.
-func (s *privKeySigner) SignInvoiceRoot(root [32]byte) ([64]byte, error) {
-	digest := chainhash.TaggedHash(
-		[]byte(bolt12.InvoiceSignatureTag), root[:],
-	)
+// NOTE: This is part of the Signer interface.
+func (s *privKeySigner) PubKey(key KeyRef) (*btcec.PublicKey, error) {
+	return tweakPubKey(s.privKey.PubKey(), key)
+}
 
-	sig, err := schnorr.Sign(s.privKey, digest[:])
+// SignSchnorr signs the tagged hash of msg with the tweaked private key.
+//
+// NOTE: This is part of the Signer interface.
+func (s *privKeySigner) SignSchnorr(key KeyRef, tag string,
+	msg []byte) ([64]byte, error) {
+
+	privKey, err := tweakPrivKey(s.privKey, key)
+	if err != nil {
+		return [64]byte{}, err
+	}
+
+	digest := chainhash.TaggedHash([]byte(tag), msg)
+	sig, err := schnorr.Sign(privKey, digest[:])
 	if err != nil {
 		return [64]byte{}, err
 	}
 
 	return [64]byte(sig.Serialize()), nil
+}
+
+// ECDH returns the shared secret of the private key and pub.
+//
+// NOTE: This is part of the Signer interface.
+func (s *privKeySigner) ECDH(pub *btcec.PublicKey) ([32]byte, error) {
+	return (&keychain.PrivKeyECDH{PrivKey: s.privKey}).ECDH(pub)
 }

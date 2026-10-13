@@ -4,49 +4,71 @@ import (
 	"fmt"
 
 	"github.com/btcsuite/btcd/btcec/v2"
-	"github.com/lightningnetwork/lnd/bolt12"
 	"github.com/lightningnetwork/lnd/keychain"
 )
 
-// KeyRingSigner implements NodeSigner for the daemon. It signs through the
-// Schnorr message signer of the key ring and never sees the private key, so it
-// also works in remote signing mode.
-type KeyRingSigner struct {
-	signer      keychain.MessageSignerRing
-	keyLoc      keychain.KeyLocator
-	identityPub *btcec.PublicKey
+// KeyRing is the part of the key ring that KeyRingSigner needs.
+type KeyRing interface {
+	keychain.MessageSignerRing
+	keychain.ECDHRing
 }
 
-// NewKeyRingSigner creates a NodeSigner backed by the daemon's key ring.
-func NewKeyRingSigner(signer keychain.MessageSignerRing,
-	keyLoc keychain.KeyLocator,
-	identityPub *btcec.PublicKey) *KeyRingSigner {
+// KeyRingSigner implements Signer for the daemon. It signs and derives shared
+// secrets through the key ring and never sees the private key, so it also
+// works in remote signing mode.
+type KeyRingSigner struct {
+	keyRing KeyRing
+	keyLoc  keychain.KeyLocator
+	nodePub *btcec.PublicKey
+}
+
+// NewKeyRingSigner creates a Signer backed by the daemon's key ring.
+func NewKeyRingSigner(keyRing KeyRing, keyLoc keychain.KeyLocator,
+	nodePub *btcec.PublicKey) *KeyRingSigner {
 
 	return &KeyRingSigner{
-		signer:      signer,
-		keyLoc:      keyLoc,
-		identityPub: identityPub,
+		keyRing: keyRing,
+		keyLoc:  keyLoc,
+		nodePub: nodePub,
 	}
 }
 
-// NodePubKey returns the node's identity public key.
+// NodePubKey returns the node identity public key.
 //
-// NOTE: This is part of the NodeSigner interface.
+// NOTE: This is part of the Signer interface.
 func (s *KeyRingSigner) NodePubKey() *btcec.PublicKey {
-	return s.identityPub
+	return s.nodePub
 }
 
-// SignInvoiceRoot signs an invoice Merkle root with the node's identity key.
+// PubKey returns the public key of key.
 //
-// NOTE: This is part of the NodeSigner interface.
-func (s *KeyRingSigner) SignInvoiceRoot(root [32]byte) ([64]byte, error) {
-	sig, err := s.signer.SignMessageSchnorr(
-		s.keyLoc, root[:], false, nil, nil,
-		[]byte(bolt12.InvoiceSignatureTag),
+// NOTE: This is part of the Signer interface.
+func (s *KeyRingSigner) PubKey(key KeyRef) (*btcec.PublicKey, error) {
+	return tweakPubKey(s.nodePub, key)
+}
+
+// SignSchnorr signs the tagged hash of msg with key through the key ring.
+//
+// NOTE: This is part of the Signer interface.
+func (s *KeyRingSigner) SignSchnorr(key KeyRef, tag string,
+	msg []byte) ([64]byte, error) {
+
+	sig, err := s.keyRing.SignMessageSchnorr(
+		s.keyLoc, msg, false, key.AddTweak, key.MulTweak, []byte(tag),
 	)
 	if err != nil {
-		return [64]byte{}, fmt.Errorf("sign invoice root: %w", err)
+		return [64]byte{}, fmt.Errorf("sign %s: %w", tag, err)
 	}
 
 	return [64]byte(sig.Serialize()), nil
+}
+
+// ECDH returns the shared secret of the node key and pub.
+//
+// NOTE: This is part of the Signer interface.
+func (s *KeyRingSigner) ECDH(pub *btcec.PublicKey) ([32]byte, error) {
+	return s.keyRing.ECDH(keychain.KeyDescriptor{
+		KeyLocator: s.keyLoc,
+		PubKey:     s.nodePub,
+	}, pub)
 }
