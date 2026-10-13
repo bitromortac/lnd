@@ -30,6 +30,12 @@ const (
 const InvoiceSignatureTag = signatureTagPrefix + tagMsgInvoice +
 	tagFieldSignature
 
+// InvoiceRequestSignatureTag is the BIP-340 tag of an invoice request
+// signature. The signature covers the tagged hash of the root that
+// InvoiceRequestSigningRoot returns.
+const InvoiceRequestSignatureTag = signatureTagPrefix + tagMsgInvoiceRequest +
+	tagFieldSignature
+
 // ErrInvalidSignature is returned by verifyInvoice and verifyInvoiceRequest
 // when the BIP-340 Schnorr signature does not validate against the message's
 // Merkle root and signing key.
@@ -97,16 +103,7 @@ func SignInvoiceRequest(ir *InvoiceRequest, privKey *btcec.PrivateKey) (
 		return [64]byte{}, ErrNilPrivateKey
 	}
 
-	// A signature over a message that breaks the writer requirements is
-	// worthless: the peer rejects it on read. Refusing here keeps a key
-	// from signing bytes no correct reader accepts.
-	if err := validateInvoiceRequestWrite(ir); err != nil {
-		return [64]byte{}, fmt.Errorf(
-			"validate invoice request: %w", err,
-		)
-	}
-
-	root, err := merkleRoot(signableTLVs(ir.AllRecords()))
+	root, err := InvoiceRequestSigningRoot(ir)
 	if err != nil {
 		return [64]byte{}, err
 	}
@@ -114,6 +111,23 @@ func SignInvoiceRequest(ir *InvoiceRequest, privKey *btcec.PrivateKey) (
 	return signMessage(
 		tagMsgInvoiceRequest, tagFieldSignature, root, privKey,
 	)
+}
+
+// InvoiceRequestSigningRoot returns the Merkle root that the invoice request
+// signature covers. A signer without the raw private key, such as a remote
+// signer, signs it under InvoiceRequestSignatureTag. It returns an error for
+// a request that breaks the writer requirements.
+func InvoiceRequestSigningRoot(ir *InvoiceRequest) ([32]byte, error) {
+	// A signature over a message that breaks the writer requirements is
+	// worthless: the peer rejects it on read. Refusing here keeps a key
+	// from signing bytes no correct reader accepts.
+	if err := validateInvoiceRequestWrite(ir); err != nil {
+		return [32]byte{}, fmt.Errorf(
+			"validate invoice request: %w", err,
+		)
+	}
+
+	return merkleRoot(signableTLVs(ir.AllRecords()))
 }
 
 // verifyInvoiceRequest verifies the signature on an invoice request using its

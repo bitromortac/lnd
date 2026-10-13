@@ -520,3 +520,37 @@ func TestInvoiceSigningRoot(t *testing.T) {
 	_, err = InvoiceSigningRoot(inv)
 	require.Error(t, err)
 }
+
+// TestInvoiceRequestSigningRoot verifies that a signature over the tagged
+// hash of InvoiceRequestSigningRoot is a valid invoice request signature. A
+// signer without the raw key signs in this way.
+func TestInvoiceRequestSigningRoot(t *testing.T) {
+	t.Parallel()
+
+	bobPriv, _ := bobKey()
+	ir := validInvoiceRequest(t)
+
+	root, err := InvoiceRequestSigningRoot(ir)
+	require.NoError(t, err)
+
+	digest := chainhash.TaggedHash(
+		[]byte(InvoiceRequestSignatureTag), root[:],
+	)
+	sig, err := schnorr.Sign(bobPriv, digest[:])
+	require.NoError(t, err)
+
+	ir.Signature = tlv.SomeRecordT(
+		tlv.NewPrimitiveRecord[tlv.TlvType240, [64]byte](
+			[64]byte(sig.Serialize()),
+		),
+	)
+	require.NoError(t, verifyInvoiceRequest(ir))
+
+	// The root function runs the writer validation, so a request that
+	// breaks it has no root to sign.
+	ir.InvreqPayerID = tlv.OptionalRecordT[
+		tlv.TlvType88, *btcec.PublicKey,
+	]{}
+	_, err = InvoiceRequestSigningRoot(ir)
+	require.Error(t, err)
+}
