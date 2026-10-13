@@ -3,7 +3,6 @@ package bolt12handler
 import (
 	"bytes"
 	"context"
-	"crypto/rand"
 	"fmt"
 	"time"
 
@@ -117,26 +116,19 @@ func WithPayerNote(note string) RequestOption {
 }
 
 // BuildInvoiceRequest constructs a signed BOLT 12 invoice request from a
-// decoded offer. It generates an ephemeral keypair for proof of payer, mirrors
-// all offer fields, and signs the request. Returns the signed request and the
-// ephemeral private key.
-func BuildInvoiceRequest(offer *bolt12.Offer, opts ...RequestOption) (
-	*bolt12.InvoiceRequest, *btcec.PrivateKey, error) {
+// decoded offer. It mirrors all offer fields, names payer in invreq_payer_id
+// and invreq_metadata, and signs the request with the payer key.
+func BuildInvoiceRequest(offer *bolt12.Offer, payer *Payer,
+	opts ...RequestOption) (*bolt12.InvoiceRequest, error) {
 
 	cfg := &requestConfig{}
 	for _, o := range opts {
 		o(cfg)
 	}
 
-	// Generate ephemeral keypair for invreq_payer_id.
-	payerKey, err := btcec.NewPrivateKey()
+	payerID, err := payer.PubKey()
 	if err != nil {
-		return nil, nil, fmt.Errorf("generate payer key: %w", err)
-	}
-
-	metadata := make([]byte, 32)
-	if _, err := rand.Read(metadata); err != nil {
-		return nil, nil, fmt.Errorf("generate metadata: %w", err)
+		return nil, fmt.Errorf("payer key: %w", err)
 	}
 
 	// Pay on the offer's chain: use the first listed offer_chains entry, or
@@ -154,10 +146,10 @@ func BuildInvoiceRequest(offer *bolt12.Offer, opts ...RequestOption) (
 	)
 
 	ir, err := bolt12.NewInvoiceRequestFromOffer(
-		offer, payerKey.PubKey(), metadata, chain,
+		offer, payerID, payer.Metadata, chain,
 	)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
 	if cfg.amountMsat > 0 {
@@ -186,19 +178,11 @@ func BuildInvoiceRequest(offer *bolt12.Offer, opts ...RequestOption) (
 		)
 	}
 
-	// Sign with the ephemeral payer key. SignInvoiceRequest runs the
-	// writer validation first, so a malformed request fails before the
-	// payer key signs it.
-	sig, err := bolt12.SignInvoiceRequest(ir, payerKey)
-	if err != nil {
-		return nil, nil, fmt.Errorf("sign invreq: %w", err)
+	if err := payer.signInvoiceRequest(ir); err != nil {
+		return nil, err
 	}
 
-	ir.Signature = tlv.SomeRecordT(
-		tlv.NewPrimitiveRecord[tlv.TlvType240, [64]byte](sig),
-	)
-
-	return ir, payerKey, nil
+	return ir, nil
 }
 
 // BuildSingleHopReplyPath creates a single-hop blinded path back to the sender
