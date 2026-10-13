@@ -75,7 +75,7 @@ func (s *SecretKeyRing) SignMessageCompact(_ keychain.KeyLocator,
 
 // SignMessageSchnorr signs the passed message and ignores the KeyDescriptor.
 func (s *SecretKeyRing) SignMessageSchnorr(_ keychain.KeyLocator,
-	msg []byte, doubleHash bool, taprootTweak []byte,
+	msg []byte, doubleHash bool, taprootTweak []byte, mulTweak []byte,
 	tag []byte) (*schnorr.Signature, error) {
 
 	var digest []byte
@@ -90,6 +90,13 @@ func (s *SecretKeyRing) SignMessageSchnorr(_ keychain.KeyLocator,
 	}
 
 	privKey := s.RootKey
+	if len(mulTweak) > 0 {
+		var err error
+		privKey, err = keychain.MulTweakPrivKey(privKey, mulTweak)
+		if err != nil {
+			return nil, err
+		}
+	}
 	if len(taprootTweak) > 0 {
 		privKey = txscript.TweakTaprootPrivKey(*privKey, taprootTweak)
 	}

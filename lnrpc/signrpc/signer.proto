@@ -383,6 +383,14 @@ message SignMessageReq {
     message. This option can only be used when schnorr_sig is true.
     */
     bytes tag = 7;
+
+    /*
+    An optional 32-byte scalar that the private key is multiplied with (modulo
+    the curve order) before creating a Schnorr signature, as route blinding
+    derives a blinded node key. It is applied before the Taproot tweak. This
+    option can only be used when schnorr_sig is true.
+    */
+    bytes schnorr_sig_mul_tweak = 8;
 }
 message SignMessageResp {
     /*

@@ -97,6 +97,11 @@
   channels](https://github.com/lightningnetwork/lnd/pull/10501) via the new
   `outgoing_chan_ids` field in `RouteFeeRequest`.
 
+* The `signrpc.SignMessage` RPC gets the optional `schnorr_sig_mul_tweak`
+  field. It multiplies the private key by a scalar before a Schnorr signature,
+  as route blinding derives a blinded node key, so a remote signer can sign
+  with a blinded node key.
+
 ## lncli Additions
 
 * The `estimateroutefee` command now supports [restricting fee estimates to
