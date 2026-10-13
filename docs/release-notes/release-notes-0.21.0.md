@@ -34,11 +34,10 @@
   UTXO info`.
 * Fixed onion-message forwarding when the next hop is a local alias. That
   alias is not in the graph, so the forward was dropped with `edge not found`.
-  The resolver now uses the switch's forwarding indexes for a local alias. The
-  confirmed SCID of a private channel and the peer's alias do not resolve,
-  matching BOLT 4. This refuses SCIDs that a local-channel scan would resolve,
-  so a backport is a separate decision.
-
+  The resolver now uses the switch's forwarding indexes for a local alias. As
+  BOLT 4 requires, a next-hop SCID now resolves only for an announced channel
+  or a local alias. Before this change, the confirmed SCID of a private channel
+  resolved through the graph. It no longer resolves.
 
 * [Fixed `OpenChannel` with
   `fund_max`](https://github.com/lightningnetwork/lnd/pull/10488) to use the
