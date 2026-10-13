@@ -237,9 +237,12 @@ type MessageSignerRing interface {
 
 	// SignMessageSchnorr signs the given message, single or double SHA256
 	// hashing it first, with the private key described in the key locator
-	// and the optional Taproot tweak applied to the private key.
+	// and the optional tweaks applied to the private key. The optional
+	// mulTweak multiplies the key by a scalar first, as route blinding
+	// derives a blinded node key, and the optional Taproot tweak is
+	// applied after it.
 	SignMessageSchnorr(keyLoc KeyLocator, msg []byte,
-		doubleHash bool, taprootTweak []byte,
+		doubleHash bool, taprootTweak []byte, mulTweak []byte,
 		tag []byte) (*schnorr.Signature, error)
 }
 

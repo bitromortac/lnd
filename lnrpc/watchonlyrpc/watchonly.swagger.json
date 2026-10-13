@@ -407,6 +407,11 @@
           "type": "string",
           "format": "byte",
           "description": "An optional tag that can be provided when taking a tagged hash of a\nmessage. This option can only be used when schnorr_sig is true."
+        },
+        "schnorr_sig_mul_tweak": {
+          "type": "string",
+          "format": "byte",
+          "description": "An optional 32-byte scalar that the private key is multiplied with (modulo\nthe curve order) before creating a Schnorr signature, as route blinding\nderives a blinded node key. It is applied before the Taproot tweak. This\noption can only be used when schnorr_sig is true."
         }
       }
     },

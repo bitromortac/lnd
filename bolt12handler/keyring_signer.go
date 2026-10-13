@@ -41,7 +41,7 @@ func (s *KeyRingSigner) NodePubKey() *btcec.PublicKey {
 // NOTE: This is part of the NodeSigner interface.
 func (s *KeyRingSigner) SignInvoiceRoot(root [32]byte) ([64]byte, error) {
 	sig, err := s.signer.SignMessageSchnorr(
-		s.keyLoc, root[:], false, nil,
+		s.keyLoc, root[:], false, nil, nil,
 		[]byte(bolt12.InvoiceSignatureTag),
 	)
 	if err != nil {

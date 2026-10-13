@@ -629,6 +629,10 @@ func (s *Server) SignMessage(_ context.Context,
 		return nil, fmt.Errorf("double hash and tag can't be set at " +
 			"the same time")
 	}
+	if !in.SchnorrSig && len(in.SchnorrSigMulTweak) > 0 {
+		return nil, fmt.Errorf("multiplicative tweak can only be " +
+			"used when the Schnorr signature option is set")
+	}
 
 	// Describe the private key we'll be using for signing.
 	keyLocator := keychain.KeyLocator{
@@ -640,7 +644,7 @@ func (s *Server) SignMessage(_ context.Context,
 	if in.SchnorrSig {
 		sig, err := s.cfg.KeyRing.SignMessageSchnorr(
 			keyLocator, in.Msg, in.DoubleHash,
-			in.SchnorrSigTapTweak, in.Tag,
+			in.SchnorrSigTapTweak, in.SchnorrSigMulTweak, in.Tag,
 		)
 		if err != nil {
 			return nil, fmt.Errorf("can't sign the hash: %w", err)

@@ -707,9 +707,15 @@ type SignMessageReq struct {
 	//
 	//An optional tag that can be provided when taking a tagged hash of a
 	//message. This option can only be used when schnorr_sig is true.
-	Tag           []byte `protobuf:"bytes,7,opt,name=tag,proto3" json:"tag,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	Tag []byte `protobuf:"bytes,7,opt,name=tag,proto3" json:"tag,omitempty"`
+	//
+	//An optional 32-byte scalar that the private key is multiplied with (modulo
+	//the curve order) before creating a Schnorr signature, as route blinding
+	//derives a blinded node key. It is applied before the Taproot tweak. This
+	//option can only be used when schnorr_sig is true.
+	SchnorrSigMulTweak []byte `protobuf:"bytes,8,opt,name=schnorr_sig_mul_tweak,json=schnorrSigMulTweak,proto3" json:"schnorr_sig_mul_tweak,omitempty"`
+	unknownFields      protoimpl.UnknownFields
+	sizeCache          protoimpl.SizeCache
 }
 
 func (x *SignMessageReq) Reset() {
@@ -787,6 +793,13 @@ func (x *SignMessageReq) GetSchnorrSigTapTweak() []byte {
 func (x *SignMessageReq) GetTag() []byte {
 	if x != nil {
 		return x.Tag
+	}
+	return nil
+}
+
+func (x *SignMessageReq) GetSchnorrSigMulTweak() []byte {
+	if x != nil {
+		return x.SchnorrSigMulTweak
 	}
 	return nil
 }
@@ -2238,7 +2251,7 @@ const file_signrpc_signer_proto_rawDesc = "" +
 	"\n" +
 	"sig_script\x18\x02 \x01(\fR\tsigScript\"L\n" +
 	"\x0fInputScriptResp\x129\n" +
-	"\rinput_scripts\x18\x01 \x03(\v2\x14.signrpc.InputScriptR\finputScripts\"\xf8\x01\n" +
+	"\rinput_scripts\x18\x01 \x03(\v2\x14.signrpc.InputScriptR\finputScripts\"\xab\x02\n" +
 	"\x0eSignMessageReq\x12\x10\n" +
 	"\x03msg\x18\x01 \x01(\fR\x03msg\x12,\n" +
 	"\akey_loc\x18\x02 \x01(\v2\x13.signrpc.KeyLocatorR\x06keyLoc\x12\x1f\n" +
@@ -2249,7 +2262,8 @@ const file_signrpc_signer_proto_rawDesc = "" +
 	"\vschnorr_sig\x18\x05 \x01(\bR\n" +
 	"schnorrSig\x121\n" +
 	"\x15schnorr_sig_tap_tweak\x18\x06 \x01(\fR\x12schnorrSigTapTweak\x12\x10\n" +
-	"\x03tag\x18\a \x01(\fR\x03tag\"/\n" +
+	"\x03tag\x18\a \x01(\fR\x03tag\x121\n" +
+	"\x15schnorr_sig_mul_tweak\x18\b \x01(\fR\x12schnorrSigMulTweak\"/\n" +
 	"\x0fSignMessageResp\x12\x1c\n" +
 	"\tsignature\x18\x01 \x01(\fR\tsignature\"\x92\x01\n" +
 	"\x10VerifyMessageReq\x12\x10\n" +
