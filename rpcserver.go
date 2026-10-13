@@ -9130,7 +9130,12 @@ func (r *rpcServer) RequestInvoice(ctx context.Context,
 		)
 	}
 
-	ir, _, err := bolt12handler.BuildInvoiceRequest(offer, opts...)
+	payer, err := bolt12handler.NewRandomPayer()
+	if err != nil {
+		return nil, err
+	}
+
+	ir, err := bolt12handler.BuildInvoiceRequest(offer, payer, opts...)
 	if err != nil {
 		return nil, fmt.Errorf("build invoice request: %w", err)
 	}

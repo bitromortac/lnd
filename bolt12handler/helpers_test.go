@@ -5,12 +5,9 @@ import (
 	"time"
 
 	"github.com/btcsuite/btcd/btcec/v2"
-	"github.com/btcsuite/btcd/btcec/v2/schnorr"
 	"github.com/btcsuite/btcd/chaincfg/v2"
-	"github.com/btcsuite/btcd/chainhash/v2"
 	"github.com/lightningnetwork/lnd/bolt12"
 	"github.com/lightningnetwork/lnd/clock"
-	"github.com/lightningnetwork/lnd/keychain"
 	"github.com/lightningnetwork/lnd/tlv"
 	"github.com/stretchr/testify/require"
 )
@@ -33,7 +30,7 @@ const testFinalCLTVDelta = 42
 // PaymentPathBuilder.
 func testInvoiceConfig(key *btcec.PrivateKey) *InvoiceConfig {
 	return &InvoiceConfig{
-		Signer:         newPrivKeySigner(key),
+		Signer:         NewPrivKeySigner(key),
 		Clock:          clock.NewTestClock(testNow),
 		FinalCLTVDelta: testFinalCLTVDelta,
 	}
@@ -118,53 +115,12 @@ func testInvoiceRequest(t *testing.T, offer *bolt12.Offer,
 	return ir
 }
 
-// privKeySigner implements Signer with a raw private key for tests.
-type privKeySigner struct {
-	privKey *btcec.PrivateKey
-}
+// newTestPayer returns a payer with a random key.
+func newTestPayer(t *testing.T) *Payer {
+	t.Helper()
 
-// newPrivKeySigner creates a Signer backed by a raw private key.
-func newPrivKeySigner(privKey *btcec.PrivateKey) *privKeySigner {
-	return &privKeySigner{privKey: privKey}
-}
+	payer, err := NewRandomPayer()
+	require.NoError(t, err)
 
-// NodePubKey returns the node identity public key.
-//
-// NOTE: This is part of the Signer interface.
-func (s *privKeySigner) NodePubKey() *btcec.PublicKey {
-	return s.privKey.PubKey()
-}
-
-// PubKey returns the public key of key.
-//
-// NOTE: This is part of the Signer interface.
-func (s *privKeySigner) PubKey(key KeyRef) (*btcec.PublicKey, error) {
-	return tweakPubKey(s.privKey.PubKey(), key)
-}
-
-// SignSchnorr signs the tagged hash of msg with the tweaked private key.
-//
-// NOTE: This is part of the Signer interface.
-func (s *privKeySigner) SignSchnorr(key KeyRef, tag string,
-	msg []byte) ([64]byte, error) {
-
-	privKey, err := tweakPrivKey(s.privKey, key)
-	if err != nil {
-		return [64]byte{}, err
-	}
-
-	digest := chainhash.TaggedHash([]byte(tag), msg)
-	sig, err := schnorr.Sign(privKey, digest[:])
-	if err != nil {
-		return [64]byte{}, err
-	}
-
-	return [64]byte(sig.Serialize()), nil
-}
-
-// ECDH returns the shared secret of the private key and pub.
-//
-// NOTE: This is part of the Signer interface.
-func (s *privKeySigner) ECDH(pub *btcec.PublicKey) ([32]byte, error) {
-	return (&keychain.PrivKeyECDH{PrivKey: s.privKey}).ECDH(pub)
+	return payer
 }

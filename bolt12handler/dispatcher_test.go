@@ -178,7 +178,7 @@ func newDispatchTest(t *testing.T, maxInflight int) *dispatchTest {
 	replier := &chanReplier{replies: replies}
 	handler, err := NewHandler(
 		store, nopNotifier{}, replier,
-		newPrivKeySigner(nodeKey), nil, testChainHash(),
+		NewPrivKeySigner(nodeKey), nil, testChainHash(),
 		testFinalCLTVDelta,
 	)
 	require.NoError(t, err)
@@ -373,7 +373,7 @@ func TestHandlerDispatch(t *testing.T) {
 
 		handler, err := NewHandler(
 			newMockOfferStore(), nopNotifier{}, &mockReplier{},
-			newPrivKeySigner(testKey(t)), nil, testChainHash(),
+			NewPrivKeySigner(testKey(t)), nil, testChainHash(),
 			testFinalCLTVDelta,
 		)
 		require.NoError(t, err)

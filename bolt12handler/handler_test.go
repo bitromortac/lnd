@@ -36,7 +36,7 @@ func TestHandleInvoiceRequest_FullFlow(t *testing.T) {
 	builder := &fakePathBuilder{err: errors.New("no paths")}
 
 	handler, err := NewHandler(
-		store, notifier, replier, newPrivKeySigner(nodeKey),
+		store, notifier, replier, NewPrivKeySigner(nodeKey),
 		builder, testChainHash(), testFinalCLTVDelta,
 	)
 	require.NoError(t, err)
@@ -311,7 +311,7 @@ func TestHandleInvoiceRequestErrors(t *testing.T) {
 			handler, err := NewHandler(
 				store, notifier,
 				&mockReplier{err: tc.replyErr},
-				newPrivKeySigner(nodeKey), nil,
+				NewPrivKeySigner(nodeKey), nil,
 				testChainHash(), testFinalCLTVDelta,
 			)
 			require.NoError(t, err)
