@@ -40,7 +40,7 @@ var (
 // InvoiceConfig holds the dependencies and node settings of GenerateInvoice.
 type InvoiceConfig struct {
 	// Signer signs the invoice with the node identity key.
-	Signer NodeSigner
+	Signer Signer
 
 	// PathBuilder constructs the blinded payment paths. If it is nil, the
 	// invoice uses a single-hop blinded path to this node.
@@ -210,7 +210,7 @@ func GenerateInvoice(cfg *InvoiceConfig,
 		invoiceAmount, cfg.Clock.Now(),
 	)
 
-	signedInv, encoded, err := signAndEncode(inv, cfg.Signer)
+	signedInv, encoded, err := signAndEncode(inv, cfg.Signer, KeyRef{})
 	if err != nil {
 		return nil, fmt.Errorf("sign invoice: %w", err)
 	}
@@ -390,10 +390,10 @@ func buildSingleHopBlindedPath(nodePubKey *btcec.PublicKey,
 	}, nil
 }
 
-// signAndEncode attaches the signature to inv in place and returns the bech32
-// string of the signed invoice.
-func signAndEncode(inv *bolt12.Invoice, signer NodeSigner) (*bolt12.Invoice,
-	string, error) {
+// signAndEncode signs inv with key, attaches the signature in place and
+// returns the bech32 string of the signed invoice.
+func signAndEncode(inv *bolt12.Invoice, signer Signer,
+	key KeyRef) (*bolt12.Invoice, string, error) {
 
 	// The root function runs the writer validation, so a malformed invoice
 	// fails before a key signs it.
@@ -402,7 +402,7 @@ func signAndEncode(inv *bolt12.Invoice, signer NodeSigner) (*bolt12.Invoice,
 		return nil, "", err
 	}
 
-	sig, err := signer.SignInvoiceRoot(root)
+	sig, err := signer.SignSchnorr(key, bolt12.InvoiceSignatureTag, root[:])
 	if err != nil {
 		return nil, "", fmt.Errorf("sign: %w", err)
 	}

@@ -255,7 +255,7 @@ func signTestInvoice(t *testing.T, ir *bolt12.InvoiceRequest,
 		time.Now(),
 	)
 
-	signed, _, err := signAndEncode(inv, newPrivKeySigner(key))
+	signed, _, err := signAndEncode(inv, newPrivKeySigner(key), KeyRef{})
 	require.NoError(t, err)
 
 	return signed

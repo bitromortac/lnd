@@ -40,7 +40,7 @@ type Handler struct {
 	offerStore         offers.Store
 	notifier           InvoiceNotifier
 	replier            OnionReplier
-	signer             NodeSigner
+	signer             Signer
 	paymentPathBuilder PaymentPathBuilder
 
 	// activeChain is the genesis hash of the chain this handler serves.
@@ -71,7 +71,7 @@ type Handler struct {
 // routing.MinCLTVDelta, and it must leave room for routing.BlockPadding in a
 // uint16.
 func NewHandler(offerStore offers.Store, notifier InvoiceNotifier,
-	replier OnionReplier, signer NodeSigner,
+	replier OnionReplier, signer Signer,
 	paymentPathBuilder PaymentPathBuilder, activeChain [32]byte,
 	finalCLTVDelta uint16) (*Handler, error) {
 
