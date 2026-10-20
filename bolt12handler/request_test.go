@@ -5,8 +5,8 @@ import (
 	"time"
 
 	"github.com/btcsuite/btcd/btcec/v2"
+	sphinx "github.com/lightningnetwork/lightning-onion"
 	"github.com/lightningnetwork/lnd/bolt12"
-	"github.com/lightningnetwork/lnd/lntypes"
 	"github.com/lightningnetwork/lnd/lnwire"
 	"github.com/lightningnetwork/lnd/tlv"
 	"github.com/stretchr/testify/require"
@@ -165,9 +165,24 @@ func TestValidateInvoiceReply(t *testing.T) {
 	nodeKey := testKey(t)
 	otherKey := testKey2(t)
 
+	// The blinded offer carries a genuine route-blinding path, so its
+	// blinded_node_id differs from the signing node's identity key. A
+	// fixture that reused the identity key would pass even when the
+	// receiver signs under the wrong identity.
+	blindedOffer, blindedNodeID, pathKey := buildBlindedOffer(
+		t, nodeKey, 50000,
+	)
+	require.False(t, blindedNodeID.IsEqual(nodeKey.PubKey()),
+		"fixture must blind the node id away from the identity key")
+
+	impersonated, _, impersonatedPathKey := buildBlindedOffer(
+		t, nodeKey, 50000,
+	)
+
 	tests := []struct {
 		name      string
 		offer     *bolt12.Offer
+		pathKey   *btcec.PublicKey
 		finalNode *btcec.PublicKey
 		wantErr   error
 	}{
@@ -178,12 +193,14 @@ func TestValidateInvoiceReply(t *testing.T) {
 		},
 		{
 			name:      "valid blinded",
-			offer:     buildBlindedOffer(t, nodeKey, 50000),
-			finalNode: nodeKey.PubKey(),
+			offer:     blindedOffer,
+			pathKey:   pathKey,
+			finalNode: blindedNodeID,
 		},
 		{
 			name:      "blinded impersonation",
-			offer:     buildBlindedOffer(t, nodeKey, 50000),
+			offer:     impersonated,
+			pathKey:   impersonatedPathKey,
 			finalNode: otherKey.PubKey(),
 			wantErr:   bolt12.ErrUnexpectedInvoiceNodeID,
 		},
@@ -203,19 +220,29 @@ func TestValidateInvoiceReply(t *testing.T) {
 			ir, err = bolt12.DecodeInvoiceRequest(irBytes)
 			require.NoError(t, err)
 
-			var signed *bolt12.Invoice
-			if tc.offer.OfferIssuerID.IsSome() {
-				result, err := GenerateInvoice(
-					testInvoiceConfig(nodeKey), ir,
-					[32]byte{},
-				)
-				require.NoError(t, err)
-				signed = result.Invoice
-			} else {
-				signed = signTestInvoice(t, ir, nodeKey)
+			// A blinded offer needs a multi-hop payment path, so
+			// the builder returns a path to the node.
+			path, err := buildSingleHopBlindedPath(
+				nodeKey.PubKey(), []byte{1}, nil,
+			)
+			require.NoError(t, err)
+
+			cfg := testInvoiceConfig(nodeKey)
+			cfg.PathBuilder = &fakePathBuilder{
+				result: &PaymentPathResult{
+					Paths: []lnwire.BlindedPath{path},
+					PayInfos: []bolt12.BlindedPayInfo{{
+						HtlcMaximumMsat: 50000,
+					}},
+				},
 			}
 
-			invBytes, err := signed.EncodeSigned()
+			result, err := GenerateInvoice(
+				cfg, ir, [32]byte{}, tc.pathKey,
+			)
+			require.NoError(t, err)
+
+			invBytes, err := result.Invoice.EncodeSigned()
 			require.NoError(t, err)
 			inv, err := bolt12.DecodeInvoice(invBytes)
 			require.NoError(t, err)
@@ -233,49 +260,37 @@ func TestValidateInvoiceReply(t *testing.T) {
 	}
 }
 
-// signTestInvoice answers ir with an invoice that key signs under its public
-// key. GenerateInvoice refuses an offer without offer_issuer_id, so the tests
-// of blinded offers sign their invoices in this way.
-func signTestInvoice(t *testing.T, ir *bolt12.InvoiceRequest,
-	key *btcec.PrivateKey) *bolt12.Invoice {
-
-	t.Helper()
-
-	amount, err := computeInvoiceAmount(ir)
-	require.NoError(t, err)
-
-	path, err := buildSingleHopBlindedPath(
-		key.PubKey(), make([]byte, 32), nil,
-	)
-	require.NoError(t, err)
-
-	pathResult := &PaymentPathResult{
-		Paths: []lnwire.BlindedPath{path},
-		PayInfos: []bolt12.BlindedPayInfo{{
-			HtlcMaximumMsat: amount,
-		}},
-	}
-	inv := buildInvoiceFromRequest(
-		ir, key.PubKey(), lntypes.Hash{}, pathResult, amount,
-		time.Now(),
-	)
-
-	signed, _, err := signAndEncode(inv, NewPrivKeySigner(key), KeyRef{})
-	require.NoError(t, err)
-
-	return signed
-}
-
-// buildBlindedOffer creates a bolt12.Offer that advertises a blinded path
-// (offer_paths) with no offer_issuer_id, so the payer must bind the received
-// invoice to the final blinded node.
+// buildBlindedOffer creates a bolt12.Offer that advertises a real blinded
+// path (offer_paths) with no offer_issuer_id, so the payer must bind the
+// received invoice to the final blinded node. It returns the offer, that
+// path's final blinded_node_id, and the ephemeral path key the receiver would
+// see on the incoming request.
 func buildBlindedOffer(t *testing.T, key *btcec.PrivateKey,
-	amountMsat uint64) *bolt12.Offer {
+	amountMsat uint64) (*bolt12.Offer, *btcec.PublicKey,
+	*btcec.PublicKey) {
 
 	t.Helper()
 
-	introPub, err := lnwire.NewPubkeyIntro(key.PubKey())
+	// A single-hop path to the receiver: it is entered with the session
+	// key, so that key is also the path key the receiver sees.
+	sessionKey := testSeededKey(t, 200)
+
+	path, err := sphinx.BuildBlindedPath(sessionKey, []*sphinx.HopInfo{{
+		NodePub:   key.PubKey(),
+		PlainText: []byte{0},
+	}})
 	require.NoError(t, err)
+
+	introPub, err := lnwire.NewPubkeyIntro(path.Path.IntroductionPoint)
+	require.NoError(t, err)
+
+	hops := make([]lnwire.BlindedHop, len(path.Path.BlindedHops))
+	for i, hop := range path.Path.BlindedHops {
+		hops[i] = lnwire.BlindedHop{
+			BlindedNodeID: hop.BlindedNodePub,
+			EncryptedData: hop.CipherText,
+		}
+	}
 
 	offer := &bolt12.Offer{
 		OfferPaths: tlv.SomeRecordT(
@@ -283,11 +298,9 @@ func buildBlindedOffer(t *testing.T, key *btcec.PrivateKey,
 				Val: lnwire.BlindedPaths{
 					Paths: []lnwire.BlindedPath{{
 						IntroductionNode: introPub,
-						BlindingPoint:    key.PubKey(),
-						Hops: []lnwire.BlindedHop{{
-							BlindedNodeID: key.PubKey(),
-							EncryptedData: []byte{0},
-						}},
+						BlindingPoint: path.Path.
+							BlindingPoint,
+						Hops: hops,
 					}},
 				},
 			},
@@ -308,7 +321,9 @@ func buildBlindedOffer(t *testing.T, key *btcec.PrivateKey,
 		)
 	}
 
-	return offer
+	finalHop := hops[len(hops)-1]
+
+	return offer, finalHop.BlindedNodeID, sessionKey.PubKey()
 }
 
 // buildBolt12Offer creates a bolt12.Offer for testing.

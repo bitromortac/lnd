@@ -109,8 +109,12 @@ var errNoReplyPath = errors.New("invoice request has no reply path")
 
 // HandleInvoiceRequest is the top-level entry point called when an onion
 // message with TLV type 64 (invoice request) arrives.
+//
+// pathKey is the route-blinding ephemeral key the request arrived under, or
+// nil when it reached us unblinded. An offer that published offer_paths needs
+// it to sign the reply under the blinded identity the payer expects.
 func (h *Handler) HandleInvoiceRequest(ctx context.Context, invreqBytes []byte,
-	replyPath *sphinx.BlindedPath) error {
+	replyPath *sphinx.BlindedPath, pathKey *btcec.PublicKey) error {
 
 	// Check the reply path first, so that a request without one costs no
 	// decode and no signature.
@@ -141,12 +145,18 @@ func (h *Handler) HandleInvoiceRequest(ctx context.Context, invreqBytes []byte,
 		return fmt.Errorf("validate against offer: %w", err)
 	}
 
+	// An offer with offer_paths answers only requests that arrived on one
+	// of those paths.
+	if err := CheckArrivalPath(ir, h.signer, pathKey); err != nil {
+		return err
+	}
+
 	result, err := GenerateInvoice(&InvoiceConfig{
 		Signer:         h.signer,
 		PathBuilder:    h.paymentPathBuilder,
 		Clock:          clock.NewDefaultClock(),
 		FinalCLTVDelta: h.finalCLTVDelta,
-	}, ir, offer.Hash)
+	}, ir, offer.Hash, pathKey)
 	if err != nil {
 		return fmt.Errorf("generate invoice: %w", err)
 	}

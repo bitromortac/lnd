@@ -30,6 +30,7 @@ func TestInvoiceRequest(t *testing.T) {
 	records := record.CustomSet{
 		uint64(lnwire.InvoiceRequestNamespaceType): invreq,
 	}
+	pathKey := testKey(t).PubKey()
 
 	tests := []struct {
 		name   string
@@ -41,9 +42,18 @@ func TestInvoiceRequest(t *testing.T) {
 			update: &onionmessage.OnionMessageUpdate{
 				CustomRecords: records,
 				ReplyPath:     replyPath,
+				PathKey:       testPathKey(pathKey),
 				Delivered:     true,
 			},
 			ok: true,
+		},
+		{
+			name: "invalid path key",
+			update: &onionmessage.OnionMessageUpdate{
+				CustomRecords: records,
+				ReplyPath:     replyPath,
+				Delivered:     true,
+			},
 		},
 		{
 			name: "forwarded request",
@@ -76,16 +86,15 @@ func TestInvoiceRequest(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			gotInvreq, gotPath, ok := invoiceRequest(
-				tc.update,
-			)
+			got, ok := invoiceRequest(tc.update)
 			require.Equal(t, tc.ok, ok)
 			if !tc.ok {
 				return
 			}
 
-			require.Equal(t, invreq, gotInvreq)
-			require.Same(t, replyPath, gotPath)
+			require.Equal(t, invreq, got.invreq)
+			require.Same(t, replyPath, got.replyPath)
+			require.True(t, pathKey.IsEqual(got.pathKey))
 		})
 	}
 }
@@ -208,6 +217,7 @@ func newDispatchTest(t *testing.T, maxInflight int) *dispatchTest {
 				IntroductionNode: intro,
 				BlindingPoint:    nodeKey.PubKey(),
 			},
+			PathKey:   testPathKey(payerKey.PubKey()),
 			Delivered: true,
 		},
 	}
@@ -386,4 +396,12 @@ func TestHandlerDispatch(t *testing.T) {
 		require.ErrorContains(t, err, "no subscription")
 		handler.Stop()
 	})
+}
+
+// testPathKey returns key in the form of an onion message update path key.
+func testPathKey(key *btcec.PublicKey) [33]byte {
+	var pathKey [33]byte
+	copy(pathKey[:], key.SerializeCompressed())
+
+	return pathKey
 }

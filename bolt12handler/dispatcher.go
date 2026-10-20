@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/btcsuite/btcd/btcec/v2"
 	"github.com/lightningnetwork/lnd/lnwire"
 	"github.com/lightningnetwork/lnd/onionmessage"
 	"github.com/lightningnetwork/lnd/subscribe"
@@ -75,7 +76,7 @@ func (h *Handler) dispatch(ctx context.Context, client *subscribe.Client) {
 				return
 			}
 
-			invreqBytes, replyPath, ok := invoiceRequest(update)
+			req, ok := invoiceRequest(update)
 			if !ok {
 				continue
 			}
@@ -88,9 +89,7 @@ func (h *Handler) dispatch(ctx context.Context, client *subscribe.Client) {
 			}
 
 			h.cg.WgAdd(1)
-			go h.runInvoiceRequest(
-				ctx, slots, invreqBytes, replyPath,
-			)
+			go h.runInvoiceRequest(ctx, slots, req)
 
 		// The subscribe server ends a subscription with Quit, and it
 		// does not close the updates.
@@ -108,28 +107,42 @@ func (h *Handler) dispatch(ctx context.Context, client *subscribe.Client) {
 //
 // NOTE: This must be run as a goroutine.
 func (h *Handler) runInvoiceRequest(ctx context.Context, slots chan struct{},
-	invreqBytes []byte, replyPath *lnwire.BlindedPath) {
+	req *incomingRequest) {
 
 	defer h.cg.WgDone()
 	defer func() { <-slots }()
 
-	h.answerInvoiceRequest(ctx, invreqBytes, replyPath)
+	h.answerInvoiceRequest(ctx, req)
 }
 
-// invoiceRequest returns the invoice request and the reply path of an onion
-// message update. It returns false when this node must not answer the
-// update, for example when the node only forwards the message.
-func invoiceRequest(update any) ([]byte, *lnwire.BlindedPath, bool) {
+// incomingRequest is an invoice request that arrived in an onion message.
+type incomingRequest struct {
+	// invreq is the encoded invoice request.
+	invreq []byte
+
+	// replyPath is the path for the reply.
+	replyPath *lnwire.BlindedPath
+
+	// pathKey is the route-blinding key the message arrived under. An
+	// offer published as offer_paths is signed under the blinded identity
+	// that this key gives.
+	pathKey *btcec.PublicKey
+}
+
+// invoiceRequest returns the invoice request of an onion message update. It
+// returns false when this node must not answer the update, for example when
+// the node only forwards the message.
+func invoiceRequest(update any) (*incomingRequest, bool) {
 	msg, ok := update.(*onionmessage.OnionMessageUpdate)
 	if !ok || !msg.Delivered {
-		return nil, nil, false
+		return nil, false
 	}
 
 	invreq, ok := msg.CustomRecords[uint64(
 		lnwire.InvoiceRequestNamespaceType,
 	)]
 	if !ok {
-		return nil, nil, false
+		return nil, false
 	}
 
 	// The handler answers only through the reply path. A request without
@@ -138,10 +151,22 @@ func invoiceRequest(update any) ([]byte, *lnwire.BlindedPath, bool) {
 	if msg.ReplyPath == nil {
 		log.Debugf("Skipping invoice request without a reply path")
 
-		return nil, nil, false
+		return nil, false
 	}
 
-	return invreq, msg.ReplyPath, true
+	pathKey, err := btcec.ParsePubKey(msg.PathKey[:])
+	if err != nil {
+		log.Debugf("Skipping invoice request with an invalid path "+
+			"key: %v", err)
+
+		return nil, false
+	}
+
+	return &incomingRequest{
+		invreq:    invreq,
+		replyPath: msg.ReplyPath,
+		pathKey:   pathKey,
+	}, true
 }
 
 // acquireSlot takes a slot from slots without blocking. It returns false
@@ -158,16 +183,18 @@ func acquireSlot(slots chan struct{}) bool {
 
 // answerInvoiceRequest answers one invoice request over its reply path.
 func (h *Handler) answerInvoiceRequest(ctx context.Context,
-	invreqBytes []byte, replyPath *lnwire.BlindedPath) {
+	req *incomingRequest) {
 
-	sphinxReplyPath, err := replyPath.ToSphinx(h.introResolver)
+	sphinxReplyPath, err := req.replyPath.ToSphinx(h.introResolver)
 	if err != nil {
 		log.Debugf("Failed to convert reply path: %v", err)
 
 		return
 	}
 
-	err = h.HandleInvoiceRequest(ctx, invreqBytes, sphinxReplyPath)
+	err = h.HandleInvoiceRequest(
+		ctx, req.invreq, sphinxReplyPath, req.pathKey,
+	)
 	if err != nil {
 		log.Debugf("Failed to handle invoice request: %v", err)
 	}
