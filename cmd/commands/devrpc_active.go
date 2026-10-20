@@ -27,6 +27,7 @@ func devCommands() []cli.Command {
 		CreateOfferCommand,
 		DecodeOfferCommand,
 		RequestInvoiceCommand,
+		PayOfferCommand,
 	}
 }
 
