@@ -1129,6 +1129,642 @@ func (x *PayOfferPaymentResult) GetIdempotencyKey() []byte {
 	return nil
 }
 
+type CreateInvoiceRequestRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// The purpose of the payment, set as offer_description.
+	Description string `protobuf:"bytes,1,opt,name=description,proto3" json:"description,omitempty"`
+	// The amount this node pays, in millisatoshis.
+	AmountMsat uint64 `protobuf:"varint,2,opt,name=amount_msat,json=amountMsat,proto3" json:"amount_msat,omitempty"`
+	// If set, the time in seconds since the epoch after which the node no
+	// longer pays an invoice for the request.
+	AbsoluteExpiry uint64 `protobuf:"varint,3,opt,name=absolute_expiry,json=absoluteExpiry,proto3" json:"absolute_expiry,omitempty"`
+	// The 33-byte invoice_node_id agreed with the payee out of band. An
+	// invoice from this node is paid at once. If empty, every invoice waits
+	// for ApproveInvoiceRequestPayment.
+	ExpectedNodeId []byte `protobuf:"bytes,4,opt,name=expected_node_id,json=expectedNodeId,proto3" json:"expected_node_id,omitempty"`
+	// The caller's idempotency key. A call with a known key returns the
+	// stored request. If empty, the node generates a random key.
+	IdempotencyKey []byte `protobuf:"bytes,5,opt,name=idempotency_key,json=idempotencyKey,proto3" json:"idempotency_key,omitempty"`
+	// The maximum routing fee in millisatoshis for paying an invoice from
+	// the expected node at once. If zero, the default fee limit applies.
+	FeeLimitMsat  int64 `protobuf:"varint,6,opt,name=fee_limit_msat,json=feeLimitMsat,proto3" json:"fee_limit_msat,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *CreateInvoiceRequestRequest) Reset() {
+	*x = CreateInvoiceRequestRequest{}
+	mi := &file_devrpc_dev_proto_msgTypes[14]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CreateInvoiceRequestRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CreateInvoiceRequestRequest) ProtoMessage() {}
+
+func (x *CreateInvoiceRequestRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_devrpc_dev_proto_msgTypes[14]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CreateInvoiceRequestRequest.ProtoReflect.Descriptor instead.
+func (*CreateInvoiceRequestRequest) Descriptor() ([]byte, []int) {
+	return file_devrpc_dev_proto_rawDescGZIP(), []int{14}
+}
+
+func (x *CreateInvoiceRequestRequest) GetDescription() string {
+	if x != nil {
+		return x.Description
+	}
+	return ""
+}
+
+func (x *CreateInvoiceRequestRequest) GetAmountMsat() uint64 {
+	if x != nil {
+		return x.AmountMsat
+	}
+	return 0
+}
+
+func (x *CreateInvoiceRequestRequest) GetAbsoluteExpiry() uint64 {
+	if x != nil {
+		return x.AbsoluteExpiry
+	}
+	return 0
+}
+
+func (x *CreateInvoiceRequestRequest) GetExpectedNodeId() []byte {
+	if x != nil {
+		return x.ExpectedNodeId
+	}
+	return nil
+}
+
+func (x *CreateInvoiceRequestRequest) GetIdempotencyKey() []byte {
+	if x != nil {
+		return x.IdempotencyKey
+	}
+	return nil
+}
+
+func (x *CreateInvoiceRequestRequest) GetFeeLimitMsat() int64 {
+	if x != nil {
+		return x.FeeLimitMsat
+	}
+	return 0
+}
+
+type CreateInvoiceRequestResponse struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// The signed invoice request (lnr1...).
+	InvoiceRequest string `protobuf:"bytes,1,opt,name=invoice_request,json=invoiceRequest,proto3" json:"invoice_request,omitempty"`
+	// The idempotency key of the request.
+	IdempotencyKey []byte `protobuf:"bytes,2,opt,name=idempotency_key,json=idempotencyKey,proto3" json:"idempotency_key,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
+}
+
+func (x *CreateInvoiceRequestResponse) Reset() {
+	*x = CreateInvoiceRequestResponse{}
+	mi := &file_devrpc_dev_proto_msgTypes[15]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CreateInvoiceRequestResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CreateInvoiceRequestResponse) ProtoMessage() {}
+
+func (x *CreateInvoiceRequestResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_devrpc_dev_proto_msgTypes[15]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CreateInvoiceRequestResponse.ProtoReflect.Descriptor instead.
+func (*CreateInvoiceRequestResponse) Descriptor() ([]byte, []int) {
+	return file_devrpc_dev_proto_rawDescGZIP(), []int{15}
+}
+
+func (x *CreateInvoiceRequestResponse) GetInvoiceRequest() string {
+	if x != nil {
+		return x.InvoiceRequest
+	}
+	return ""
+}
+
+func (x *CreateInvoiceRequestResponse) GetIdempotencyKey() []byte {
+	if x != nil {
+		return x.IdempotencyKey
+	}
+	return nil
+}
+
+type SendInvoiceRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// The invoice request without an offer (lnr1...) to answer.
+	InvoiceRequest string `protobuf:"bytes,1,opt,name=invoice_request,json=invoiceRequest,proto3" json:"invoice_request,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
+}
+
+func (x *SendInvoiceRequest) Reset() {
+	*x = SendInvoiceRequest{}
+	mi := &file_devrpc_dev_proto_msgTypes[16]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SendInvoiceRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SendInvoiceRequest) ProtoMessage() {}
+
+func (x *SendInvoiceRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_devrpc_dev_proto_msgTypes[16]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SendInvoiceRequest.ProtoReflect.Descriptor instead.
+func (*SendInvoiceRequest) Descriptor() ([]byte, []int) {
+	return file_devrpc_dev_proto_rawDescGZIP(), []int{16}
+}
+
+func (x *SendInvoiceRequest) GetInvoiceRequest() string {
+	if x != nil {
+		return x.InvoiceRequest
+	}
+	return ""
+}
+
+type SendInvoiceResponse struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// The signed invoice that was sent (lni1...).
+	Invoice string `protobuf:"bytes,1,opt,name=invoice,proto3" json:"invoice,omitempty"`
+	// The 32-byte payment hash of the invoice.
+	PaymentHash []byte `protobuf:"bytes,2,opt,name=payment_hash,json=paymentHash,proto3" json:"payment_hash,omitempty"`
+	// The invoice amount in millisatoshis.
+	AmountMsat    uint64 `protobuf:"varint,3,opt,name=amount_msat,json=amountMsat,proto3" json:"amount_msat,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *SendInvoiceResponse) Reset() {
+	*x = SendInvoiceResponse{}
+	mi := &file_devrpc_dev_proto_msgTypes[17]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SendInvoiceResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SendInvoiceResponse) ProtoMessage() {}
+
+func (x *SendInvoiceResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_devrpc_dev_proto_msgTypes[17]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SendInvoiceResponse.ProtoReflect.Descriptor instead.
+func (*SendInvoiceResponse) Descriptor() ([]byte, []int) {
+	return file_devrpc_dev_proto_rawDescGZIP(), []int{17}
+}
+
+func (x *SendInvoiceResponse) GetInvoice() string {
+	if x != nil {
+		return x.Invoice
+	}
+	return ""
+}
+
+func (x *SendInvoiceResponse) GetPaymentHash() []byte {
+	if x != nil {
+		return x.PaymentHash
+	}
+	return nil
+}
+
+func (x *SendInvoiceResponse) GetAmountMsat() uint64 {
+	if x != nil {
+		return x.AmountMsat
+	}
+	return 0
+}
+
+type ListInvoiceRequestsRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListInvoiceRequestsRequest) Reset() {
+	*x = ListInvoiceRequestsRequest{}
+	mi := &file_devrpc_dev_proto_msgTypes[18]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListInvoiceRequestsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListInvoiceRequestsRequest) ProtoMessage() {}
+
+func (x *ListInvoiceRequestsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_devrpc_dev_proto_msgTypes[18]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListInvoiceRequestsRequest.ProtoReflect.Descriptor instead.
+func (*ListInvoiceRequestsRequest) Descriptor() ([]byte, []int) {
+	return file_devrpc_dev_proto_rawDescGZIP(), []int{18}
+}
+
+type PendingInvoice struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// The invoice that waits for approval (lni1...).
+	Invoice string `protobuf:"bytes,1,opt,name=invoice,proto3" json:"invoice,omitempty"`
+	// The 32-byte payment hash of the invoice.
+	PaymentHash []byte `protobuf:"bytes,2,opt,name=payment_hash,json=paymentHash,proto3" json:"payment_hash,omitempty"`
+	// The 33-byte invoice_node_id that signed the invoice.
+	InvoiceNodeId []byte `protobuf:"bytes,3,opt,name=invoice_node_id,json=invoiceNodeId,proto3" json:"invoice_node_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *PendingInvoice) Reset() {
+	*x = PendingInvoice{}
+	mi := &file_devrpc_dev_proto_msgTypes[19]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *PendingInvoice) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*PendingInvoice) ProtoMessage() {}
+
+func (x *PendingInvoice) ProtoReflect() protoreflect.Message {
+	mi := &file_devrpc_dev_proto_msgTypes[19]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use PendingInvoice.ProtoReflect.Descriptor instead.
+func (*PendingInvoice) Descriptor() ([]byte, []int) {
+	return file_devrpc_dev_proto_rawDescGZIP(), []int{19}
+}
+
+func (x *PendingInvoice) GetInvoice() string {
+	if x != nil {
+		return x.Invoice
+	}
+	return ""
+}
+
+func (x *PendingInvoice) GetPaymentHash() []byte {
+	if x != nil {
+		return x.PaymentHash
+	}
+	return nil
+}
+
+func (x *PendingInvoice) GetInvoiceNodeId() []byte {
+	if x != nil {
+		return x.InvoiceNodeId
+	}
+	return nil
+}
+
+type PublishedInvoiceRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// The signed invoice request (lnr1...).
+	InvoiceRequest string `protobuf:"bytes,1,opt,name=invoice_request,json=invoiceRequest,proto3" json:"invoice_request,omitempty"`
+	// The idempotency key of the request.
+	IdempotencyKey []byte `protobuf:"bytes,2,opt,name=idempotency_key,json=idempotencyKey,proto3" json:"idempotency_key,omitempty"`
+	// The amount the request pays in millisatoshis.
+	AmountMsat uint64 `protobuf:"varint,3,opt,name=amount_msat,json=amountMsat,proto3" json:"amount_msat,omitempty"`
+	// The expiry in seconds since the epoch, or zero for none.
+	ExpiresAt int64 `protobuf:"varint,4,opt,name=expires_at,json=expiresAt,proto3" json:"expires_at,omitempty"`
+	// The 33-byte expected invoice_node_id, or empty.
+	ExpectedNodeId []byte `protobuf:"bytes,5,opt,name=expected_node_id,json=expectedNodeId,proto3" json:"expected_node_id,omitempty"`
+	// Whether a payment ever started for the request.
+	Used bool `protobuf:"varint,6,opt,name=used,proto3" json:"used,omitempty"`
+	// The 32-byte payment hash of the request's current payment, or empty.
+	PaymentHash []byte `protobuf:"bytes,7,opt,name=payment_hash,json=paymentHash,proto3" json:"payment_hash,omitempty"`
+	// The invoices that wait for approval. They live in memory only.
+	PendingInvoices []*PendingInvoice `protobuf:"bytes,8,rep,name=pending_invoices,json=pendingInvoices,proto3" json:"pending_invoices,omitempty"`
+	// The creation time in seconds since the epoch.
+	CreatedAt int64 `protobuf:"varint,9,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	// The maximum routing fee in millisatoshis for paying an invoice from
+	// the expected node at once. Zero selects the default fee limit.
+	FeeLimitMsat  int64 `protobuf:"varint,10,opt,name=fee_limit_msat,json=feeLimitMsat,proto3" json:"fee_limit_msat,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *PublishedInvoiceRequest) Reset() {
+	*x = PublishedInvoiceRequest{}
+	mi := &file_devrpc_dev_proto_msgTypes[20]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *PublishedInvoiceRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*PublishedInvoiceRequest) ProtoMessage() {}
+
+func (x *PublishedInvoiceRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_devrpc_dev_proto_msgTypes[20]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use PublishedInvoiceRequest.ProtoReflect.Descriptor instead.
+func (*PublishedInvoiceRequest) Descriptor() ([]byte, []int) {
+	return file_devrpc_dev_proto_rawDescGZIP(), []int{20}
+}
+
+func (x *PublishedInvoiceRequest) GetInvoiceRequest() string {
+	if x != nil {
+		return x.InvoiceRequest
+	}
+	return ""
+}
+
+func (x *PublishedInvoiceRequest) GetIdempotencyKey() []byte {
+	if x != nil {
+		return x.IdempotencyKey
+	}
+	return nil
+}
+
+func (x *PublishedInvoiceRequest) GetAmountMsat() uint64 {
+	if x != nil {
+		return x.AmountMsat
+	}
+	return 0
+}
+
+func (x *PublishedInvoiceRequest) GetExpiresAt() int64 {
+	if x != nil {
+		return x.ExpiresAt
+	}
+	return 0
+}
+
+func (x *PublishedInvoiceRequest) GetExpectedNodeId() []byte {
+	if x != nil {
+		return x.ExpectedNodeId
+	}
+	return nil
+}
+
+func (x *PublishedInvoiceRequest) GetUsed() bool {
+	if x != nil {
+		return x.Used
+	}
+	return false
+}
+
+func (x *PublishedInvoiceRequest) GetPaymentHash() []byte {
+	if x != nil {
+		return x.PaymentHash
+	}
+	return nil
+}
+
+func (x *PublishedInvoiceRequest) GetPendingInvoices() []*PendingInvoice {
+	if x != nil {
+		return x.PendingInvoices
+	}
+	return nil
+}
+
+func (x *PublishedInvoiceRequest) GetCreatedAt() int64 {
+	if x != nil {
+		return x.CreatedAt
+	}
+	return 0
+}
+
+func (x *PublishedInvoiceRequest) GetFeeLimitMsat() int64 {
+	if x != nil {
+		return x.FeeLimitMsat
+	}
+	return 0
+}
+
+type ListInvoiceRequestsResponse struct {
+	state           protoimpl.MessageState     `protogen:"open.v1"`
+	InvoiceRequests []*PublishedInvoiceRequest `protobuf:"bytes,1,rep,name=invoice_requests,json=invoiceRequests,proto3" json:"invoice_requests,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
+}
+
+func (x *ListInvoiceRequestsResponse) Reset() {
+	*x = ListInvoiceRequestsResponse{}
+	mi := &file_devrpc_dev_proto_msgTypes[21]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListInvoiceRequestsResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListInvoiceRequestsResponse) ProtoMessage() {}
+
+func (x *ListInvoiceRequestsResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_devrpc_dev_proto_msgTypes[21]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListInvoiceRequestsResponse.ProtoReflect.Descriptor instead.
+func (*ListInvoiceRequestsResponse) Descriptor() ([]byte, []int) {
+	return file_devrpc_dev_proto_rawDescGZIP(), []int{21}
+}
+
+func (x *ListInvoiceRequestsResponse) GetInvoiceRequests() []*PublishedInvoiceRequest {
+	if x != nil {
+		return x.InvoiceRequests
+	}
+	return nil
+}
+
+type ApproveInvoiceRequestPaymentRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// The 32-byte payment hash of the pending invoice to pay.
+	PaymentHash []byte `protobuf:"bytes,1,opt,name=payment_hash,json=paymentHash,proto3" json:"payment_hash,omitempty"`
+	// Maximum fee in millisatoshis to pay for routing. If zero, a default
+	// percentage of the payment amount is used.
+	FeeLimitMsat  int64 `protobuf:"varint,2,opt,name=fee_limit_msat,json=feeLimitMsat,proto3" json:"fee_limit_msat,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ApproveInvoiceRequestPaymentRequest) Reset() {
+	*x = ApproveInvoiceRequestPaymentRequest{}
+	mi := &file_devrpc_dev_proto_msgTypes[22]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ApproveInvoiceRequestPaymentRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ApproveInvoiceRequestPaymentRequest) ProtoMessage() {}
+
+func (x *ApproveInvoiceRequestPaymentRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_devrpc_dev_proto_msgTypes[22]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ApproveInvoiceRequestPaymentRequest.ProtoReflect.Descriptor instead.
+func (*ApproveInvoiceRequestPaymentRequest) Descriptor() ([]byte, []int) {
+	return file_devrpc_dev_proto_rawDescGZIP(), []int{22}
+}
+
+func (x *ApproveInvoiceRequestPaymentRequest) GetPaymentHash() []byte {
+	if x != nil {
+		return x.PaymentHash
+	}
+	return nil
+}
+
+func (x *ApproveInvoiceRequestPaymentRequest) GetFeeLimitMsat() int64 {
+	if x != nil {
+		return x.FeeLimitMsat
+	}
+	return 0
+}
+
+type ApproveInvoiceRequestPaymentResponse struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// The 32-byte payment preimage proving settlement.
+	PaymentPreimage []byte `protobuf:"bytes,1,opt,name=payment_preimage,json=paymentPreimage,proto3" json:"payment_preimage,omitempty"`
+	// The 32-byte payment hash.
+	PaymentHash   []byte `protobuf:"bytes,2,opt,name=payment_hash,json=paymentHash,proto3" json:"payment_hash,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ApproveInvoiceRequestPaymentResponse) Reset() {
+	*x = ApproveInvoiceRequestPaymentResponse{}
+	mi := &file_devrpc_dev_proto_msgTypes[23]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ApproveInvoiceRequestPaymentResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ApproveInvoiceRequestPaymentResponse) ProtoMessage() {}
+
+func (x *ApproveInvoiceRequestPaymentResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_devrpc_dev_proto_msgTypes[23]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ApproveInvoiceRequestPaymentResponse.ProtoReflect.Descriptor instead.
+func (*ApproveInvoiceRequestPaymentResponse) Descriptor() ([]byte, []int) {
+	return file_devrpc_dev_proto_rawDescGZIP(), []int{23}
+}
+
+func (x *ApproveInvoiceRequestPaymentResponse) GetPaymentPreimage() []byte {
+	if x != nil {
+		return x.PaymentPreimage
+	}
+	return nil
+}
+
+func (x *ApproveInvoiceRequestPaymentResponse) GetPaymentHash() []byte {
+	if x != nil {
+		return x.PaymentHash
+	}
+	return nil
+}
+
 var File_devrpc_dev_proto protoreflect.FileDescriptor
 
 const file_devrpc_dev_proto_rawDesc = "" +
@@ -1223,14 +1859,64 @@ const file_devrpc_dev_proto_rawDesc = "" +
 	"\x0einvoice_string\x18\x04 \x01(\tR\rinvoiceString\x12&\n" +
 	"\x0finvreq_payer_id\x18\x05 \x01(\fR\rinvreqPayerId\x121\n" +
 	"\x05offer\x18\x06 \x01(\v2\x1b.devrpc.DecodeOfferResponseR\x05offer\x12'\n" +
-	"\x0fidempotency_key\x18\a \x01(\fR\x0eidempotencyKey2\xa8\x03\n" +
+	"\x0fidempotency_key\x18\a \x01(\fR\x0eidempotencyKey\"\x82\x02\n" +
+	"\x1bCreateInvoiceRequestRequest\x12 \n" +
+	"\vdescription\x18\x01 \x01(\tR\vdescription\x12\x1f\n" +
+	"\vamount_msat\x18\x02 \x01(\x04R\n" +
+	"amountMsat\x12'\n" +
+	"\x0fabsolute_expiry\x18\x03 \x01(\x04R\x0eabsoluteExpiry\x12(\n" +
+	"\x10expected_node_id\x18\x04 \x01(\fR\x0eexpectedNodeId\x12'\n" +
+	"\x0fidempotency_key\x18\x05 \x01(\fR\x0eidempotencyKey\x12$\n" +
+	"\x0efee_limit_msat\x18\x06 \x01(\x03R\ffeeLimitMsat\"p\n" +
+	"\x1cCreateInvoiceRequestResponse\x12'\n" +
+	"\x0finvoice_request\x18\x01 \x01(\tR\x0einvoiceRequest\x12'\n" +
+	"\x0fidempotency_key\x18\x02 \x01(\fR\x0eidempotencyKey\"=\n" +
+	"\x12SendInvoiceRequest\x12'\n" +
+	"\x0finvoice_request\x18\x01 \x01(\tR\x0einvoiceRequest\"s\n" +
+	"\x13SendInvoiceResponse\x12\x18\n" +
+	"\ainvoice\x18\x01 \x01(\tR\ainvoice\x12!\n" +
+	"\fpayment_hash\x18\x02 \x01(\fR\vpaymentHash\x12\x1f\n" +
+	"\vamount_msat\x18\x03 \x01(\x04R\n" +
+	"amountMsat\"\x1c\n" +
+	"\x1aListInvoiceRequestsRequest\"u\n" +
+	"\x0ePendingInvoice\x12\x18\n" +
+	"\ainvoice\x18\x01 \x01(\tR\ainvoice\x12!\n" +
+	"\fpayment_hash\x18\x02 \x01(\fR\vpaymentHash\x12&\n" +
+	"\x0finvoice_node_id\x18\x03 \x01(\fR\rinvoiceNodeId\"\x94\x03\n" +
+	"\x17PublishedInvoiceRequest\x12'\n" +
+	"\x0finvoice_request\x18\x01 \x01(\tR\x0einvoiceRequest\x12'\n" +
+	"\x0fidempotency_key\x18\x02 \x01(\fR\x0eidempotencyKey\x12\x1f\n" +
+	"\vamount_msat\x18\x03 \x01(\x04R\n" +
+	"amountMsat\x12\x1d\n" +
+	"\n" +
+	"expires_at\x18\x04 \x01(\x03R\texpiresAt\x12(\n" +
+	"\x10expected_node_id\x18\x05 \x01(\fR\x0eexpectedNodeId\x12\x12\n" +
+	"\x04used\x18\x06 \x01(\bR\x04used\x12!\n" +
+	"\fpayment_hash\x18\a \x01(\fR\vpaymentHash\x12A\n" +
+	"\x10pending_invoices\x18\b \x03(\v2\x16.devrpc.PendingInvoiceR\x0fpendingInvoices\x12\x1d\n" +
+	"\n" +
+	"created_at\x18\t \x01(\x03R\tcreatedAt\x12$\n" +
+	"\x0efee_limit_msat\x18\n" +
+	" \x01(\x03R\ffeeLimitMsat\"i\n" +
+	"\x1bListInvoiceRequestsResponse\x12J\n" +
+	"\x10invoice_requests\x18\x01 \x03(\v2\x1f.devrpc.PublishedInvoiceRequestR\x0finvoiceRequests\"n\n" +
+	"#ApproveInvoiceRequestPaymentRequest\x12!\n" +
+	"\fpayment_hash\x18\x01 \x01(\fR\vpaymentHash\x12$\n" +
+	"\x0efee_limit_msat\x18\x02 \x01(\x03R\ffeeLimitMsat\"t\n" +
+	"$ApproveInvoiceRequestPaymentResponse\x12)\n" +
+	"\x10payment_preimage\x18\x01 \x01(\fR\x0fpaymentPreimage\x12!\n" +
+	"\fpayment_hash\x18\x02 \x01(\fR\vpaymentHash2\xae\x06\n" +
 	"\x03Dev\x12?\n" +
 	"\vImportGraph\x12\x13.lnrpc.ChannelGraph\x1a\x1b.devrpc.ImportGraphResponse\x12@\n" +
 	"\aQuiesce\x12\x19.devrpc.QuiescenceRequest\x1a\x1a.devrpc.QuiescenceResponse\x12F\n" +
 	"\vCreateOffer\x12\x1a.devrpc.CreateOfferRequest\x1a\x1b.devrpc.CreateOfferResponse\x12F\n" +
 	"\vDecodeOffer\x12\x1a.devrpc.DecodeOfferRequest\x1a\x1b.devrpc.DecodeOfferResponse\x12O\n" +
 	"\x0eRequestInvoice\x12\x1d.devrpc.RequestInvoiceRequest\x1a\x1e.devrpc.RequestInvoiceResponse\x12=\n" +
-	"\bPayOffer\x12\x17.devrpc.PayOfferRequest\x1a\x16.devrpc.PayOfferUpdate0\x01B.Z,github.com/lightningnetwork/lnd/lnrpc/devrpcb\x06proto3"
+	"\bPayOffer\x12\x17.devrpc.PayOfferRequest\x1a\x16.devrpc.PayOfferUpdate0\x01\x12a\n" +
+	"\x14CreateInvoiceRequest\x12#.devrpc.CreateInvoiceRequestRequest\x1a$.devrpc.CreateInvoiceRequestResponse\x12F\n" +
+	"\vSendInvoice\x12\x1a.devrpc.SendInvoiceRequest\x1a\x1b.devrpc.SendInvoiceResponse\x12^\n" +
+	"\x13ListInvoiceRequests\x12\".devrpc.ListInvoiceRequestsRequest\x1a#.devrpc.ListInvoiceRequestsResponse\x12y\n" +
+	"\x1cApproveInvoiceRequestPayment\x12+.devrpc.ApproveInvoiceRequestPaymentRequest\x1a,.devrpc.ApproveInvoiceRequestPaymentResponseB.Z,github.com/lightningnetwork/lnd/lnrpc/devrpcb\x06proto3"
 
 var (
 	file_devrpc_dev_proto_rawDescOnce sync.Once
@@ -1244,29 +1930,39 @@ func file_devrpc_dev_proto_rawDescGZIP() []byte {
 	return file_devrpc_dev_proto_rawDescData
 }
 
-var file_devrpc_dev_proto_msgTypes = make([]protoimpl.MessageInfo, 14)
+var file_devrpc_dev_proto_msgTypes = make([]protoimpl.MessageInfo, 24)
 var file_devrpc_dev_proto_goTypes = []any{
-	(*ImportGraphResponse)(nil),        // 0: devrpc.ImportGraphResponse
-	(*QuiescenceRequest)(nil),          // 1: devrpc.QuiescenceRequest
-	(*QuiescenceResponse)(nil),         // 2: devrpc.QuiescenceResponse
-	(*CreateOfferRequest)(nil),         // 3: devrpc.CreateOfferRequest
-	(*CreateOfferResponse)(nil),        // 4: devrpc.CreateOfferResponse
-	(*DecodeOfferRequest)(nil),         // 5: devrpc.DecodeOfferRequest
-	(*DecodeOfferResponse)(nil),        // 6: devrpc.DecodeOfferResponse
-	(*RequestInvoiceRequest)(nil),      // 7: devrpc.RequestInvoiceRequest
-	(*RequestInvoiceResponse)(nil),     // 8: devrpc.RequestInvoiceResponse
-	(*PayOfferRequest)(nil),            // 9: devrpc.PayOfferRequest
-	(*PayOfferUpdate)(nil),             // 10: devrpc.PayOfferUpdate
-	(*PayOfferInvoiceRequestSent)(nil), // 11: devrpc.PayOfferInvoiceRequestSent
-	(*PayOfferInvoiceReceived)(nil),    // 12: devrpc.PayOfferInvoiceReceived
-	(*PayOfferPaymentResult)(nil),      // 13: devrpc.PayOfferPaymentResult
-	(*lnrpc.ChannelPoint)(nil),         // 14: lnrpc.ChannelPoint
-	(*lnrpc.BlindedPath)(nil),          // 15: lnrpc.BlindedPath
-	(*lnrpc.ChannelGraph)(nil),         // 16: lnrpc.ChannelGraph
+	(*ImportGraphResponse)(nil),                  // 0: devrpc.ImportGraphResponse
+	(*QuiescenceRequest)(nil),                    // 1: devrpc.QuiescenceRequest
+	(*QuiescenceResponse)(nil),                   // 2: devrpc.QuiescenceResponse
+	(*CreateOfferRequest)(nil),                   // 3: devrpc.CreateOfferRequest
+	(*CreateOfferResponse)(nil),                  // 4: devrpc.CreateOfferResponse
+	(*DecodeOfferRequest)(nil),                   // 5: devrpc.DecodeOfferRequest
+	(*DecodeOfferResponse)(nil),                  // 6: devrpc.DecodeOfferResponse
+	(*RequestInvoiceRequest)(nil),                // 7: devrpc.RequestInvoiceRequest
+	(*RequestInvoiceResponse)(nil),               // 8: devrpc.RequestInvoiceResponse
+	(*PayOfferRequest)(nil),                      // 9: devrpc.PayOfferRequest
+	(*PayOfferUpdate)(nil),                       // 10: devrpc.PayOfferUpdate
+	(*PayOfferInvoiceRequestSent)(nil),           // 11: devrpc.PayOfferInvoiceRequestSent
+	(*PayOfferInvoiceReceived)(nil),              // 12: devrpc.PayOfferInvoiceReceived
+	(*PayOfferPaymentResult)(nil),                // 13: devrpc.PayOfferPaymentResult
+	(*CreateInvoiceRequestRequest)(nil),          // 14: devrpc.CreateInvoiceRequestRequest
+	(*CreateInvoiceRequestResponse)(nil),         // 15: devrpc.CreateInvoiceRequestResponse
+	(*SendInvoiceRequest)(nil),                   // 16: devrpc.SendInvoiceRequest
+	(*SendInvoiceResponse)(nil),                  // 17: devrpc.SendInvoiceResponse
+	(*ListInvoiceRequestsRequest)(nil),           // 18: devrpc.ListInvoiceRequestsRequest
+	(*PendingInvoice)(nil),                       // 19: devrpc.PendingInvoice
+	(*PublishedInvoiceRequest)(nil),              // 20: devrpc.PublishedInvoiceRequest
+	(*ListInvoiceRequestsResponse)(nil),          // 21: devrpc.ListInvoiceRequestsResponse
+	(*ApproveInvoiceRequestPaymentRequest)(nil),  // 22: devrpc.ApproveInvoiceRequestPaymentRequest
+	(*ApproveInvoiceRequestPaymentResponse)(nil), // 23: devrpc.ApproveInvoiceRequestPaymentResponse
+	(*lnrpc.ChannelPoint)(nil),                   // 24: lnrpc.ChannelPoint
+	(*lnrpc.BlindedPath)(nil),                    // 25: lnrpc.BlindedPath
+	(*lnrpc.ChannelGraph)(nil),                   // 26: lnrpc.ChannelGraph
 }
 var file_devrpc_dev_proto_depIdxs = []int32{
-	14, // 0: devrpc.QuiescenceRequest.chan_id:type_name -> lnrpc.ChannelPoint
-	15, // 1: devrpc.DecodeOfferResponse.offer_paths:type_name -> lnrpc.BlindedPath
+	24, // 0: devrpc.QuiescenceRequest.chan_id:type_name -> lnrpc.ChannelPoint
+	25, // 1: devrpc.DecodeOfferResponse.offer_paths:type_name -> lnrpc.BlindedPath
 	6,  // 2: devrpc.RequestInvoiceResponse.offer:type_name -> devrpc.DecodeOfferResponse
 	11, // 3: devrpc.PayOfferUpdate.invoice_request_sent:type_name -> devrpc.PayOfferInvoiceRequestSent
 	12, // 4: devrpc.PayOfferUpdate.invoice_received:type_name -> devrpc.PayOfferInvoiceReceived
@@ -1274,23 +1970,33 @@ var file_devrpc_dev_proto_depIdxs = []int32{
 	6,  // 6: devrpc.PayOfferInvoiceRequestSent.offer:type_name -> devrpc.DecodeOfferResponse
 	6,  // 7: devrpc.PayOfferInvoiceReceived.offer:type_name -> devrpc.DecodeOfferResponse
 	6,  // 8: devrpc.PayOfferPaymentResult.offer:type_name -> devrpc.DecodeOfferResponse
-	16, // 9: devrpc.Dev.ImportGraph:input_type -> lnrpc.ChannelGraph
-	1,  // 10: devrpc.Dev.Quiesce:input_type -> devrpc.QuiescenceRequest
-	3,  // 11: devrpc.Dev.CreateOffer:input_type -> devrpc.CreateOfferRequest
-	5,  // 12: devrpc.Dev.DecodeOffer:input_type -> devrpc.DecodeOfferRequest
-	7,  // 13: devrpc.Dev.RequestInvoice:input_type -> devrpc.RequestInvoiceRequest
-	9,  // 14: devrpc.Dev.PayOffer:input_type -> devrpc.PayOfferRequest
-	0,  // 15: devrpc.Dev.ImportGraph:output_type -> devrpc.ImportGraphResponse
-	2,  // 16: devrpc.Dev.Quiesce:output_type -> devrpc.QuiescenceResponse
-	4,  // 17: devrpc.Dev.CreateOffer:output_type -> devrpc.CreateOfferResponse
-	6,  // 18: devrpc.Dev.DecodeOffer:output_type -> devrpc.DecodeOfferResponse
-	8,  // 19: devrpc.Dev.RequestInvoice:output_type -> devrpc.RequestInvoiceResponse
-	10, // 20: devrpc.Dev.PayOffer:output_type -> devrpc.PayOfferUpdate
-	15, // [15:21] is the sub-list for method output_type
-	9,  // [9:15] is the sub-list for method input_type
-	9,  // [9:9] is the sub-list for extension type_name
-	9,  // [9:9] is the sub-list for extension extendee
-	0,  // [0:9] is the sub-list for field type_name
+	19, // 9: devrpc.PublishedInvoiceRequest.pending_invoices:type_name -> devrpc.PendingInvoice
+	20, // 10: devrpc.ListInvoiceRequestsResponse.invoice_requests:type_name -> devrpc.PublishedInvoiceRequest
+	26, // 11: devrpc.Dev.ImportGraph:input_type -> lnrpc.ChannelGraph
+	1,  // 12: devrpc.Dev.Quiesce:input_type -> devrpc.QuiescenceRequest
+	3,  // 13: devrpc.Dev.CreateOffer:input_type -> devrpc.CreateOfferRequest
+	5,  // 14: devrpc.Dev.DecodeOffer:input_type -> devrpc.DecodeOfferRequest
+	7,  // 15: devrpc.Dev.RequestInvoice:input_type -> devrpc.RequestInvoiceRequest
+	9,  // 16: devrpc.Dev.PayOffer:input_type -> devrpc.PayOfferRequest
+	14, // 17: devrpc.Dev.CreateInvoiceRequest:input_type -> devrpc.CreateInvoiceRequestRequest
+	16, // 18: devrpc.Dev.SendInvoice:input_type -> devrpc.SendInvoiceRequest
+	18, // 19: devrpc.Dev.ListInvoiceRequests:input_type -> devrpc.ListInvoiceRequestsRequest
+	22, // 20: devrpc.Dev.ApproveInvoiceRequestPayment:input_type -> devrpc.ApproveInvoiceRequestPaymentRequest
+	0,  // 21: devrpc.Dev.ImportGraph:output_type -> devrpc.ImportGraphResponse
+	2,  // 22: devrpc.Dev.Quiesce:output_type -> devrpc.QuiescenceResponse
+	4,  // 23: devrpc.Dev.CreateOffer:output_type -> devrpc.CreateOfferResponse
+	6,  // 24: devrpc.Dev.DecodeOffer:output_type -> devrpc.DecodeOfferResponse
+	8,  // 25: devrpc.Dev.RequestInvoice:output_type -> devrpc.RequestInvoiceResponse
+	10, // 26: devrpc.Dev.PayOffer:output_type -> devrpc.PayOfferUpdate
+	15, // 27: devrpc.Dev.CreateInvoiceRequest:output_type -> devrpc.CreateInvoiceRequestResponse
+	17, // 28: devrpc.Dev.SendInvoice:output_type -> devrpc.SendInvoiceResponse
+	21, // 29: devrpc.Dev.ListInvoiceRequests:output_type -> devrpc.ListInvoiceRequestsResponse
+	23, // 30: devrpc.Dev.ApproveInvoiceRequestPayment:output_type -> devrpc.ApproveInvoiceRequestPaymentResponse
+	21, // [21:31] is the sub-list for method output_type
+	11, // [11:21] is the sub-list for method input_type
+	11, // [11:11] is the sub-list for extension type_name
+	11, // [11:11] is the sub-list for extension extendee
+	0,  // [0:11] is the sub-list for field type_name
 }
 
 func init() { file_devrpc_dev_proto_init() }
@@ -1310,7 +2016,7 @@ func file_devrpc_dev_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_devrpc_dev_proto_rawDesc), len(file_devrpc_dev_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   14,
+			NumMessages:   24,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

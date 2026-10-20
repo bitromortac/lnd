@@ -20,3 +20,14 @@ http:
     - selector: devrpc.Dev.PayOffer
       post: "/v2/dev/payoffer"
       body: "*"
+    - selector: devrpc.Dev.CreateInvoiceRequest
+      post: "/v2/dev/invoicerequests"
+      body: "*"
+    - selector: devrpc.Dev.SendInvoice
+      post: "/v2/dev/invoicerequests/invoice"
+      body: "*"
+    - selector: devrpc.Dev.ListInvoiceRequests
+      get: "/v2/dev/invoicerequests"
+    - selector: devrpc.Dev.ApproveInvoiceRequestPayment
+      post: "/v2/dev/invoicerequests/approve"
+      body: "*"

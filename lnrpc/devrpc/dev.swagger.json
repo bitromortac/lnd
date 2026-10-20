@@ -115,6 +115,126 @@
         ]
       }
     },
+    "/v2/dev/invoicerequests": {
+      "get": {
+        "summary": "lncli: `listinvoicerequests`\nListInvoiceRequests returns the invoice requests without an offer that\nthis node published, with the invoices that wait for approval. The node\nmust run with --protocol.bolt12-offers.",
+        "operationId": "Dev_ListInvoiceRequests",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/devrpcListInvoiceRequestsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "tags": [
+          "Dev"
+        ]
+      },
+      "post": {
+        "summary": "lncli: `createinvoicerequest`\nCreateInvoiceRequest publishes an invoice request without an offer as an\nlnr1 string: an offer to send money, for a refund or a withdrawal. The\npayee answers it with an invoice, and the node pays that invoice at most\nonce. An invoice from expected_node_id is paid at once. Without an\nexpected node, the invoice waits for ApproveInvoiceRequestPayment. The\nnode must run with --protocol.bolt12-offers.",
+        "operationId": "Dev_CreateInvoiceRequest",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/devrpcCreateInvoiceRequestResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/devrpcCreateInvoiceRequestRequest"
+            }
+          }
+        ],
+        "tags": [
+          "Dev"
+        ]
+      }
+    },
+    "/v2/dev/invoicerequests/approve": {
+      "post": {
+        "summary": "lncli: `approveinvoicerequestpayment`\nApproveInvoiceRequestPayment pays an invoice that answers one of this\nnode's published invoice requests and waits for approval, because the\nrequest names no expected node. It returns when the payment settles. The\nnode must run with --protocol.bolt12-offers.",
+        "operationId": "Dev_ApproveInvoiceRequestPayment",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/devrpcApproveInvoiceRequestPaymentResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/devrpcApproveInvoiceRequestPaymentRequest"
+            }
+          }
+        ],
+        "tags": [
+          "Dev"
+        ]
+      }
+    },
+    "/v2/dev/invoicerequests/invoice": {
+      "post": {
+        "summary": "lncli: `sendinvoice`\nSendInvoice answers an invoice request without an offer (lnr1...) with a\nBOLT 12 invoice. The node stores the invoice, sends it to the payer by\nonion message and returns it. The payer then pays it. The node must run\nwith --protocol.bolt12-offers.",
+        "operationId": "Dev_SendInvoice",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/devrpcSendInvoiceResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/devrpcSendInvoiceRequest"
+            }
+          }
+        ],
+        "tags": [
+          "Dev"
+        ]
+      }
+    },
     "/v2/dev/payoffer": {
       "post": {
         "summary": "lncli: `payoffer`\nPayOffer takes a BOLT 12 offer string, negotiates an invoice with the\noffer's issuer via onion message, validates the returned invoice, and\ndispatches an HTLC to complete the payment. Returns a stream of updates:\ninvoice_request_sent, invoice_received, and payment_result. The node\nmust run with --protocol.bolt12-offers.",
@@ -225,6 +345,84 @@
     }
   },
   "definitions": {
+    "devrpcApproveInvoiceRequestPaymentRequest": {
+      "type": "object",
+      "properties": {
+        "payment_hash": {
+          "type": "string",
+          "format": "byte",
+          "description": "The 32-byte payment hash of the pending invoice to pay."
+        },
+        "fee_limit_msat": {
+          "type": "string",
+          "format": "int64",
+          "description": "Maximum fee in millisatoshis to pay for routing. If zero, a default\npercentage of the payment amount is used."
+        }
+      }
+    },
+    "devrpcApproveInvoiceRequestPaymentResponse": {
+      "type": "object",
+      "properties": {
+        "payment_preimage": {
+          "type": "string",
+          "format": "byte",
+          "description": "The 32-byte payment preimage proving settlement."
+        },
+        "payment_hash": {
+          "type": "string",
+          "format": "byte",
+          "description": "The 32-byte payment hash."
+        }
+      }
+    },
+    "devrpcCreateInvoiceRequestRequest": {
+      "type": "object",
+      "properties": {
+        "description": {
+          "type": "string",
+          "description": "The purpose of the payment, set as offer_description."
+        },
+        "amount_msat": {
+          "type": "string",
+          "format": "uint64",
+          "description": "The amount this node pays, in millisatoshis."
+        },
+        "absolute_expiry": {
+          "type": "string",
+          "format": "uint64",
+          "description": "If set, the time in seconds since the epoch after which the node no\nlonger pays an invoice for the request."
+        },
+        "expected_node_id": {
+          "type": "string",
+          "format": "byte",
+          "description": "The 33-byte invoice_node_id agreed with the payee out of band. An\ninvoice from this node is paid at once. If empty, every invoice waits\nfor ApproveInvoiceRequestPayment."
+        },
+        "idempotency_key": {
+          "type": "string",
+          "format": "byte",
+          "description": "The caller's idempotency key. A call with a known key returns the\nstored request. If empty, the node generates a random key."
+        },
+        "fee_limit_msat": {
+          "type": "string",
+          "format": "int64",
+          "description": "The maximum routing fee in millisatoshis for paying an invoice from\nthe expected node at once. If zero, the default fee limit applies."
+        }
+      }
+    },
+    "devrpcCreateInvoiceRequestResponse": {
+      "type": "object",
+      "properties": {
+        "invoice_request": {
+          "type": "string",
+          "description": "The signed invoice request (lnr1...)."
+        },
+        "idempotency_key": {
+          "type": "string",
+          "format": "byte",
+          "description": "The idempotency key of the request."
+        }
+      }
+    },
     "devrpcCreateOfferRequest": {
       "type": "object",
       "properties": {
@@ -343,6 +541,18 @@
     },
     "devrpcImportGraphResponse": {
       "type": "object"
+    },
+    "devrpcListInvoiceRequestsResponse": {
+      "type": "object",
+      "properties": {
+        "invoice_requests": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/devrpcPublishedInvoiceRequest"
+          }
+        }
+      }
     },
     "devrpcPayOfferInvoiceReceived": {
       "type": "object",
@@ -481,6 +691,81 @@
         }
       }
     },
+    "devrpcPendingInvoice": {
+      "type": "object",
+      "properties": {
+        "invoice": {
+          "type": "string",
+          "description": "The invoice that waits for approval (lni1...)."
+        },
+        "payment_hash": {
+          "type": "string",
+          "format": "byte",
+          "description": "The 32-byte payment hash of the invoice."
+        },
+        "invoice_node_id": {
+          "type": "string",
+          "format": "byte",
+          "description": "The 33-byte invoice_node_id that signed the invoice."
+        }
+      }
+    },
+    "devrpcPublishedInvoiceRequest": {
+      "type": "object",
+      "properties": {
+        "invoice_request": {
+          "type": "string",
+          "description": "The signed invoice request (lnr1...)."
+        },
+        "idempotency_key": {
+          "type": "string",
+          "format": "byte",
+          "description": "The idempotency key of the request."
+        },
+        "amount_msat": {
+          "type": "string",
+          "format": "uint64",
+          "description": "The amount the request pays in millisatoshis."
+        },
+        "expires_at": {
+          "type": "string",
+          "format": "int64",
+          "description": "The expiry in seconds since the epoch, or zero for none."
+        },
+        "expected_node_id": {
+          "type": "string",
+          "format": "byte",
+          "description": "The 33-byte expected invoice_node_id, or empty."
+        },
+        "used": {
+          "type": "boolean",
+          "description": "Whether a payment ever started for the request."
+        },
+        "payment_hash": {
+          "type": "string",
+          "format": "byte",
+          "description": "The 32-byte payment hash of the request's current payment, or empty."
+        },
+        "pending_invoices": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/devrpcPendingInvoice"
+          },
+          "description": "The invoices that wait for approval. They live in memory only."
+        },
+        "created_at": {
+          "type": "string",
+          "format": "int64",
+          "description": "The creation time in seconds since the epoch."
+        },
+        "fee_limit_msat": {
+          "type": "string",
+          "format": "int64",
+          "description": "The maximum routing fee in millisatoshis for paying an invoice from\nthe expected node at once. Zero selects the default fee limit."
+        }
+      }
+    },
     "devrpcQuiescenceRequest": {
       "type": "object",
       "properties": {
@@ -557,6 +842,34 @@
         "offer": {
           "$ref": "#/definitions/devrpcDecodeOfferResponse",
           "description": "The decoded offer fields from the invoice for convenience."
+        }
+      }
+    },
+    "devrpcSendInvoiceRequest": {
+      "type": "object",
+      "properties": {
+        "invoice_request": {
+          "type": "string",
+          "description": "The invoice request without an offer (lnr1...) to answer."
+        }
+      }
+    },
+    "devrpcSendInvoiceResponse": {
+      "type": "object",
+      "properties": {
+        "invoice": {
+          "type": "string",
+          "description": "The signed invoice that was sent (lni1...)."
+        },
+        "payment_hash": {
+          "type": "string",
+          "format": "byte",
+          "description": "The 32-byte payment hash of the invoice."
+        },
+        "amount_msat": {
+          "type": "string",
+          "format": "uint64",
+          "description": "The invoice amount in millisatoshis."
         }
       }
     },

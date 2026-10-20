@@ -53,6 +53,31 @@ type DevClient interface {
 	//invoice_request_sent, invoice_received, and payment_result. The node
 	//must run with --protocol.bolt12-offers.
 	PayOffer(ctx context.Context, in *PayOfferRequest, opts ...grpc.CallOption) (Dev_PayOfferClient, error)
+	// lncli: `createinvoicerequest`
+	//CreateInvoiceRequest publishes an invoice request without an offer as an
+	//lnr1 string: an offer to send money, for a refund or a withdrawal. The
+	//payee answers it with an invoice, and the node pays that invoice at most
+	//once. An invoice from expected_node_id is paid at once. Without an
+	//expected node, the invoice waits for ApproveInvoiceRequestPayment. The
+	//node must run with --protocol.bolt12-offers.
+	CreateInvoiceRequest(ctx context.Context, in *CreateInvoiceRequestRequest, opts ...grpc.CallOption) (*CreateInvoiceRequestResponse, error)
+	// lncli: `sendinvoice`
+	//SendInvoice answers an invoice request without an offer (lnr1...) with a
+	//BOLT 12 invoice. The node stores the invoice, sends it to the payer by
+	//onion message and returns it. The payer then pays it. The node must run
+	//with --protocol.bolt12-offers.
+	SendInvoice(ctx context.Context, in *SendInvoiceRequest, opts ...grpc.CallOption) (*SendInvoiceResponse, error)
+	// lncli: `listinvoicerequests`
+	//ListInvoiceRequests returns the invoice requests without an offer that
+	//this node published, with the invoices that wait for approval. The node
+	//must run with --protocol.bolt12-offers.
+	ListInvoiceRequests(ctx context.Context, in *ListInvoiceRequestsRequest, opts ...grpc.CallOption) (*ListInvoiceRequestsResponse, error)
+	// lncli: `approveinvoicerequestpayment`
+	//ApproveInvoiceRequestPayment pays an invoice that answers one of this
+	//node's published invoice requests and waits for approval, because the
+	//request names no expected node. It returns when the payment settles. The
+	//node must run with --protocol.bolt12-offers.
+	ApproveInvoiceRequestPayment(ctx context.Context, in *ApproveInvoiceRequestPaymentRequest, opts ...grpc.CallOption) (*ApproveInvoiceRequestPaymentResponse, error)
 }
 
 type devClient struct {
@@ -140,6 +165,42 @@ func (x *devPayOfferClient) Recv() (*PayOfferUpdate, error) {
 	return m, nil
 }
 
+func (c *devClient) CreateInvoiceRequest(ctx context.Context, in *CreateInvoiceRequestRequest, opts ...grpc.CallOption) (*CreateInvoiceRequestResponse, error) {
+	out := new(CreateInvoiceRequestResponse)
+	err := c.cc.Invoke(ctx, "/devrpc.Dev/CreateInvoiceRequest", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *devClient) SendInvoice(ctx context.Context, in *SendInvoiceRequest, opts ...grpc.CallOption) (*SendInvoiceResponse, error) {
+	out := new(SendInvoiceResponse)
+	err := c.cc.Invoke(ctx, "/devrpc.Dev/SendInvoice", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *devClient) ListInvoiceRequests(ctx context.Context, in *ListInvoiceRequestsRequest, opts ...grpc.CallOption) (*ListInvoiceRequestsResponse, error) {
+	out := new(ListInvoiceRequestsResponse)
+	err := c.cc.Invoke(ctx, "/devrpc.Dev/ListInvoiceRequests", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *devClient) ApproveInvoiceRequestPayment(ctx context.Context, in *ApproveInvoiceRequestPaymentRequest, opts ...grpc.CallOption) (*ApproveInvoiceRequestPaymentResponse, error) {
+	out := new(ApproveInvoiceRequestPaymentResponse)
+	err := c.cc.Invoke(ctx, "/devrpc.Dev/ApproveInvoiceRequestPayment", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // DevServer is the server API for Dev service.
 // All implementations must embed UnimplementedDevServer
 // for forward compatibility
@@ -178,6 +239,31 @@ type DevServer interface {
 	//invoice_request_sent, invoice_received, and payment_result. The node
 	//must run with --protocol.bolt12-offers.
 	PayOffer(*PayOfferRequest, Dev_PayOfferServer) error
+	// lncli: `createinvoicerequest`
+	//CreateInvoiceRequest publishes an invoice request without an offer as an
+	//lnr1 string: an offer to send money, for a refund or a withdrawal. The
+	//payee answers it with an invoice, and the node pays that invoice at most
+	//once. An invoice from expected_node_id is paid at once. Without an
+	//expected node, the invoice waits for ApproveInvoiceRequestPayment. The
+	//node must run with --protocol.bolt12-offers.
+	CreateInvoiceRequest(context.Context, *CreateInvoiceRequestRequest) (*CreateInvoiceRequestResponse, error)
+	// lncli: `sendinvoice`
+	//SendInvoice answers an invoice request without an offer (lnr1...) with a
+	//BOLT 12 invoice. The node stores the invoice, sends it to the payer by
+	//onion message and returns it. The payer then pays it. The node must run
+	//with --protocol.bolt12-offers.
+	SendInvoice(context.Context, *SendInvoiceRequest) (*SendInvoiceResponse, error)
+	// lncli: `listinvoicerequests`
+	//ListInvoiceRequests returns the invoice requests without an offer that
+	//this node published, with the invoices that wait for approval. The node
+	//must run with --protocol.bolt12-offers.
+	ListInvoiceRequests(context.Context, *ListInvoiceRequestsRequest) (*ListInvoiceRequestsResponse, error)
+	// lncli: `approveinvoicerequestpayment`
+	//ApproveInvoiceRequestPayment pays an invoice that answers one of this
+	//node's published invoice requests and waits for approval, because the
+	//request names no expected node. It returns when the payment settles. The
+	//node must run with --protocol.bolt12-offers.
+	ApproveInvoiceRequestPayment(context.Context, *ApproveInvoiceRequestPaymentRequest) (*ApproveInvoiceRequestPaymentResponse, error)
 	mustEmbedUnimplementedDevServer()
 }
 
@@ -202,6 +288,18 @@ func (UnimplementedDevServer) RequestInvoice(context.Context, *RequestInvoiceReq
 }
 func (UnimplementedDevServer) PayOffer(*PayOfferRequest, Dev_PayOfferServer) error {
 	return status.Errorf(codes.Unimplemented, "method PayOffer not implemented")
+}
+func (UnimplementedDevServer) CreateInvoiceRequest(context.Context, *CreateInvoiceRequestRequest) (*CreateInvoiceRequestResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method CreateInvoiceRequest not implemented")
+}
+func (UnimplementedDevServer) SendInvoice(context.Context, *SendInvoiceRequest) (*SendInvoiceResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method SendInvoice not implemented")
+}
+func (UnimplementedDevServer) ListInvoiceRequests(context.Context, *ListInvoiceRequestsRequest) (*ListInvoiceRequestsResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ListInvoiceRequests not implemented")
+}
+func (UnimplementedDevServer) ApproveInvoiceRequestPayment(context.Context, *ApproveInvoiceRequestPaymentRequest) (*ApproveInvoiceRequestPaymentResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ApproveInvoiceRequestPayment not implemented")
 }
 func (UnimplementedDevServer) mustEmbedUnimplementedDevServer() {}
 
@@ -327,6 +425,78 @@ func (x *devPayOfferServer) Send(m *PayOfferUpdate) error {
 	return x.ServerStream.SendMsg(m)
 }
 
+func _Dev_CreateInvoiceRequest_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CreateInvoiceRequestRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DevServer).CreateInvoiceRequest(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/devrpc.Dev/CreateInvoiceRequest",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DevServer).CreateInvoiceRequest(ctx, req.(*CreateInvoiceRequestRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Dev_SendInvoice_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SendInvoiceRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DevServer).SendInvoice(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/devrpc.Dev/SendInvoice",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DevServer).SendInvoice(ctx, req.(*SendInvoiceRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Dev_ListInvoiceRequests_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListInvoiceRequestsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DevServer).ListInvoiceRequests(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/devrpc.Dev/ListInvoiceRequests",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DevServer).ListInvoiceRequests(ctx, req.(*ListInvoiceRequestsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Dev_ApproveInvoiceRequestPayment_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ApproveInvoiceRequestPaymentRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DevServer).ApproveInvoiceRequestPayment(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/devrpc.Dev/ApproveInvoiceRequestPayment",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DevServer).ApproveInvoiceRequestPayment(ctx, req.(*ApproveInvoiceRequestPaymentRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // Dev_ServiceDesc is the grpc.ServiceDesc for Dev service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -353,6 +523,22 @@ var Dev_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "RequestInvoice",
 			Handler:    _Dev_RequestInvoice_Handler,
+		},
+		{
+			MethodName: "CreateInvoiceRequest",
+			Handler:    _Dev_CreateInvoiceRequest_Handler,
+		},
+		{
+			MethodName: "SendInvoice",
+			Handler:    _Dev_SendInvoice_Handler,
+		},
+		{
+			MethodName: "ListInvoiceRequests",
+			Handler:    _Dev_ListInvoiceRequests_Handler,
+		},
+		{
+			MethodName: "ApproveInvoiceRequestPayment",
+			Handler:    _Dev_ApproveInvoiceRequestPayment_Handler,
 		},
 	},
 	Streams: []grpc.StreamDesc{

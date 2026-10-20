@@ -6511,11 +6511,6 @@
           "format": "byte",
           "description": "The 32-byte hash of the offer this invoice answers."
         },
-        "invoice_node_id": {
-          "type": "string",
-          "format": "byte",
-          "description": "The 33-byte compressed pubkey that signed the BOLT 12 invoice."
-        },
         "invreq_payer_id": {
           "type": "string",
           "format": "byte",

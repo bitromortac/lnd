@@ -13187,8 +13187,6 @@ type OfferInvoiceDetail struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// The 32-byte hash of the offer this invoice answers.
 	OfferHash []byte `protobuf:"bytes,1,opt,name=offer_hash,json=offerHash,proto3" json:"offer_hash,omitempty"`
-	// The 33-byte compressed pubkey that signed the BOLT 12 invoice.
-	InvoiceNodeId []byte `protobuf:"bytes,2,opt,name=invoice_node_id,json=invoiceNodeId,proto3" json:"invoice_node_id,omitempty"`
 	// The 33-byte compressed ephemeral payer pubkey from the invoice
 	// request (invreq_payer_id, TLV type 88).
 	InvreqPayerId []byte `protobuf:"bytes,3,opt,name=invreq_payer_id,json=invreqPayerId,proto3" json:"invreq_payer_id,omitempty"`
@@ -13232,13 +13230,6 @@ func (*OfferInvoiceDetail) Descriptor() ([]byte, []int) {
 func (x *OfferInvoiceDetail) GetOfferHash() []byte {
 	if x != nil {
 		return x.OfferHash
-	}
-	return nil
-}
-
-func (x *OfferInvoiceDetail) GetInvoiceNodeId() []byte {
-	if x != nil {
-		return x.InvoiceNodeId
 	}
 	return nil
 }
@@ -20037,13 +20028,12 @@ const file_lightning_proto_rawDesc = "" +
 	"\x04OPEN\x10\x00\x12\v\n" +
 	"\aSETTLED\x10\x01\x12\f\n" +
 	"\bCANCELED\x10\x02\x12\f\n" +
-	"\bACCEPTED\x10\x03J\x04\b\x02\x10\x03\"\x9f\x01\n" +
+	"\bACCEPTED\x10\x03J\x04\b\x02\x10\x03\"}\n" +
 	"\x12OfferInvoiceDetail\x12\x1d\n" +
 	"\n" +
 	"offer_hash\x18\x01 \x01(\fR\tofferHash\x12&\n" +
-	"\x0finvoice_node_id\x18\x02 \x01(\fR\rinvoiceNodeId\x12&\n" +
 	"\x0finvreq_payer_id\x18\x03 \x01(\fR\rinvreqPayerId\x12\x1a\n" +
-	"\bquantity\x18\x04 \x01(\x04R\bquantity\"\xa3\x02\n" +
+	"\bquantity\x18\x04 \x01(\x04R\bquantityJ\x04\b\x02\x10\x03\"\xa3\x02\n" +
 	"\x11BlindedPathConfig\x12.\n" +
 	"\x11min_num_real_hops\x18\x01 \x01(\rH\x00R\x0eminNumRealHops\x88\x01\x01\x12\x1e\n" +
 	"\bnum_hops\x18\x02 \x01(\rH\x01R\anumHops\x88\x01\x01\x12'\n" +
