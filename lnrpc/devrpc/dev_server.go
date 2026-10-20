@@ -428,7 +428,7 @@ func (s *Server) CreateOffer(ctx context.Context,
 
 	result, err := s.cfg.OfferCreator.CreateOffer(
 		ctx, req.Description, req.AmountMsat, req.AbsoluteExpiry,
-		fn.OptionFromPtr(req.QuantityMax),
+		fn.OptionFromPtr(req.QuantityMax), req.UseBlindedPaths,
 	)
 	switch {
 	case errors.Is(err, offers.ErrExpiryNotInFuture):

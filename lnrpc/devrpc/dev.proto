@@ -94,6 +94,12 @@ message CreateOfferRequest {
     // Zero means unlimited. If not set, quantity selection is not
     // supported.
     optional uint64 quantity_max = 4;
+
+    // When true, the offer uses blinded message paths (offer_paths) instead
+    // of revealing the node's identity via offer_issuer_id. This provides
+    // receiver privacy. The payer cannot learn the receiver's node pubkey
+    // from the offer.
+    bool use_blinded_paths = 5;
 }
 
 message CreateOfferResponse {

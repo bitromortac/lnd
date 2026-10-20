@@ -204,6 +204,10 @@
           "type": "string",
           "format": "uint64",
           "description": "Maximum number of items that can be requested in a single invoice.\nZero means unlimited. If not set, quantity selection is not\nsupported."
+        },
+        "use_blinded_paths": {
+          "type": "boolean",
+          "description": "When true, the offer uses blinded message paths (offer_paths) instead\nof revealing the node's identity via offer_issuer_id. This provides\nreceiver privacy. The payer cannot learn the receiver's node pubkey\nfrom the offer."
         }
       }
     },

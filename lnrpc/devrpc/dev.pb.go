@@ -163,9 +163,14 @@ type CreateOfferRequest struct {
 	// Maximum number of items that can be requested in a single invoice.
 	// Zero means unlimited. If not set, quantity selection is not
 	// supported.
-	QuantityMax   *uint64 `protobuf:"varint,4,opt,name=quantity_max,json=quantityMax,proto3,oneof" json:"quantity_max,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	QuantityMax *uint64 `protobuf:"varint,4,opt,name=quantity_max,json=quantityMax,proto3,oneof" json:"quantity_max,omitempty"`
+	// When true, the offer uses blinded message paths (offer_paths) instead
+	// of revealing the node's identity via offer_issuer_id. This provides
+	// receiver privacy. The payer cannot learn the receiver's node pubkey
+	// from the offer.
+	UseBlindedPaths bool `protobuf:"varint,5,opt,name=use_blinded_paths,json=useBlindedPaths,proto3" json:"use_blinded_paths,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
 }
 
 func (x *CreateOfferRequest) Reset() {
@@ -224,6 +229,13 @@ func (x *CreateOfferRequest) GetQuantityMax() uint64 {
 		return *x.QuantityMax
 	}
 	return 0
+}
+
+func (x *CreateOfferRequest) GetUseBlindedPaths() bool {
+	if x != nil {
+		return x.UseBlindedPaths
+	}
+	return false
 }
 
 type CreateOfferResponse struct {
@@ -677,13 +689,14 @@ const file_devrpc_dev_proto_rawDesc = "" +
 	"\x11QuiescenceRequest\x12,\n" +
 	"\achan_id\x18\x01 \x01(\v2\x13.lnrpc.ChannelPointR\x06chanId\"2\n" +
 	"\x12QuiescenceResponse\x12\x1c\n" +
-	"\tinitiator\x18\x01 \x01(\bR\tinitiator\"\xb9\x01\n" +
+	"\tinitiator\x18\x01 \x01(\bR\tinitiator\"\xe5\x01\n" +
 	"\x12CreateOfferRequest\x12 \n" +
 	"\vdescription\x18\x01 \x01(\tR\vdescription\x12\x1f\n" +
 	"\vamount_msat\x18\x02 \x01(\x04R\n" +
 	"amountMsat\x12'\n" +
 	"\x0fabsolute_expiry\x18\x03 \x01(\x04R\x0eabsoluteExpiry\x12&\n" +
-	"\fquantity_max\x18\x04 \x01(\x04H\x00R\vquantityMax\x88\x01\x01B\x0f\n" +
+	"\fquantity_max\x18\x04 \x01(\x04H\x00R\vquantityMax\x88\x01\x01\x12*\n" +
+	"\x11use_blinded_paths\x18\x05 \x01(\bR\x0fuseBlindedPathsB\x0f\n" +
 	"\r_quantity_max\"J\n" +
 	"\x13CreateOfferResponse\x12\x14\n" +
 	"\x05offer\x18\x01 \x01(\tR\x05offer\x12\x1d\n" +

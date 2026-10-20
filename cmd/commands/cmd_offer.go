@@ -58,6 +58,12 @@ var CreateOfferCommand = cli.Command{
 				"(0 = unlimited, omit to disable " +
 				"quantity selection)",
 		},
+		cli.BoolFlag{
+			Name: "use_blinded_paths",
+			Usage: "reach the node through blinded paths " +
+				"instead of revealing its identity as " +
+				"offer_issuer_id",
+		},
 	},
 	Action: actionDecorator(createOffer),
 }
@@ -176,9 +182,10 @@ func createOffer(ctx *cli.Context) error {
 	}
 
 	req := &devrpc.CreateOfferRequest{
-		Description:    ctx.String("description"),
-		AmountMsat:     ctx.Uint64("amt_msat"),
-		AbsoluteExpiry: absoluteExpiry,
+		Description:     ctx.String("description"),
+		AmountMsat:      ctx.Uint64("amt_msat"),
+		AbsoluteExpiry:  absoluteExpiry,
+		UseBlindedPaths: ctx.Bool("use_blinded_paths"),
 	}
 
 	if ctx.IsSet("quantity_max") {

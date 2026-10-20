@@ -26,8 +26,8 @@ type fakeOfferCreator struct {
 
 // CreateOffer returns err, or a fixed offer when err is nil.
 func (f *fakeOfferCreator) CreateOffer(_ context.Context, _ string,
-	_, _ uint64,
-	quantityMax fn.Option[uint64]) (*offers.CreateOfferResult, error) {
+	_, _ uint64, quantityMax fn.Option[uint64],
+	_ bool) (*offers.CreateOfferResult, error) {
 
 	f.quantityMax = quantityMax
 	if f.err != nil {
