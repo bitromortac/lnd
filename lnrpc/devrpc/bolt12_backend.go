@@ -19,4 +19,27 @@ type Bolt12Backend interface {
 	// PayOffer pays an offer and streams the negotiation and payment
 	// updates.
 	PayOffer(req *PayOfferRequest, stream Dev_PayOfferServer) error
+
+	// CreateInvoiceRequest publishes an invoice request without an
+	// offer.
+	CreateInvoiceRequest(ctx context.Context,
+		req *CreateInvoiceRequestRequest) (
+		*CreateInvoiceRequestResponse, error)
+
+	// SendInvoice answers an invoice request without an offer as the
+	// payee.
+	SendInvoice(ctx context.Context,
+		req *SendInvoiceRequest) (*SendInvoiceResponse, error)
+
+	// ListInvoiceRequests returns the published invoice requests with the
+	// invoices that wait for approval.
+	ListInvoiceRequests(ctx context.Context,
+		req *ListInvoiceRequestsRequest) (*ListInvoiceRequestsResponse,
+		error)
+
+	// ApproveInvoiceRequestPayment pays an invoice that waits for
+	// approval.
+	ApproveInvoiceRequestPayment(ctx context.Context,
+		req *ApproveInvoiceRequestPaymentRequest) (
+		*ApproveInvoiceRequestPaymentResponse, error)
 }

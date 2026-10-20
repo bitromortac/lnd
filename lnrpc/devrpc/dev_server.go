@@ -65,6 +65,22 @@ var (
 			Entity: "offchain",
 			Action: "write",
 		}},
+		"/devrpc.Dev/CreateInvoiceRequest": {{
+			Entity: "offchain",
+			Action: "write",
+		}},
+		"/devrpc.Dev/SendInvoice": {{
+			Entity: "invoices",
+			Action: "write",
+		}},
+		"/devrpc.Dev/ListInvoiceRequests": {{
+			Entity: "offchain",
+			Action: "read",
+		}},
+		"/devrpc.Dev/ApproveInvoiceRequestPayment": {{
+			Entity: "offchain",
+			Action: "write",
+		}},
 	}
 )
 
@@ -484,4 +500,51 @@ func (s *Server) PayOffer(req *PayOfferRequest,
 	}
 
 	return s.cfg.Bolt12Backend.PayOffer(req, stream)
+}
+
+// CreateInvoiceRequest publishes an invoice request without an offer.
+func (s *Server) CreateInvoiceRequest(ctx context.Context,
+	req *CreateInvoiceRequestRequest) (*CreateInvoiceRequestResponse,
+	error) {
+
+	if s.cfg.Bolt12Backend == nil {
+		return nil, errBolt12Disabled
+	}
+
+	return s.cfg.Bolt12Backend.CreateInvoiceRequest(ctx, req)
+}
+
+// SendInvoice answers an invoice request without an offer as the payee.
+func (s *Server) SendInvoice(ctx context.Context,
+	req *SendInvoiceRequest) (*SendInvoiceResponse, error) {
+
+	if s.cfg.Bolt12Backend == nil {
+		return nil, errBolt12Disabled
+	}
+
+	return s.cfg.Bolt12Backend.SendInvoice(ctx, req)
+}
+
+// ListInvoiceRequests returns the published invoice requests with the
+// invoices that wait for approval.
+func (s *Server) ListInvoiceRequests(ctx context.Context,
+	req *ListInvoiceRequestsRequest) (*ListInvoiceRequestsResponse, error) {
+
+	if s.cfg.Bolt12Backend == nil {
+		return nil, errBolt12Disabled
+	}
+
+	return s.cfg.Bolt12Backend.ListInvoiceRequests(ctx, req)
+}
+
+// ApproveInvoiceRequestPayment pays an invoice that waits for approval.
+func (s *Server) ApproveInvoiceRequestPayment(ctx context.Context,
+	req *ApproveInvoiceRequestPaymentRequest) (
+	*ApproveInvoiceRequestPaymentResponse, error) {
+
+	if s.cfg.Bolt12Backend == nil {
+		return nil, errBolt12Disabled
+	}
+
+	return s.cfg.Bolt12Backend.ApproveInvoiceRequestPayment(ctx, req)
 }

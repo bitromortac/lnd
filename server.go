@@ -62,6 +62,7 @@ import (
 	"github.com/lightningnetwork/lnd/lnpeer"
 	"github.com/lightningnetwork/lnd/lnrpc"
 	"github.com/lightningnetwork/lnd/lnrpc/routerrpc"
+	"github.com/lightningnetwork/lnd/lntypes"
 	"github.com/lightningnetwork/lnd/lnutils"
 	"github.com/lightningnetwork/lnd/lnwallet"
 	"github.com/lightningnetwork/lnd/lnwallet/chainfee"
@@ -482,6 +483,11 @@ type server struct {
 	// bolt12Handler handles incoming BOLT 12 invoice requests and
 	// generates signed invoices in response.
 	bolt12Handler *bolt12handler.Handler
+
+	// offerlessPayer pays the invoices that answer the invoice requests
+	// without an offer that this node published. It is nil when the
+	// payments store cannot hold such requests.
+	offerlessPayer *offerlessPayer
 
 	// sciddirResolver translates BOLT 4 sciddir blinded-path
 	// introduction nodes into pubkeys via the channel graph.
@@ -945,6 +951,22 @@ func newServer(ctx context.Context, cfg *Config, listenAddrs []net.Addr,
 		)
 		if err != nil {
 			return nil, err
+		}
+
+		// The table for published invoice requests is a native SQL
+		// migration, so only the SQL payments store holds them.
+		requestStore, ok :=
+			dbs.PaymentsDB.(paymentsdb.Bolt12InvoiceRequestStore)
+		if ok {
+			pending := make(map[lntypes.Hash]*pendingInvoice)
+			s.offerlessPayer = &offerlessPayer{
+				store:    requestStore,
+				signer:   signer,
+				chain:    *s.cfg.ActiveNetParams.GenesisHash,
+				payments: dbs.PaymentsDB,
+				pay:      s.payOfferlessInvoice,
+				pending:  pending,
+			}
 		}
 
 		// Wire the stateless BOLT 12 invoice reconstructor into
@@ -2504,6 +2526,10 @@ func (s *server) Start(ctx context.Context) error {
 				startErr = err
 				return
 			}
+		}
+		if s.offerlessPayer != nil {
+			s.wg.Add(1)
+			go s.bolt12OfferlessInvoiceLoop()
 		}
 
 		if s.hostAnn != nil {
