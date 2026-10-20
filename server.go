@@ -79,6 +79,7 @@ import (
 	"github.com/lightningnetwork/lnd/queue"
 	"github.com/lightningnetwork/lnd/reputation"
 	"github.com/lightningnetwork/lnd/routing"
+	"github.com/lightningnetwork/lnd/routing/blindedpath"
 	"github.com/lightningnetwork/lnd/routing/localchans"
 	"github.com/lightningnetwork/lnd/routing/route"
 	"github.com/lightningnetwork/lnd/subscribe"
@@ -467,6 +468,10 @@ type server struct {
 	// bolt12Handler handles incoming BOLT 12 invoice requests and
 	// generates signed invoices in response.
 	bolt12Handler *bolt12handler.Handler
+
+	// sciddirResolver translates BOLT 4 sciddir blinded-path
+	// introduction nodes into pubkeys via the channel graph.
+	sciddirResolver *blindedpath.SciddirResolver
 
 	// offerStore persists and queries BOLT 12 offers.
 	offerStore offers.Store
@@ -889,6 +894,24 @@ func newServer(ctx context.Context, cfg *Config, listenAddrs []net.Addr,
 	)
 	s.invoices = invoices.NewRegistry(
 		dbs.InvoiceDB, expiryWatcher, &registryConfig,
+	)
+
+	// Construct the channel-graph-backed sciddir resolver before any
+	// consumer that calls lnwire.BlindedPath.ToSphinx. This single
+	// instance services BOLT 11 + blinded paths (routerrpc) and every
+	// BOLT 12 conversion site below. The graph fetch takes a context.
+	// Callers of the lnwire.IntroNodeResolver interface have no context
+	// to thread, so the resolver runs the lookup with a background
+	// context. Graph reads are local and bounded.
+	s.sciddirResolver = blindedpath.NewSciddirResolver(
+		func(chanID uint64) (
+			*models.ChannelEdgeInfo, *models.ChannelEdgePolicy,
+			*models.ChannelEdgePolicy, error) {
+
+			return s.graphDB.FetchChannelEdgesByID(
+				context.Background(), chanID,
+			)
+		},
 	)
 
 	// BOLT 12 needs native SQL, so set it up only with the offer store.
@@ -2411,7 +2434,10 @@ func (s *server) Start(ctx context.Context) error {
 
 				return nil
 			})
-			if err := s.bolt12Handler.Start(ctx, s); err != nil {
+			err := s.bolt12Handler.Start(
+				ctx, s, s.sciddirResolver,
+			)
+			if err != nil {
 				startErr = err
 				return
 			}

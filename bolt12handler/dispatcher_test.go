@@ -190,7 +190,7 @@ func newDispatchTest(t *testing.T, maxInflight int) *dispatchTest {
 	// that ends too late. Only the test cancels this context.
 	ctx, cancel := context.WithCancel(context.WithoutCancel(t.Context()))
 	require.NoError(t, handler.Start(
-		ctx, subscriberFunc(server.Subscribe),
+		ctx, subscriberFunc(server.Subscribe), nil,
 	))
 
 	return &dispatchTest{
@@ -382,7 +382,7 @@ func TestHandlerDispatch(t *testing.T) {
 			*subscribe.Client, error) {
 
 			return nil, errors.New("no subscription")
-		}))
+		}), nil)
 		require.ErrorContains(t, err, "no subscription")
 		handler.Stop()
 	})

@@ -425,7 +425,7 @@ func TestBlindedPathSphinxRoundTrip(t *testing.T) {
 		require.NoError(rt, err)
 		path.IntroductionNode = intro
 
-		sphinxPath, err := path.ToSphinx()
+		sphinxPath, err := path.ToSphinx(nil)
 		require.NoError(rt, err)
 
 		got, err := NewBlindedPathFromSphinx(sphinxPath)
@@ -458,11 +458,11 @@ func TestToSphinxRejects(t *testing.T) {
 		err   string
 	}{
 		{
-			name:  "sciddir intro",
+			name:  "sciddir intro without a resolver",
 			intro: sciddirIntro,
 			point: validBlindingPoint(t),
 			hops:  []BlindedHop{hop},
-			err:   "not supported",
+			err:   "requires a resolver",
 		},
 		{
 			name:  "nil intro",
@@ -502,8 +502,52 @@ func TestToSphinxRejects(t *testing.T) {
 				Hops:             tc.hops,
 			}
 
-			_, err := path.ToSphinx()
+			_, err := path.ToSphinx(nil)
 			require.ErrorContains(t, err, tc.err)
 		})
 	}
+}
+
+// stubResolver is an IntroNodeResolver that returns a fixed key or error.
+type stubResolver struct {
+	pub *btcec.PublicKey
+	err error
+}
+
+func (s stubResolver) ResolveSciddir(byte, [scidLen]byte) (*btcec.PublicKey,
+	error) {
+
+	return s.pub, s.err
+}
+
+// TestToSphinxResolvesSciddir checks that ToSphinx resolves a sciddir-form
+// introduction node through the resolver, and that it returns the error of
+// the resolver.
+func TestToSphinxResolvesSciddir(t *testing.T) {
+	t.Parallel()
+
+	sciddirIntro, err := NewSciddirIntro(
+		0x00, [8]byte{1, 2, 3, 4, 5, 6, 7, 8},
+	)
+	require.NoError(t, err)
+
+	resolvedPriv, err := btcec.NewPrivateKey()
+	require.NoError(t, err)
+	resolvedPub := resolvedPriv.PubKey()
+
+	path := &BlindedPath{
+		IntroductionNode: sciddirIntro,
+		BlindingPoint:    validBlindingPoint(t),
+		Hops: []BlindedHop{{
+			BlindedNodeID: validBlindingPoint(t),
+			EncryptedData: []byte{0xaa, 0xbb},
+		}},
+	}
+
+	got, err := path.ToSphinx(stubResolver{pub: resolvedPub})
+	require.NoError(t, err)
+	require.True(t, resolvedPub.IsEqual(got.IntroductionPoint))
+
+	_, err = path.ToSphinx(stubResolver{err: ErrUnknownSciddir})
+	require.ErrorIs(t, err, ErrUnknownSciddir)
 }

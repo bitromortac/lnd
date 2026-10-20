@@ -55,6 +55,10 @@ type Handler struct {
 	// answers at the same time.
 	maxInflight int
 
+	// introResolver resolves a sciddir-form introduction node of a reply
+	// path. Start sets it.
+	introResolver lnwire.IntroNodeResolver
+
 	startOnce sync.Once
 
 	// cg cancels the running invoice requests on Stop and waits for them.

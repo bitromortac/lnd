@@ -22,9 +22,11 @@ type OnionMessageSubscriber interface {
 }
 
 // Start subscribes to onion messages and answers the invoice requests in
-// them until Stop or until ctx ends. The subscriber must already run.
+// them until Stop or until ctx ends. The subscriber must already run. The
+// resolver resolves a sciddir-form introduction node of a reply path.
 func (h *Handler) Start(ctx context.Context,
-	subscriber OnionMessageSubscriber) error {
+	subscriber OnionMessageSubscriber,
+	resolver lnwire.IntroNodeResolver) error {
 
 	var err error
 	h.startOnce.Do(func() {
@@ -35,6 +37,8 @@ func (h *Handler) Start(ctx context.Context,
 
 			return
 		}
+
+		h.introResolver = resolver
 
 		h.cg.WgAdd(1)
 		go h.dispatch(ctx, client)
@@ -156,9 +160,7 @@ func acquireSlot(slots chan struct{}) bool {
 func (h *Handler) answerInvoiceRequest(ctx context.Context,
 	invreqBytes []byte, replyPath *lnwire.BlindedPath) {
 
-	// Only pubkey-form introduction nodes are accepted. Resolving the
-	// sciddir form needs a channel-graph lookup.
-	sphinxReplyPath, err := replyPath.ToSphinx()
+	sphinxReplyPath, err := replyPath.ToSphinx(h.introResolver)
 	if err != nil {
 		log.Debugf("Failed to convert reply path: %v", err)
 

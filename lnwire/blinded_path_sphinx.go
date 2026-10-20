@@ -1,11 +1,27 @@
 package lnwire
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/btcsuite/btcd/btcec/v2"
 	sphinx "github.com/lightningnetwork/lightning-onion"
 )
+
+// ErrUnknownSciddir is returned by an IntroNodeResolver when the referenced
+// short channel ID is not in the local channel graph, for example for stale
+// gossip, a private channel, or a closed channel.
+var ErrUnknownSciddir = errors.New("sciddir introduction node not found in " +
+	"channel graph")
+
+// IntroNodeResolver resolves a sciddir introduction node to the endpoint
+// pubkey identified by the (direction, scid) pair, using channel_announcement
+// ordering (0 = lesser pubkey, 1 = greater). The implementation lives in
+// routing/blindedpath alongside the channel-graph lookup.
+type IntroNodeResolver interface {
+	ResolveSciddir(direction byte, scid [scidLen]byte) (*btcec.PublicKey,
+		error)
+}
 
 // NewBlindedPathFromSphinx rebuilds a sphinx-form blinded path as the lnwire
 // equivalent. A nil path yields a nil path and no error.
@@ -33,14 +49,16 @@ func NewBlindedPathFromSphinx(p *sphinx.BlindedPath) (*BlindedPath, error) {
 }
 
 // ToSphinx assembles the sphinx-form representation used by the routing layer.
-// It accepts only a pubkey-form introduction node, because the sciddir form
-// needs a channel-graph lookup.
-func (p *BlindedPath) ToSphinx() (*sphinx.BlindedPath, error) {
+// A pubkey-form introduction node is used as is. A sciddir-form introduction
+// node is resolved through r, which may be nil when only the pubkey form is
+// expected.
+func (p *BlindedPath) ToSphinx(r IntroNodeResolver) (*sphinx.BlindedPath,
+	error) {
 	if p.IntroductionNode == nil {
 		return nil, fmt.Errorf("nil intro node")
 	}
 
-	introPub, err := introductionNodePubkey(p.IntroductionNode)
+	introPub, err := ResolveIntroductionNode(p.IntroductionNode, r)
 	if err != nil {
 		return nil, err
 	}
@@ -68,9 +86,11 @@ func (p *BlindedPath) ToSphinx() (*sphinx.BlindedPath, error) {
 	}, nil
 }
 
-// introductionNodePubkey extracts the key of a pubkey-form introduction
-// node. It returns an error for any other form.
-func introductionNodePubkey(intro IntroductionNode) (*btcec.PublicKey, error) {
+// ResolveIntroductionNode returns the pubkey of an introduction node. A nil
+// resolver is only valid for a pubkey-form introduction node.
+func ResolveIntroductionNode(intro IntroductionNode,
+	r IntroNodeResolver) (*btcec.PublicKey, error) {
+
 	switch v := intro.(type) {
 	case PubkeyIntro:
 		if v.Pubkey == nil {
@@ -81,7 +101,12 @@ func introductionNodePubkey(intro IntroductionNode) (*btcec.PublicKey, error) {
 		return v.Pubkey, nil
 
 	case SciddirIntro:
-		return nil, fmt.Errorf("sciddir intro is not supported")
+		if r == nil {
+			return nil, fmt.Errorf("sciddir intro requires a " +
+				"resolver")
+		}
+
+		return r.ResolveSciddir(v.Direction, v.SCID)
 
 	default:
 		return nil, fmt.Errorf("%w: %T", ErrInvalidIntroNode, intro)
