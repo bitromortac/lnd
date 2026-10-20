@@ -280,6 +280,394 @@ func (x *CreateOfferResponse) GetOfferHash() []byte {
 	return nil
 }
 
+type DecodeOfferRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// The bech32-encoded offer string (lno1...).
+	Offer         string `protobuf:"bytes,1,opt,name=offer,proto3" json:"offer,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *DecodeOfferRequest) Reset() {
+	*x = DecodeOfferRequest{}
+	mi := &file_devrpc_dev_proto_msgTypes[5]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *DecodeOfferRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DecodeOfferRequest) ProtoMessage() {}
+
+func (x *DecodeOfferRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_devrpc_dev_proto_msgTypes[5]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DecodeOfferRequest.ProtoReflect.Descriptor instead.
+func (*DecodeOfferRequest) Descriptor() ([]byte, []int) {
+	return file_devrpc_dev_proto_rawDescGZIP(), []int{5}
+}
+
+func (x *DecodeOfferRequest) GetOffer() string {
+	if x != nil {
+		return x.Offer
+	}
+	return ""
+}
+
+type DecodeOfferResponse struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// The 32-byte offer hash: the SHA256 of the offer's TLV records.
+	OfferHash []byte `protobuf:"bytes,1,opt,name=offer_hash,json=offerHash,proto3" json:"offer_hash,omitempty"`
+	// The UTF-8 description of the purpose of the payment.
+	Description string `protobuf:"bytes,2,opt,name=description,proto3" json:"description,omitempty"`
+	// The amount per item in millisatoshis. Zero if the payer chooses.
+	AmountMsat uint64 `protobuf:"varint,3,opt,name=amount_msat,json=amountMsat,proto3" json:"amount_msat,omitempty"`
+	// Whether the offer specifies a fixed amount.
+	HasAmount bool `protobuf:"varint,4,opt,name=has_amount,json=hasAmount,proto3" json:"has_amount,omitempty"`
+	// The offer issuer's free-form name or identifier.
+	Issuer string `protobuf:"bytes,5,opt,name=issuer,proto3" json:"issuer,omitempty"`
+	// Seconds since epoch after which the offer expires. Zero if no
+	// expiry.
+	AbsoluteExpiry uint64 `protobuf:"varint,6,opt,name=absolute_expiry,json=absoluteExpiry,proto3" json:"absolute_expiry,omitempty"`
+	// Whether the offer has an expiry.
+	HasExpiry bool `protobuf:"varint,7,opt,name=has_expiry,json=hasExpiry,proto3" json:"has_expiry,omitempty"`
+	// Maximum number of items per invoice. Zero means unlimited.
+	QuantityMax uint64 `protobuf:"varint,8,opt,name=quantity_max,json=quantityMax,proto3" json:"quantity_max,omitempty"`
+	// Whether the offer supports quantity selection.
+	HasQuantityMax bool `protobuf:"varint,9,opt,name=has_quantity_max,json=hasQuantityMax,proto3" json:"has_quantity_max,omitempty"`
+	// The 33-byte compressed pubkey of the offer issuer. Empty when
+	// offer_paths is used instead.
+	OfferIssuerId []byte `protobuf:"bytes,10,opt,name=offer_issuer_id,json=offerIssuerId,proto3" json:"offer_issuer_id,omitempty"`
+	// Blinded paths for reaching the offer issuer when
+	// offer_issuer_id is absent.
+	OfferPaths []*lnrpc.BlindedPath `protobuf:"bytes,11,rep,name=offer_paths,json=offerPaths,proto3" json:"offer_paths,omitempty"`
+	// The raw feature bits advertised by the offer.
+	Features []byte `protobuf:"bytes,12,opt,name=features,proto3" json:"features,omitempty"`
+	// The chains this offer is valid for, as hex-encoded 32-byte
+	// chain hashes. Empty implies bitcoin only.
+	Chains []string `protobuf:"bytes,13,rep,name=chains,proto3" json:"chains,omitempty"`
+	// The currency for offer_amount (e.g. "USD"). Empty means the
+	// amount is denominated in the chain's native unit (msat for
+	// bitcoin).
+	Currency      string `protobuf:"bytes,14,opt,name=currency,proto3" json:"currency,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *DecodeOfferResponse) Reset() {
+	*x = DecodeOfferResponse{}
+	mi := &file_devrpc_dev_proto_msgTypes[6]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *DecodeOfferResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DecodeOfferResponse) ProtoMessage() {}
+
+func (x *DecodeOfferResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_devrpc_dev_proto_msgTypes[6]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DecodeOfferResponse.ProtoReflect.Descriptor instead.
+func (*DecodeOfferResponse) Descriptor() ([]byte, []int) {
+	return file_devrpc_dev_proto_rawDescGZIP(), []int{6}
+}
+
+func (x *DecodeOfferResponse) GetOfferHash() []byte {
+	if x != nil {
+		return x.OfferHash
+	}
+	return nil
+}
+
+func (x *DecodeOfferResponse) GetDescription() string {
+	if x != nil {
+		return x.Description
+	}
+	return ""
+}
+
+func (x *DecodeOfferResponse) GetAmountMsat() uint64 {
+	if x != nil {
+		return x.AmountMsat
+	}
+	return 0
+}
+
+func (x *DecodeOfferResponse) GetHasAmount() bool {
+	if x != nil {
+		return x.HasAmount
+	}
+	return false
+}
+
+func (x *DecodeOfferResponse) GetIssuer() string {
+	if x != nil {
+		return x.Issuer
+	}
+	return ""
+}
+
+func (x *DecodeOfferResponse) GetAbsoluteExpiry() uint64 {
+	if x != nil {
+		return x.AbsoluteExpiry
+	}
+	return 0
+}
+
+func (x *DecodeOfferResponse) GetHasExpiry() bool {
+	if x != nil {
+		return x.HasExpiry
+	}
+	return false
+}
+
+func (x *DecodeOfferResponse) GetQuantityMax() uint64 {
+	if x != nil {
+		return x.QuantityMax
+	}
+	return 0
+}
+
+func (x *DecodeOfferResponse) GetHasQuantityMax() bool {
+	if x != nil {
+		return x.HasQuantityMax
+	}
+	return false
+}
+
+func (x *DecodeOfferResponse) GetOfferIssuerId() []byte {
+	if x != nil {
+		return x.OfferIssuerId
+	}
+	return nil
+}
+
+func (x *DecodeOfferResponse) GetOfferPaths() []*lnrpc.BlindedPath {
+	if x != nil {
+		return x.OfferPaths
+	}
+	return nil
+}
+
+func (x *DecodeOfferResponse) GetFeatures() []byte {
+	if x != nil {
+		return x.Features
+	}
+	return nil
+}
+
+func (x *DecodeOfferResponse) GetChains() []string {
+	if x != nil {
+		return x.Chains
+	}
+	return nil
+}
+
+func (x *DecodeOfferResponse) GetCurrency() string {
+	if x != nil {
+		return x.Currency
+	}
+	return ""
+}
+
+type RequestInvoiceRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// The bech32-encoded offer string (lno1...).
+	Offer string `protobuf:"bytes,1,opt,name=offer,proto3" json:"offer,omitempty"`
+	// The amount in millisatoshis. Required when the offer does not
+	// specify a fixed amount.
+	AmountMsat uint64 `protobuf:"varint,2,opt,name=amount_msat,json=amountMsat,proto3" json:"amount_msat,omitempty"`
+	// The number of items to request. Required when the offer
+	// supports quantity selection.
+	Quantity uint64 `protobuf:"varint,3,opt,name=quantity,proto3" json:"quantity,omitempty"`
+	// An optional payer note included in the invoice request.
+	PayerNote string `protobuf:"bytes,4,opt,name=payer_note,json=payerNote,proto3" json:"payer_note,omitempty"`
+	// Timeout in seconds to wait for the invoice reply. Defaults to
+	// 30 if unset or zero.
+	TimeoutSeconds uint64 `protobuf:"varint,5,opt,name=timeout_seconds,json=timeoutSeconds,proto3" json:"timeout_seconds,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
+}
+
+func (x *RequestInvoiceRequest) Reset() {
+	*x = RequestInvoiceRequest{}
+	mi := &file_devrpc_dev_proto_msgTypes[7]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RequestInvoiceRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RequestInvoiceRequest) ProtoMessage() {}
+
+func (x *RequestInvoiceRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_devrpc_dev_proto_msgTypes[7]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RequestInvoiceRequest.ProtoReflect.Descriptor instead.
+func (*RequestInvoiceRequest) Descriptor() ([]byte, []int) {
+	return file_devrpc_dev_proto_rawDescGZIP(), []int{7}
+}
+
+func (x *RequestInvoiceRequest) GetOffer() string {
+	if x != nil {
+		return x.Offer
+	}
+	return ""
+}
+
+func (x *RequestInvoiceRequest) GetAmountMsat() uint64 {
+	if x != nil {
+		return x.AmountMsat
+	}
+	return 0
+}
+
+func (x *RequestInvoiceRequest) GetQuantity() uint64 {
+	if x != nil {
+		return x.Quantity
+	}
+	return 0
+}
+
+func (x *RequestInvoiceRequest) GetPayerNote() string {
+	if x != nil {
+		return x.PayerNote
+	}
+	return ""
+}
+
+func (x *RequestInvoiceRequest) GetTimeoutSeconds() uint64 {
+	if x != nil {
+		return x.TimeoutSeconds
+	}
+	return 0
+}
+
+type RequestInvoiceResponse struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// The bech32-encoded BOLT 12 invoice string (lni1...).
+	InvoiceString string `protobuf:"bytes,1,opt,name=invoice_string,json=invoiceString,proto3" json:"invoice_string,omitempty"`
+	// The 33-byte compressed pubkey that signed the invoice.
+	InvoiceNodeId []byte `protobuf:"bytes,2,opt,name=invoice_node_id,json=invoiceNodeId,proto3" json:"invoice_node_id,omitempty"`
+	// The invoice amount in millisatoshis.
+	InvoiceAmountMsat uint64 `protobuf:"varint,3,opt,name=invoice_amount_msat,json=invoiceAmountMsat,proto3" json:"invoice_amount_msat,omitempty"`
+	// The 32-byte payment hash for the invoice.
+	InvoicePaymentHash []byte `protobuf:"bytes,4,opt,name=invoice_payment_hash,json=invoicePaymentHash,proto3" json:"invoice_payment_hash,omitempty"`
+	// The 33-byte compressed ephemeral payer pubkey from the
+	// invoice request.
+	InvreqPayerId []byte `protobuf:"bytes,5,opt,name=invreq_payer_id,json=invreqPayerId,proto3" json:"invreq_payer_id,omitempty"`
+	// The decoded offer fields from the invoice for convenience.
+	Offer         *DecodeOfferResponse `protobuf:"bytes,6,opt,name=offer,proto3" json:"offer,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *RequestInvoiceResponse) Reset() {
+	*x = RequestInvoiceResponse{}
+	mi := &file_devrpc_dev_proto_msgTypes[8]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RequestInvoiceResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RequestInvoiceResponse) ProtoMessage() {}
+
+func (x *RequestInvoiceResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_devrpc_dev_proto_msgTypes[8]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RequestInvoiceResponse.ProtoReflect.Descriptor instead.
+func (*RequestInvoiceResponse) Descriptor() ([]byte, []int) {
+	return file_devrpc_dev_proto_rawDescGZIP(), []int{8}
+}
+
+func (x *RequestInvoiceResponse) GetInvoiceString() string {
+	if x != nil {
+		return x.InvoiceString
+	}
+	return ""
+}
+
+func (x *RequestInvoiceResponse) GetInvoiceNodeId() []byte {
+	if x != nil {
+		return x.InvoiceNodeId
+	}
+	return nil
+}
+
+func (x *RequestInvoiceResponse) GetInvoiceAmountMsat() uint64 {
+	if x != nil {
+		return x.InvoiceAmountMsat
+	}
+	return 0
+}
+
+func (x *RequestInvoiceResponse) GetInvoicePaymentHash() []byte {
+	if x != nil {
+		return x.InvoicePaymentHash
+	}
+	return nil
+}
+
+func (x *RequestInvoiceResponse) GetInvreqPayerId() []byte {
+	if x != nil {
+		return x.InvreqPayerId
+	}
+	return nil
+}
+
+func (x *RequestInvoiceResponse) GetOffer() *DecodeOfferResponse {
+	if x != nil {
+		return x.Offer
+	}
+	return nil
+}
+
 var File_devrpc_dev_proto protoreflect.FileDescriptor
 
 const file_devrpc_dev_proto_rawDesc = "" +
@@ -300,11 +688,51 @@ const file_devrpc_dev_proto_rawDesc = "" +
 	"\x13CreateOfferResponse\x12\x14\n" +
 	"\x05offer\x18\x01 \x01(\tR\x05offer\x12\x1d\n" +
 	"\n" +
-	"offer_hash\x18\x02 \x01(\fR\tofferHash2\xd0\x01\n" +
+	"offer_hash\x18\x02 \x01(\fR\tofferHash\"*\n" +
+	"\x12DecodeOfferRequest\x12\x14\n" +
+	"\x05offer\x18\x01 \x01(\tR\x05offer\"\xf0\x03\n" +
+	"\x13DecodeOfferResponse\x12\x1d\n" +
+	"\n" +
+	"offer_hash\x18\x01 \x01(\fR\tofferHash\x12 \n" +
+	"\vdescription\x18\x02 \x01(\tR\vdescription\x12\x1f\n" +
+	"\vamount_msat\x18\x03 \x01(\x04R\n" +
+	"amountMsat\x12\x1d\n" +
+	"\n" +
+	"has_amount\x18\x04 \x01(\bR\thasAmount\x12\x16\n" +
+	"\x06issuer\x18\x05 \x01(\tR\x06issuer\x12'\n" +
+	"\x0fabsolute_expiry\x18\x06 \x01(\x04R\x0eabsoluteExpiry\x12\x1d\n" +
+	"\n" +
+	"has_expiry\x18\a \x01(\bR\thasExpiry\x12!\n" +
+	"\fquantity_max\x18\b \x01(\x04R\vquantityMax\x12(\n" +
+	"\x10has_quantity_max\x18\t \x01(\bR\x0ehasQuantityMax\x12&\n" +
+	"\x0foffer_issuer_id\x18\n" +
+	" \x01(\fR\rofferIssuerId\x123\n" +
+	"\voffer_paths\x18\v \x03(\v2\x12.lnrpc.BlindedPathR\n" +
+	"offerPaths\x12\x1a\n" +
+	"\bfeatures\x18\f \x01(\fR\bfeatures\x12\x16\n" +
+	"\x06chains\x18\r \x03(\tR\x06chains\x12\x1a\n" +
+	"\bcurrency\x18\x0e \x01(\tR\bcurrency\"\xb2\x01\n" +
+	"\x15RequestInvoiceRequest\x12\x14\n" +
+	"\x05offer\x18\x01 \x01(\tR\x05offer\x12\x1f\n" +
+	"\vamount_msat\x18\x02 \x01(\x04R\n" +
+	"amountMsat\x12\x1a\n" +
+	"\bquantity\x18\x03 \x01(\x04R\bquantity\x12\x1d\n" +
+	"\n" +
+	"payer_note\x18\x04 \x01(\tR\tpayerNote\x12'\n" +
+	"\x0ftimeout_seconds\x18\x05 \x01(\x04R\x0etimeoutSeconds\"\xa4\x02\n" +
+	"\x16RequestInvoiceResponse\x12%\n" +
+	"\x0einvoice_string\x18\x01 \x01(\tR\rinvoiceString\x12&\n" +
+	"\x0finvoice_node_id\x18\x02 \x01(\fR\rinvoiceNodeId\x12.\n" +
+	"\x13invoice_amount_msat\x18\x03 \x01(\x04R\x11invoiceAmountMsat\x120\n" +
+	"\x14invoice_payment_hash\x18\x04 \x01(\fR\x12invoicePaymentHash\x12&\n" +
+	"\x0finvreq_payer_id\x18\x05 \x01(\fR\rinvreqPayerId\x121\n" +
+	"\x05offer\x18\x06 \x01(\v2\x1b.devrpc.DecodeOfferResponseR\x05offer2\xe9\x02\n" +
 	"\x03Dev\x12?\n" +
 	"\vImportGraph\x12\x13.lnrpc.ChannelGraph\x1a\x1b.devrpc.ImportGraphResponse\x12@\n" +
 	"\aQuiesce\x12\x19.devrpc.QuiescenceRequest\x1a\x1a.devrpc.QuiescenceResponse\x12F\n" +
-	"\vCreateOffer\x12\x1a.devrpc.CreateOfferRequest\x1a\x1b.devrpc.CreateOfferResponseB.Z,github.com/lightningnetwork/lnd/lnrpc/devrpcb\x06proto3"
+	"\vCreateOffer\x12\x1a.devrpc.CreateOfferRequest\x1a\x1b.devrpc.CreateOfferResponse\x12F\n" +
+	"\vDecodeOffer\x12\x1a.devrpc.DecodeOfferRequest\x1a\x1b.devrpc.DecodeOfferResponse\x12O\n" +
+	"\x0eRequestInvoice\x12\x1d.devrpc.RequestInvoiceRequest\x1a\x1e.devrpc.RequestInvoiceResponseB.Z,github.com/lightningnetwork/lnd/lnrpc/devrpcb\x06proto3"
 
 var (
 	file_devrpc_dev_proto_rawDescOnce sync.Once
@@ -318,29 +746,40 @@ func file_devrpc_dev_proto_rawDescGZIP() []byte {
 	return file_devrpc_dev_proto_rawDescData
 }
 
-var file_devrpc_dev_proto_msgTypes = make([]protoimpl.MessageInfo, 5)
+var file_devrpc_dev_proto_msgTypes = make([]protoimpl.MessageInfo, 9)
 var file_devrpc_dev_proto_goTypes = []any{
-	(*ImportGraphResponse)(nil), // 0: devrpc.ImportGraphResponse
-	(*QuiescenceRequest)(nil),   // 1: devrpc.QuiescenceRequest
-	(*QuiescenceResponse)(nil),  // 2: devrpc.QuiescenceResponse
-	(*CreateOfferRequest)(nil),  // 3: devrpc.CreateOfferRequest
-	(*CreateOfferResponse)(nil), // 4: devrpc.CreateOfferResponse
-	(*lnrpc.ChannelPoint)(nil),  // 5: lnrpc.ChannelPoint
-	(*lnrpc.ChannelGraph)(nil),  // 6: lnrpc.ChannelGraph
+	(*ImportGraphResponse)(nil),    // 0: devrpc.ImportGraphResponse
+	(*QuiescenceRequest)(nil),      // 1: devrpc.QuiescenceRequest
+	(*QuiescenceResponse)(nil),     // 2: devrpc.QuiescenceResponse
+	(*CreateOfferRequest)(nil),     // 3: devrpc.CreateOfferRequest
+	(*CreateOfferResponse)(nil),    // 4: devrpc.CreateOfferResponse
+	(*DecodeOfferRequest)(nil),     // 5: devrpc.DecodeOfferRequest
+	(*DecodeOfferResponse)(nil),    // 6: devrpc.DecodeOfferResponse
+	(*RequestInvoiceRequest)(nil),  // 7: devrpc.RequestInvoiceRequest
+	(*RequestInvoiceResponse)(nil), // 8: devrpc.RequestInvoiceResponse
+	(*lnrpc.ChannelPoint)(nil),     // 9: lnrpc.ChannelPoint
+	(*lnrpc.BlindedPath)(nil),      // 10: lnrpc.BlindedPath
+	(*lnrpc.ChannelGraph)(nil),     // 11: lnrpc.ChannelGraph
 }
 var file_devrpc_dev_proto_depIdxs = []int32{
-	5, // 0: devrpc.QuiescenceRequest.chan_id:type_name -> lnrpc.ChannelPoint
-	6, // 1: devrpc.Dev.ImportGraph:input_type -> lnrpc.ChannelGraph
-	1, // 2: devrpc.Dev.Quiesce:input_type -> devrpc.QuiescenceRequest
-	3, // 3: devrpc.Dev.CreateOffer:input_type -> devrpc.CreateOfferRequest
-	0, // 4: devrpc.Dev.ImportGraph:output_type -> devrpc.ImportGraphResponse
-	2, // 5: devrpc.Dev.Quiesce:output_type -> devrpc.QuiescenceResponse
-	4, // 6: devrpc.Dev.CreateOffer:output_type -> devrpc.CreateOfferResponse
-	4, // [4:7] is the sub-list for method output_type
-	1, // [1:4] is the sub-list for method input_type
-	1, // [1:1] is the sub-list for extension type_name
-	1, // [1:1] is the sub-list for extension extendee
-	0, // [0:1] is the sub-list for field type_name
+	9,  // 0: devrpc.QuiescenceRequest.chan_id:type_name -> lnrpc.ChannelPoint
+	10, // 1: devrpc.DecodeOfferResponse.offer_paths:type_name -> lnrpc.BlindedPath
+	6,  // 2: devrpc.RequestInvoiceResponse.offer:type_name -> devrpc.DecodeOfferResponse
+	11, // 3: devrpc.Dev.ImportGraph:input_type -> lnrpc.ChannelGraph
+	1,  // 4: devrpc.Dev.Quiesce:input_type -> devrpc.QuiescenceRequest
+	3,  // 5: devrpc.Dev.CreateOffer:input_type -> devrpc.CreateOfferRequest
+	5,  // 6: devrpc.Dev.DecodeOffer:input_type -> devrpc.DecodeOfferRequest
+	7,  // 7: devrpc.Dev.RequestInvoice:input_type -> devrpc.RequestInvoiceRequest
+	0,  // 8: devrpc.Dev.ImportGraph:output_type -> devrpc.ImportGraphResponse
+	2,  // 9: devrpc.Dev.Quiesce:output_type -> devrpc.QuiescenceResponse
+	4,  // 10: devrpc.Dev.CreateOffer:output_type -> devrpc.CreateOfferResponse
+	6,  // 11: devrpc.Dev.DecodeOffer:output_type -> devrpc.DecodeOfferResponse
+	8,  // 12: devrpc.Dev.RequestInvoice:output_type -> devrpc.RequestInvoiceResponse
+	8,  // [8:13] is the sub-list for method output_type
+	3,  // [3:8] is the sub-list for method input_type
+	3,  // [3:3] is the sub-list for extension type_name
+	3,  // [3:3] is the sub-list for extension extendee
+	0,  // [0:3] is the sub-list for field type_name
 }
 
 func init() { file_devrpc_dev_proto_init() }
@@ -355,7 +794,7 @@ func file_devrpc_dev_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_devrpc_dev_proto_rawDesc), len(file_devrpc_dev_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   5,
+			NumMessages:   9,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

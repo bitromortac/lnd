@@ -25,6 +25,8 @@ func devCommands() []cli.Command {
 			Action:      actionDecorator(importGraph),
 		},
 		CreateOfferCommand,
+		DecodeOfferCommand,
+		RequestInvoiceCommand,
 	}
 }
 

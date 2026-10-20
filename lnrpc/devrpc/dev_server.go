@@ -53,6 +53,14 @@ var (
 			Entity: "offchain",
 			Action: "write",
 		}},
+		"/devrpc.Dev/DecodeOffer": {{
+			Entity: "offchain",
+			Action: "read",
+		}},
+		"/devrpc.Dev/RequestInvoice": {{
+			Entity: "offchain",
+			Action: "write",
+		}},
 	}
 )
 
@@ -437,4 +445,27 @@ func (s *Server) CreateOffer(ctx context.Context,
 		Offer:     result.Encoded,
 		OfferHash: result.Hash[:],
 	}, nil
+}
+
+// DecodeOffer decodes a BOLT 12 offer string and returns its fields.
+func (s *Server) DecodeOffer(ctx context.Context,
+	req *DecodeOfferRequest) (*DecodeOfferResponse, error) {
+
+	if s.cfg.Bolt12Backend == nil {
+		return nil, errBolt12Disabled
+	}
+
+	return s.cfg.Bolt12Backend.DecodeOffer(ctx, req)
+}
+
+// RequestInvoice negotiates a BOLT 12 invoice for an offer with its issuer
+// and returns the validated invoice. It pays nothing.
+func (s *Server) RequestInvoice(ctx context.Context,
+	req *RequestInvoiceRequest) (*RequestInvoiceResponse, error) {
+
+	if s.cfg.Bolt12Backend == nil {
+		return nil, errBolt12Disabled
+	}
+
+	return s.cfg.Bolt12Backend.RequestInvoice(ctx, req)
 }

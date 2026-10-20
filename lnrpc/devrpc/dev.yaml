@@ -12,3 +12,8 @@ http:
     - selector: devrpc.Dev.CreateOffer
       post: "/v2/dev/createoffer"
       body: "*"
+    - selector: devrpc.Dev.DecodeOffer
+      get: "/v2/dev/decodeoffer/{offer}"
+    - selector: devrpc.Dev.RequestInvoice
+      post: "/v2/dev/requestinvoice"
+      body: "*"

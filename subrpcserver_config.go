@@ -130,7 +130,8 @@ func (s *subRPCServerConfigs) PopulateDependencies(cfg *Config,
 	rpcLogger btclog.Logger, aliasMgr *aliasmgr.Manager,
 	auxDataParser fn.Option[AuxDataParser],
 	invoiceHtlcModifier *invoices.HtlcModificationInterceptor,
-	offerCreator fn.Option[devrpc.OfferCreator]) error {
+	offerCreator fn.Option[devrpc.OfferCreator],
+	bolt12Backend fn.Option[devrpc.Bolt12Backend]) error {
 
 	// First, we'll use reflect to obtain a version of the config struct
 	// that allows us to programmatically inspect its fields.
@@ -359,6 +360,12 @@ func (s *subRPCServerConfigs) PopulateDependencies(cfg *Config,
 			offerCreator.WhenSome(func(c devrpc.OfferCreator) {
 				subCfgValue.FieldByName("OfferCreator").Set(
 					reflect.ValueOf(c),
+				)
+			})
+
+			bolt12Backend.WhenSome(func(b devrpc.Bolt12Backend) {
+				subCfgValue.FieldByName("Bolt12Backend").Set(
+					reflect.ValueOf(b),
 				)
 			})
 

@@ -33,6 +33,19 @@ type DevClient interface {
 	//offer store and the encoded offer string (lno1...) is returned. The node
 	//must run with --protocol.bolt12-offers.
 	CreateOffer(ctx context.Context, in *CreateOfferRequest, opts ...grpc.CallOption) (*CreateOfferResponse, error)
+	// lncli: `decodeoffer`
+	//DecodeOffer takes a bech32-encoded BOLT 12 offer string (lno1...) and
+	//returns the decoded fields. This is a stateless utility analogous to
+	//DecodePayReq for BOLT 11. The node must run with
+	//--protocol.bolt12-offers.
+	DecodeOffer(ctx context.Context, in *DecodeOfferRequest, opts ...grpc.CallOption) (*DecodeOfferResponse, error)
+	// lncli: `requestinvoice`
+	//RequestInvoice takes a BOLT 12 offer string, constructs and signs an
+	//invoice request, sends it to the offer's issuer via onion message,
+	//waits for the invoice reply, validates it, and returns the decoded
+	//BOLT 12 invoice. No payment is dispatched. The node must run with
+	//--protocol.bolt12-offers.
+	RequestInvoice(ctx context.Context, in *RequestInvoiceRequest, opts ...grpc.CallOption) (*RequestInvoiceResponse, error)
 }
 
 type devClient struct {
@@ -70,6 +83,24 @@ func (c *devClient) CreateOffer(ctx context.Context, in *CreateOfferRequest, opt
 	return out, nil
 }
 
+func (c *devClient) DecodeOffer(ctx context.Context, in *DecodeOfferRequest, opts ...grpc.CallOption) (*DecodeOfferResponse, error) {
+	out := new(DecodeOfferResponse)
+	err := c.cc.Invoke(ctx, "/devrpc.Dev/DecodeOffer", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *devClient) RequestInvoice(ctx context.Context, in *RequestInvoiceRequest, opts ...grpc.CallOption) (*RequestInvoiceResponse, error) {
+	out := new(RequestInvoiceResponse)
+	err := c.cc.Invoke(ctx, "/devrpc.Dev/RequestInvoice", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // DevServer is the server API for Dev service.
 // All implementations must embed UnimplementedDevServer
 // for forward compatibility
@@ -88,6 +119,19 @@ type DevServer interface {
 	//offer store and the encoded offer string (lno1...) is returned. The node
 	//must run with --protocol.bolt12-offers.
 	CreateOffer(context.Context, *CreateOfferRequest) (*CreateOfferResponse, error)
+	// lncli: `decodeoffer`
+	//DecodeOffer takes a bech32-encoded BOLT 12 offer string (lno1...) and
+	//returns the decoded fields. This is a stateless utility analogous to
+	//DecodePayReq for BOLT 11. The node must run with
+	//--protocol.bolt12-offers.
+	DecodeOffer(context.Context, *DecodeOfferRequest) (*DecodeOfferResponse, error)
+	// lncli: `requestinvoice`
+	//RequestInvoice takes a BOLT 12 offer string, constructs and signs an
+	//invoice request, sends it to the offer's issuer via onion message,
+	//waits for the invoice reply, validates it, and returns the decoded
+	//BOLT 12 invoice. No payment is dispatched. The node must run with
+	//--protocol.bolt12-offers.
+	RequestInvoice(context.Context, *RequestInvoiceRequest) (*RequestInvoiceResponse, error)
 	mustEmbedUnimplementedDevServer()
 }
 
@@ -103,6 +147,12 @@ func (UnimplementedDevServer) Quiesce(context.Context, *QuiescenceRequest) (*Qui
 }
 func (UnimplementedDevServer) CreateOffer(context.Context, *CreateOfferRequest) (*CreateOfferResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method CreateOffer not implemented")
+}
+func (UnimplementedDevServer) DecodeOffer(context.Context, *DecodeOfferRequest) (*DecodeOfferResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method DecodeOffer not implemented")
+}
+func (UnimplementedDevServer) RequestInvoice(context.Context, *RequestInvoiceRequest) (*RequestInvoiceResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method RequestInvoice not implemented")
 }
 func (UnimplementedDevServer) mustEmbedUnimplementedDevServer() {}
 
@@ -171,6 +221,42 @@ func _Dev_CreateOffer_Handler(srv interface{}, ctx context.Context, dec func(int
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Dev_DecodeOffer_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DecodeOfferRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DevServer).DecodeOffer(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/devrpc.Dev/DecodeOffer",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DevServer).DecodeOffer(ctx, req.(*DecodeOfferRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Dev_RequestInvoice_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(RequestInvoiceRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DevServer).RequestInvoice(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/devrpc.Dev/RequestInvoice",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DevServer).RequestInvoice(ctx, req.(*RequestInvoiceRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // Dev_ServiceDesc is the grpc.ServiceDesc for Dev service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -189,6 +275,14 @@ var Dev_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "CreateOffer",
 			Handler:    _Dev_CreateOffer_Handler,
+		},
+		{
+			MethodName: "DecodeOffer",
+			Handler:    _Dev_DecodeOffer_Handler,
+		},
+		{
+			MethodName: "RequestInvoice",
+			Handler:    _Dev_RequestInvoice_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

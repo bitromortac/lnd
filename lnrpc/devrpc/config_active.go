@@ -21,4 +21,7 @@ type Config struct {
 
 	// OfferCreator is nil when the node runs without BOLT 12 offers.
 	OfferCreator OfferCreator
+
+	// Bolt12Backend is nil when the node runs without BOLT 12 offers.
+	Bolt12Backend Bolt12Backend
 }
