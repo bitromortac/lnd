@@ -61,6 +61,15 @@ service Dev {
     --protocol.bolt12-offers.
     */
     rpc RequestInvoice (RequestInvoiceRequest) returns (RequestInvoiceResponse);
+
+    /* lncli: `payoffer`
+    PayOffer takes a BOLT 12 offer string, negotiates an invoice with the
+    offer's issuer via onion message, validates the returned invoice, and
+    dispatches an HTLC to complete the payment. Returns a stream of updates:
+    invoice_request_sent, invoice_received, and payment_result. The node
+    must run with --protocol.bolt12-offers.
+    */
+    rpc PayOffer (PayOfferRequest) returns (stream PayOfferUpdate);
 }
 
 message ImportGraphResponse {
@@ -204,4 +213,95 @@ message RequestInvoiceResponse {
 
     // The decoded offer fields from the invoice for convenience.
     DecodeOfferResponse offer = 6;
+}
+
+message PayOfferRequest {
+    // The bech32-encoded offer string (lno1...).
+    string offer = 1;
+
+    // The amount in millisatoshis. Required when the offer does not
+    // specify a fixed amount.
+    uint64 amount_msat = 2;
+
+    // The number of items to request. Required when the offer
+    // supports quantity selection.
+    uint64 quantity = 3;
+
+    // An optional payer note included in the invoice request.
+    string payer_note = 4;
+
+    // Timeout in seconds to wait for the invoice reply during
+    // negotiation. Defaults to 60 if unset or zero.
+    uint64 timeout_seconds = 5;
+
+    // Maximum fee in millisatoshis to pay for routing. If zero, a
+    // default percentage of the payment amount is used.
+    int64 fee_limit_msat = 6;
+
+    // The caller's idempotency key for this payment. A call with a key
+    // that already has a payment returns that payment instead of paying
+    // again, and a key used with other parameters is refused. If empty,
+    // the node generates a random key and reports it in the updates.
+    bytes idempotency_key = 7;
+}
+
+message PayOfferUpdate {
+    oneof update {
+        PayOfferInvoiceRequestSent invoice_request_sent = 1;
+        PayOfferInvoiceReceived invoice_received = 2;
+        PayOfferPaymentResult payment_result = 3;
+    }
+}
+
+message PayOfferInvoiceRequestSent {
+    // The decoded offer fields.
+    DecodeOfferResponse offer = 1;
+
+    // The amount being requested in millisatoshis.
+    uint64 amount_msat = 2;
+
+    // The 33-byte compressed ephemeral payer pubkey.
+    bytes invreq_payer_id = 3;
+
+    // The idempotency key of this payment. A retry with the same key
+    // returns this payment instead of paying again.
+    bytes idempotency_key = 4;
+}
+
+message PayOfferInvoiceReceived {
+    // The bech32-encoded BOLT 12 invoice string (lni1...).
+    string invoice_string = 1;
+
+    // The invoice amount in millisatoshis.
+    uint64 invoice_amount_msat = 2;
+
+    // The 32-byte payment hash from the invoice.
+    bytes invoice_payment_hash = 3;
+
+    // The decoded offer fields.
+    DecodeOfferResponse offer = 4;
+}
+
+message PayOfferPaymentResult {
+    // The 32-byte payment preimage proving settlement.
+    bytes payment_preimage = 1;
+
+    // The 32-byte payment hash.
+    bytes payment_hash = 2;
+
+    // The settled amount in millisatoshis.
+    uint64 amount_msat = 3;
+
+    // The bech32-encoded BOLT 12 invoice string (lni1...).
+    string invoice_string = 4;
+
+    // The 33-byte compressed ephemeral payer pubkey from the
+    // invoice request.
+    bytes invreq_payer_id = 5;
+
+    // The decoded offer fields from the invoice for convenience.
+    DecodeOfferResponse offer = 6;
+
+    // The idempotency key of this payment.
+    bytes idempotency_key = 7;
 }

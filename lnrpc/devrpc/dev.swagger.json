@@ -115,6 +115,48 @@
         ]
       }
     },
+    "/v2/dev/payoffer": {
+      "post": {
+        "summary": "lncli: `payoffer`\nPayOffer takes a BOLT 12 offer string, negotiates an invoice with the\noffer's issuer via onion message, validates the returned invoice, and\ndispatches an HTLC to complete the payment. Returns a stream of updates:\ninvoice_request_sent, invoice_received, and payment_result. The node\nmust run with --protocol.bolt12-offers.",
+        "operationId": "Dev_PayOffer",
+        "responses": {
+          "200": {
+            "description": "A successful response.(streaming responses)",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "result": {
+                  "$ref": "#/definitions/devrpcPayOfferUpdate"
+                },
+                "error": {
+                  "$ref": "#/definitions/rpcStatus"
+                }
+              },
+              "title": "Stream result of devrpcPayOfferUpdate"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/devrpcPayOfferRequest"
+            }
+          }
+        ],
+        "tags": [
+          "Dev"
+        ]
+      }
+    },
     "/v2/dev/quiesce": {
       "post": {
         "summary": "Quiesce instructs a channel to initiate the quiescence (stfu) protocol. This\nRPC is for testing purposes only. The commit that adds it will be removed\nonce interop is confirmed.",
@@ -301,6 +343,143 @@
     },
     "devrpcImportGraphResponse": {
       "type": "object"
+    },
+    "devrpcPayOfferInvoiceReceived": {
+      "type": "object",
+      "properties": {
+        "invoice_string": {
+          "type": "string",
+          "description": "The bech32-encoded BOLT 12 invoice string (lni1...)."
+        },
+        "invoice_amount_msat": {
+          "type": "string",
+          "format": "uint64",
+          "description": "The invoice amount in millisatoshis."
+        },
+        "invoice_payment_hash": {
+          "type": "string",
+          "format": "byte",
+          "description": "The 32-byte payment hash from the invoice."
+        },
+        "offer": {
+          "$ref": "#/definitions/devrpcDecodeOfferResponse",
+          "description": "The decoded offer fields."
+        }
+      }
+    },
+    "devrpcPayOfferInvoiceRequestSent": {
+      "type": "object",
+      "properties": {
+        "offer": {
+          "$ref": "#/definitions/devrpcDecodeOfferResponse",
+          "description": "The decoded offer fields."
+        },
+        "amount_msat": {
+          "type": "string",
+          "format": "uint64",
+          "description": "The amount being requested in millisatoshis."
+        },
+        "invreq_payer_id": {
+          "type": "string",
+          "format": "byte",
+          "description": "The 33-byte compressed ephemeral payer pubkey."
+        },
+        "idempotency_key": {
+          "type": "string",
+          "format": "byte",
+          "description": "The idempotency key of this payment. A retry with the same key\nreturns this payment instead of paying again."
+        }
+      }
+    },
+    "devrpcPayOfferPaymentResult": {
+      "type": "object",
+      "properties": {
+        "payment_preimage": {
+          "type": "string",
+          "format": "byte",
+          "description": "The 32-byte payment preimage proving settlement."
+        },
+        "payment_hash": {
+          "type": "string",
+          "format": "byte",
+          "description": "The 32-byte payment hash."
+        },
+        "amount_msat": {
+          "type": "string",
+          "format": "uint64",
+          "description": "The settled amount in millisatoshis."
+        },
+        "invoice_string": {
+          "type": "string",
+          "description": "The bech32-encoded BOLT 12 invoice string (lni1...)."
+        },
+        "invreq_payer_id": {
+          "type": "string",
+          "format": "byte",
+          "description": "The 33-byte compressed ephemeral payer pubkey from the\ninvoice request."
+        },
+        "offer": {
+          "$ref": "#/definitions/devrpcDecodeOfferResponse",
+          "description": "The decoded offer fields from the invoice for convenience."
+        },
+        "idempotency_key": {
+          "type": "string",
+          "format": "byte",
+          "description": "The idempotency key of this payment."
+        }
+      }
+    },
+    "devrpcPayOfferRequest": {
+      "type": "object",
+      "properties": {
+        "offer": {
+          "type": "string",
+          "description": "The bech32-encoded offer string (lno1...)."
+        },
+        "amount_msat": {
+          "type": "string",
+          "format": "uint64",
+          "description": "The amount in millisatoshis. Required when the offer does not\nspecify a fixed amount."
+        },
+        "quantity": {
+          "type": "string",
+          "format": "uint64",
+          "description": "The number of items to request. Required when the offer\nsupports quantity selection."
+        },
+        "payer_note": {
+          "type": "string",
+          "description": "An optional payer note included in the invoice request."
+        },
+        "timeout_seconds": {
+          "type": "string",
+          "format": "uint64",
+          "description": "Timeout in seconds to wait for the invoice reply during\nnegotiation. Defaults to 60 if unset or zero."
+        },
+        "fee_limit_msat": {
+          "type": "string",
+          "format": "int64",
+          "description": "Maximum fee in millisatoshis to pay for routing. If zero, a\ndefault percentage of the payment amount is used."
+        },
+        "idempotency_key": {
+          "type": "string",
+          "format": "byte",
+          "description": "The caller's idempotency key for this payment. A call with a key\nthat already has a payment returns that payment instead of paying\nagain, and a key used with other parameters is refused. If empty,\nthe node generates a random key and reports it in the updates."
+        }
+      }
+    },
+    "devrpcPayOfferUpdate": {
+      "type": "object",
+      "properties": {
+        "invoice_request_sent": {
+          "$ref": "#/definitions/devrpcPayOfferInvoiceRequestSent"
+        },
+        "invoice_received": {
+          "$ref": "#/definitions/devrpcPayOfferInvoiceReceived"
+        },
+        "payment_result": {
+          "$ref": "#/definitions/devrpcPayOfferPaymentResult"
+        }
+      }
     },
     "devrpcQuiescenceRequest": {
       "type": "object",

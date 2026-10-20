@@ -15,4 +15,8 @@ type Bolt12Backend interface {
 	// and returns the validated invoice.
 	RequestInvoice(ctx context.Context,
 		req *RequestInvoiceRequest) (*RequestInvoiceResponse, error)
+
+	// PayOffer pays an offer and streams the negotiation and payment
+	// updates.
+	PayOffer(req *PayOfferRequest, stream Dev_PayOfferServer) error
 }

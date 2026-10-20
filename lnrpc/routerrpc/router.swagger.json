@@ -1182,6 +1182,11 @@
             "format": "byte"
           },
           "description": "The custom TLV records that were sent to the first hop as part of the HTLC\nwire message for this payment."
+        },
+        "offer_hash": {
+          "type": "string",
+          "format": "byte",
+          "description": "The 32-byte hash of the offer this BOLT 12 payment pays. Empty for\nBOLT 11 payments."
         }
       }
     },

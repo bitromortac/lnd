@@ -380,6 +380,10 @@ type server struct {
 
 	controlTower routing.ControlTower
 
+	// bolt12Signer signs BOLT 12 messages with the node key and derives
+	// the payer keys of offer payments. It is nil when BOLT 12 is off.
+	bolt12Signer bolt12handler.Signer
+
 	authGossiper *discovery.AuthenticatedGossiper
 
 	localChanMgr *localchans.Manager
@@ -930,6 +934,7 @@ func newServer(ctx context.Context, cfg *Config, listenAddrs []net.Addr,
 			cc.KeyRing, nodeKeyDesc.KeyLocator,
 			nodeKeyECDH.PubKey(),
 		)
+		s.bolt12Signer = signer
 		s.bolt12Replier = bolt12handler.NewServerOnionReplier(s, nil)
 
 		// Use the final CLTV delta of BOLT 11 invoices.

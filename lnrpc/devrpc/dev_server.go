@@ -61,6 +61,10 @@ var (
 			Entity: "offchain",
 			Action: "write",
 		}},
+		"/devrpc.Dev/PayOffer": {{
+			Entity: "offchain",
+			Action: "write",
+		}},
 	}
 )
 
@@ -468,4 +472,16 @@ func (s *Server) RequestInvoice(ctx context.Context,
 	}
 
 	return s.cfg.Bolt12Backend.RequestInvoice(ctx, req)
+}
+
+// PayOffer pays a BOLT 12 offer and streams the negotiation and payment
+// updates.
+func (s *Server) PayOffer(req *PayOfferRequest,
+	stream Dev_PayOfferServer) error {
+
+	if s.cfg.Bolt12Backend == nil {
+		return errBolt12Disabled
+	}
+
+	return s.cfg.Bolt12Backend.PayOffer(req, stream)
 }

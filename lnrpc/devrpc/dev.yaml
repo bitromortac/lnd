@@ -17,3 +17,6 @@ http:
     - selector: devrpc.Dev.RequestInvoice
       post: "/v2/dev/requestinvoice"
       body: "*"
+    - selector: devrpc.Dev.PayOffer
+      post: "/v2/dev/payoffer"
+      body: "*"

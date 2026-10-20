@@ -46,6 +46,13 @@ type DevClient interface {
 	//BOLT 12 invoice. No payment is dispatched. The node must run with
 	//--protocol.bolt12-offers.
 	RequestInvoice(ctx context.Context, in *RequestInvoiceRequest, opts ...grpc.CallOption) (*RequestInvoiceResponse, error)
+	// lncli: `payoffer`
+	//PayOffer takes a BOLT 12 offer string, negotiates an invoice with the
+	//offer's issuer via onion message, validates the returned invoice, and
+	//dispatches an HTLC to complete the payment. Returns a stream of updates:
+	//invoice_request_sent, invoice_received, and payment_result. The node
+	//must run with --protocol.bolt12-offers.
+	PayOffer(ctx context.Context, in *PayOfferRequest, opts ...grpc.CallOption) (Dev_PayOfferClient, error)
 }
 
 type devClient struct {
@@ -101,6 +108,38 @@ func (c *devClient) RequestInvoice(ctx context.Context, in *RequestInvoiceReques
 	return out, nil
 }
 
+func (c *devClient) PayOffer(ctx context.Context, in *PayOfferRequest, opts ...grpc.CallOption) (Dev_PayOfferClient, error) {
+	stream, err := c.cc.NewStream(ctx, &Dev_ServiceDesc.Streams[0], "/devrpc.Dev/PayOffer", opts...)
+	if err != nil {
+		return nil, err
+	}
+	x := &devPayOfferClient{stream}
+	if err := x.ClientStream.SendMsg(in); err != nil {
+		return nil, err
+	}
+	if err := x.ClientStream.CloseSend(); err != nil {
+		return nil, err
+	}
+	return x, nil
+}
+
+type Dev_PayOfferClient interface {
+	Recv() (*PayOfferUpdate, error)
+	grpc.ClientStream
+}
+
+type devPayOfferClient struct {
+	grpc.ClientStream
+}
+
+func (x *devPayOfferClient) Recv() (*PayOfferUpdate, error) {
+	m := new(PayOfferUpdate)
+	if err := x.ClientStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
 // DevServer is the server API for Dev service.
 // All implementations must embed UnimplementedDevServer
 // for forward compatibility
@@ -132,6 +171,13 @@ type DevServer interface {
 	//BOLT 12 invoice. No payment is dispatched. The node must run with
 	//--protocol.bolt12-offers.
 	RequestInvoice(context.Context, *RequestInvoiceRequest) (*RequestInvoiceResponse, error)
+	// lncli: `payoffer`
+	//PayOffer takes a BOLT 12 offer string, negotiates an invoice with the
+	//offer's issuer via onion message, validates the returned invoice, and
+	//dispatches an HTLC to complete the payment. Returns a stream of updates:
+	//invoice_request_sent, invoice_received, and payment_result. The node
+	//must run with --protocol.bolt12-offers.
+	PayOffer(*PayOfferRequest, Dev_PayOfferServer) error
 	mustEmbedUnimplementedDevServer()
 }
 
@@ -153,6 +199,9 @@ func (UnimplementedDevServer) DecodeOffer(context.Context, *DecodeOfferRequest) 
 }
 func (UnimplementedDevServer) RequestInvoice(context.Context, *RequestInvoiceRequest) (*RequestInvoiceResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method RequestInvoice not implemented")
+}
+func (UnimplementedDevServer) PayOffer(*PayOfferRequest, Dev_PayOfferServer) error {
+	return status.Errorf(codes.Unimplemented, "method PayOffer not implemented")
 }
 func (UnimplementedDevServer) mustEmbedUnimplementedDevServer() {}
 
@@ -257,6 +306,27 @@ func _Dev_RequestInvoice_Handler(srv interface{}, ctx context.Context, dec func(
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Dev_PayOffer_Handler(srv interface{}, stream grpc.ServerStream) error {
+	m := new(PayOfferRequest)
+	if err := stream.RecvMsg(m); err != nil {
+		return err
+	}
+	return srv.(DevServer).PayOffer(m, &devPayOfferServer{stream})
+}
+
+type Dev_PayOfferServer interface {
+	Send(*PayOfferUpdate) error
+	grpc.ServerStream
+}
+
+type devPayOfferServer struct {
+	grpc.ServerStream
+}
+
+func (x *devPayOfferServer) Send(m *PayOfferUpdate) error {
+	return x.ServerStream.SendMsg(m)
+}
+
 // Dev_ServiceDesc is the grpc.ServiceDesc for Dev service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -285,6 +355,12 @@ var Dev_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _Dev_RequestInvoice_Handler,
 		},
 	},
-	Streams:  []grpc.StreamDesc{},
+	Streams: []grpc.StreamDesc{
+		{
+			StreamName:    "PayOffer",
+			Handler:       _Dev_PayOffer_Handler,
+			ServerStreams: true,
+		},
+	},
 	Metadata: "devrpc/dev.proto",
 }
